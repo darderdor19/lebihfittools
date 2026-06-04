@@ -79,7 +79,7 @@ a{color:var(--accent);text-decoration:none}
 .nav-btn:hover{background:var(--surface2);color:var(--text)}
 .nav-btn.active{background:rgba(108,99,255,.15);color:var(--accent);font-weight:600}
 .nav-icon{font-size:1.1rem;width:24px;text-align:center}
-.sidebar-profile{padding:16px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
+.sidebar-profile{padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom, 10px));border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
 .main-content{margin-left:220px;flex:1;padding:32px;min-height:100vh}
 .mobile-topbar{display:none}
 .sidebar-overlay{display:none}

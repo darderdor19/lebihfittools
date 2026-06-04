@@ -784,9 +784,9 @@ function renderProfileDisplay() {
     if (!profile) return;
     
     document.getElementById('sidebarProfile').innerHTML = `
-        <div style="background: var(--surface2); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 12px;">
-            <div style="font-weight: 700; color: var(--text1); font-size: 0.95rem;">${authUser.name || 'Bro'}</div>
-            <div style="font-size: 0.75rem; color: var(--text2); margin-bottom: 12px; word-break: break-all;">${authUser.email || ''}</div>
+        <div style="background: var(--surface2); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden;">
+            <div style="font-weight: 700; color: var(--text1); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${authUser.name || 'Bro'}</div>
+            <div style="font-size: 0.75rem; color: var(--text2); margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${authUser.email || ''}">${authUser.email || ''}</div>
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text2);">
