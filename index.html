@@ -365,8 +365,9 @@
 
         <!-- Photo AI Form -->
         <div id="photoForm" class="log-panel hidden">
-          <div class="photo-upload-area" id="photoUploadArea">
-            <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(this)">
+          <div class="photo-upload-area" id="photoUploadArea" onclick="openPhotoPickerSheet()">
+            <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(this)">
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoUpload(this)">
             <div class="upload-icon"><i data-lucide="camera" style="width:48px;height:48px;"></i></div>
             <p>Tap atau drag foto makanan kamu di sini</p>
             <small>Didukung: JPG, PNG, WEBP</small>
@@ -627,6 +628,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="core.js?v=2"></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

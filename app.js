@@ -1043,3 +1043,41 @@ function closeCustomConfirm() {
     document.getElementById('customConfirmOverlay').classList.remove('active');
     confirmCallback = null;
 }
+
+// --- Custom Photo Picker Sheet ---
+function openPhotoPickerSheet() {
+    document.getElementById('customSheetTitle').innerText = 'Sumber Foto';
+    document.getElementById('customSheetOptions').innerHTML = `
+        <div class="custom-sheet-opt" onclick="closeCustomSelect(); document.getElementById('cameraInput').click();">
+            <span>Kamera</span>
+            <i data-lucide="camera" style="width:18px;height:18px"></i>
+        </div>
+        <div class="custom-sheet-opt" onclick="closeCustomSelect(); document.getElementById('photoInput').click();">
+            <span>Galeri / File</span>
+            <i data-lucide="image" style="width:18px;height:18px"></i>
+        </div>
+    `;
+    document.getElementById('customSheetOverlay').classList.add('active');
+    if(window.lucide) lucide.createIcons();
+}
+
+// Drag and drop support for hidden input
+const dropArea = document.getElementById('photoUploadArea');
+if(dropArea) {
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.style.borderColor = 'var(--accent)';
+    });
+    dropArea.addEventListener('dragleave', () => {
+        dropArea.style.borderColor = 'var(--border)';
+    });
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.style.borderColor = 'var(--border)';
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const input = document.getElementById('photoInput');
+            input.files = e.dataTransfer.files;
+            handlePhotoUpload(input);
+        }
+    });
+}
