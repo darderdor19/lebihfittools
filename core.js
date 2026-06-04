@@ -21,7 +21,7 @@ function syncToFirebase(key, value) {
     const email = localStorage.getItem('lf_user_email');
     if (!email) return;
     const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
-    if (key.includes('apikey') || key.includes('visionkey')) return;
+    
     fbDb.ref(`users/${safeEmail}/${key}`).set(value).catch(console.error);
 }
 
@@ -44,9 +44,7 @@ async function syncFirebaseToLocal() {
         const data = snapshot.val();
         if (data) {
             Object.keys(data).forEach(k => {
-                if (!k.includes('apikey') && !k.includes('visionkey')) {
-                    localStorage.setItem(k, JSON.stringify(data[k]));
-                }
+                localStorage.setItem(k, JSON.stringify(data[k]));
             });
             console.log("Firebase sync: OK");
         }
