@@ -70,7 +70,7 @@ a{color:var(--accent);text-decoration:none}
 
 /* ===== APP LAYOUT ===== */
 .app-container{display:flex;min-height:100vh}
-.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:.3s;box-shadow:5px 0 30px rgba(0,0,0,.5)}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100dvh;z-index:100;transition:.3s;box-shadow:5px 0 30px rgba(0,0,0,.5);overflow-y:auto}
 .sidebar-logo{padding:24px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
 .logo-icon{color:var(--accent);filter:drop-shadow(0 0 10px var(--accent))}
 .logo-text{font-size:1.4rem;font-weight:900;text-transform:uppercase;letter-spacing:3px;color:var(--text);text-shadow:0 0 10px rgba(0,240,255,.4)}
@@ -79,8 +79,8 @@ a{color:var(--accent);text-decoration:none}
 .nav-btn:hover{background:var(--surface2);color:var(--text)}
 .nav-btn.active{background:rgba(108,99,255,.15);color:var(--accent);font-weight:600}
 .nav-icon{font-size:1.1rem;width:24px;text-align:center}
-.sidebar-profile{padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom, 10px));border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
-.main-content{margin-left:220px;flex:1;padding:32px;min-height:100vh}
+.sidebar-profile{padding:16px;padding-bottom:40px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
+.main-content{margin-left:220px;flex:1;padding:32px;min-height:100dvh}
 .mobile-topbar{display:none}
 .sidebar-overlay{display:none}
 
