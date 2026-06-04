@@ -96,6 +96,21 @@
           <label>Catatan Tambahan (opsional)</label>
           <textarea id="catatanTambahan" placeholder="Contoh: Saya punya alergi gluten, suka makan nasi, ingin fokus di pembentukan otot..."></textarea>
         </div>
+        
+        <!-- API Keys for New Devices -->
+        <div class="form-group full-width" style="border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;">
+          <h4 style="color: var(--primary); margin-bottom: 0.5rem;"><i data-lucide="key" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Kunci API (Jika Belum Diset)</h4>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Jika Anda berpindah HP dan API Key belum tersinkron, masukkan di sini.</p>
+          <div style="margin-bottom: 0.8rem;">
+            <label style="font-size: 0.8rem;">API Key Groq (Text)</label>
+            <input type="text" id="onboardingApiKey" placeholder="gsk_..." style="font-size: 0.9rem; padding: 8px;">
+          </div>
+          <div>
+            <label style="font-size: 0.8rem;">API Key OpenRouter (Vision)</label>
+            <input type="text" id="onboardingVisionKey" placeholder="sk-or-v1-..." style="font-size: 0.9rem; padding: 8px;">
+          </div>
+        </div>
+
         <button type="submit" class="btn-primary btn-full" id="calcBtn">
           <span id="calcBtnText"><i data-lucide="calculator" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Kalkulasi Target</span>
           <span id="calcBtnLoader" class="hidden">⏳ Menganalisis...</span>

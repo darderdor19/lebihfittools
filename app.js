@@ -206,6 +206,12 @@ document.getElementById('calcForm').addEventListener('submit', async (e) => {
         target: document.querySelector('#targetGrid .active').dataset.target,
         catatan: document.getElementById('catatanTambahan').value
     };
+    
+    // Save Onboarding API Keys if provided
+    const onbApi = document.getElementById('onboardingApiKey').value.trim();
+    const onbVision = document.getElementById('onboardingVisionKey').value.trim();
+    if (onbApi) setApiKey(onbApi);
+    if (onbVision) setVisionKey(onbVision);
 
     try {
         btnText.classList.add('hidden');
