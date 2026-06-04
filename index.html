@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LebihFit — Smart Nutrition Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- AUTH OVERLAY -->
+  <div id="authOverlay" class="onboarding-overlay hidden">
+    <div class="onboarding-card" style="max-width: 400px; text-align: center;">
+      <div class="onboarding-header">
+        <div class="logo-glow"><i data-lucide="shield-check" style="width: 48px; height: 48px;"></i></div>
+        <h1>Login</h1>
+        <p>Masukkan email untuk mendapatkan kode OTP</p>
+      </div>
+      
+      <div id="authStep1">
+        <div class="form-group" style="text-align: left; margin-bottom: 12px;">
+          <label>Nama Panggilan</label>
+          <input type="text" id="authName" placeholder="Budi" required>
+        </div>
+        <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+          <label>Email Address</label>
+          <input type="email" id="authEmail" placeholder="nama@email.com" required>
+        </div>
+        <button type="button" class="btn-primary btn-full" id="btnRequestOtp" onclick="requestOTP()">Kirim Kode OTP</button>
+      </div>
+
+      <div id="authStep2" class="hidden">
+        <p style="font-size: 0.9rem; color: var(--text2); margin-bottom: 20px;">Kode 6 digit telah dikirim ke <b id="displayEmail" style="color:var(--text1)"></b></p>
+        <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+          <label>Kode OTP</label>
+          <input type="text" id="authOtp" placeholder="123456" maxlength="6" style="text-align: center; letter-spacing: 4px; font-size: 1.5rem; font-weight: 700;" required>
+        </div>
+        <button type="button" class="btn-primary btn-full" id="btnVerifyOtp" onclick="verifyOTP()">Verifikasi & Masuk</button>
+        <button type="button" class="btn-secondary btn-full" style="margin-top: 12px;" onclick="resetAuth()">Ganti Email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING OVERLAY -->
+  <div id="onboarding" class="onboarding-overlay hidden">
+    <div class="onboarding-card">
+      <div class="onboarding-header">
+        <div class="logo-glow"><i data-lucide="flame" style="width: 48px; height: 48px;"></i></div>
+        <h1>LebihFit</h1>
+        <p>Setup profil fitness kamu dulu, biar kami bisa kasih rekomendasi yang pas!</p>
+      </div>
+      <form id="calcForm" class="calc-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Tinggi Badan (cm)</label>
+            <input type="number" id="tb" placeholder="170" min="100" max="250" required>
+          </div>
+          <div class="form-group">
+            <label>Berat Badan (kg)</label>
+            <input type="number" id="bb" placeholder="70" min="30" max="300" required>
+          </div>
+          <div class="form-group">
+            <label>Usia</label>
+            <input type="number" id="usia" placeholder="25" min="10" max="100" required>
+          </div>
+          <div class="form-group">
+            <label>Jenis Kelamin</label>
+            <select id="gender">
+              <option value="pria">Pria</option>
+              <option value="wanita">Wanita</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label>Level Aktivitas</label>
+          <select id="aktivitas">
+            <option value="sedentary">Sedentary (Hampir tidak olahraga)</option>
+            <option value="light">Light (Olahraga 1-3x/minggu)</option>
+            <option value="moderate" selected>Moderate (Olahraga 3-5x/minggu)</option>
+            <option value="active">Active (Olahraga 6-7x/minggu)</option>
+            <option value="very_active">Very Active (Olahraga keras setiap hari)</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>Target</label>
+          <div class="target-grid" id="targetGrid">
+            <button type="button" class="target-btn" data-target="cutting_aggressive"><i data-lucide="flame" style="width:16px;height:16px;"></i> Cutting Agresif<span>-1kg/minggu</span></button>
+            <button type="button" class="target-btn" data-target="cutting_slow"><i data-lucide="scissors" style="width:16px;height:16px;"></i> Cutting Perlahan<span>-0.5kg/minggu</span></button>
+            <button type="button" class="target-btn active" data-target="maintain"><i data-lucide="scale" style="width:16px;height:16px;"></i> Pertahankan BB<span>0 kg/minggu</span></button>
+            <button type="button" class="target-btn" data-target="bulking_slow"><i data-lucide="activity" style="width:16px;height:16px;"></i> Bulking Perlahan<span>+0.5kg/minggu</span></button>
+            <button type="button" class="target-btn" data-target="bulking_aggressive"><i data-lucide="rocket" style="width:16px;height:16px;"></i> Bulking Agresif<span>+1kg/minggu</span></button>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label>Catatan Tambahan (opsional)</label>
+          <textarea id="catatanTambahan" placeholder="Contoh: Saya punya alergi gluten, suka makan nasi, ingin fokus di pembentukan otot..."></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="calcBtn">
+          <span id="calcBtnText"><i data-lucide="calculator" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Kalkulasi Target</span>
+          <span id="calcBtnLoader" class="hidden">⏳ Menganalisis...</span>
+        </button>
+      </form>
+      <div id="calcResult" class="calc-result hidden"></div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" class="app-container hidden">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo" onclick="showPage('dashboard')" style="cursor: pointer;">
+        <span class="logo-icon"><i data-lucide="flame"></i></span>
+        <span class="logo-text">LebihFit</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-page="dashboard" onclick="showPage('dashboard')">
+          <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-btn" data-page="log" onclick="showPage('log')">
+          <span class="nav-icon"><i data-lucide="plus-circle"></i></span><span class="nav-label">Log Makanan</span>
+        </button>
+        <button class="nav-btn" data-page="history" onclick="showPage('history')">
+          <span class="nav-icon"><i data-lucide="line-chart"></i></span><span class="nav-label">History</span>
+        </button>
+        <button class="nav-btn" data-page="calculator" onclick="showPage('calculator')">
+          <span class="nav-icon"><i data-lucide="calculator"></i></span><span class="nav-label">Kalkulator</span>
+        </button>
+        <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
+          <span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span>
+        </button>
+      </nav>
+      <div class="sidebar-profile" id="sidebarProfile"></div>
+    </aside>
+
+    <!-- MOBILE TOPBAR -->
+    <header class="mobile-topbar">
+      <button class="hamburger" onclick="toggleSidebar()"><i data-lucide="menu" style="width:24px;height:24px;"></i></button>
+      <span class="mobile-logo" onclick="showPage('dashboard')" style="cursor: pointer; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 6px;"><i data-lucide="flame" style="width:22px;height:22px;color:var(--accent);"></i> LebihFit</span>
+      <button class="mobile-add" onclick="showPage('log')"><i data-lucide="plus" style="width:24px;height:24px;"></i></button>
+    </header>
+
+    <!-- OVERLAY for mobile sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- ===== DASHBOARD PAGE ===== -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-header">
+          <div>
+            <h2 id="dashGreeting">Halo!</h2>
+            <p class="page-subtitle" id="dashDate"></p>
+          </div>
+          <button class="btn-primary" onclick="showPage('log')">+ Tambah Makanan</button>
+        </div>
+
+        <!-- Calorie Ring Summary -->
+        <div class="summary-cards">
+          <div class="summary-card main-card">
+            <div class="ring-container">
+              <svg class="ring-svg" viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="50"/>
+                <circle class="ring-fill" id="calRing" cx="60" cy="60" r="50" stroke="#6c63ff"/>
+              </svg>
+              <div class="ring-center">
+                <span class="ring-value" id="calConsumed">0</span>
+                <span class="ring-label">kcal</span>
+              </div>
+            </div>
+            <div class="card-info">
+              <h3>Kalori Hari Ini</h3>
+              <div class="cal-stats">
+                <div class="cal-stat"><span id="calTarget">0</span><small>Target</small></div>
+                <div class="cal-stat"><span id="calRemaining">0</span><small>Sisa</small></div>
+                <div class="cal-stat"><span id="calBurned">0</span><small>Terbakar</small></div>
+              </div>
+            </div>
+          </div>
+          <div class="macro-cards">
+            <div class="macro-card" data-macro="protein">
+              <div class="macro-icon"><i data-lucide="drumstick"></i></div>
+              <div class="macro-info">
+                <span class="macro-name">Protein</span>
+                <span class="macro-val"><b id="proteinVal">0</b>/<span id="proteinTarget">0</span>g</span>
+              </div>
+              <div class="macro-bar"><div class="macro-fill protein-fill" id="proteinBar"></div></div>
+            </div>
+            <div class="macro-card" data-macro="carbs">
+              <div class="macro-icon"><i data-lucide="wheat"></i></div>
+              <div class="macro-info">
+                <span class="macro-name">Karbohidrat</span>
+                <span class="macro-val"><b id="carbsVal">0</b>/<span id="carbsTarget">0</span>g</span>
+              </div>
+              <div class="macro-bar"><div class="macro-fill carbs-fill" id="carbsBar"></div></div>
+            </div>
+            <div class="macro-card" data-macro="fat">
+              <div class="macro-icon"><i data-lucide="apple"></i></div>
+              <div class="macro-info">
+                <span class="macro-name">Lemak</span>
+                <span class="macro-val"><b id="fatVal">0</b>/<span id="fatTarget">0</span>g</span>
+              </div>
+              <div class="macro-bar"><div class="macro-fill fat-fill" id="fatBar"></div></div>
+            </div>
+            <div class="macro-card" data-macro="fiber">
+              <div class="macro-icon"><i data-lucide="leaf"></i></div>
+              <div class="macro-info">
+                <span class="macro-name">Serat</span>
+                <span class="macro-val"><b id="fiberVal">0</b>/<span id="fiberTarget">0</span>g</span>
+              </div>
+              <div class="macro-bar"><div class="macro-fill fiber-fill" id="fiberBar"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Micronutrients -->
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="flask-conical" style="display:inline-block;vertical-align:text-bottom;"></i> Mikronutrisi Hari Ini</h3>
+          <div class="micro-grid" id="microGrid"></div>
+        </div>
+
+        <!-- Today's Food Log -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title"><i data-lucide="utensils" style="display:inline-block;vertical-align:text-bottom;"></i> Log Makanan Hari Ini</h3>
+            <span class="food-count" id="foodCount">0 item</span>
+          </div>
+          <div id="foodList" class="food-list">
+            <div class="empty-state">Belum ada makanan hari ini. <br>Klik "+ Tambah Makanan" untuk mulai!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== LOG FOOD PAGE ===== -->
+      <div id="page-log" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Log Makanan</h2>
+            <p class="page-subtitle">Tambah makanan secara manual atau pakai foto</p>
+          </div>
+        </div>
+        <div class="log-tabs">
+          <button class="log-tab active" onclick="switchLogTab('manual')" id="tabManual"><i data-lucide="edit-3" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Manual</button>
+          <button class="log-tab" onclick="switchLogTab('photo')" id="tabPhoto"><i data-lucide="camera" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Upload Foto</button>
+        </div>
+
+        <!-- Manual Form -->
+        <div id="manualForm" class="log-panel">
+          <form id="foodForm" class="food-form">
+            <div class="form-group">
+              <label>Nama Makanan *</label>
+              <input type="text" id="foodName" placeholder="Contoh: Nasi Goreng Ayam" required>
+            </div>
+            <div class="form-group">
+              <label>Porsi / Jumlah</label>
+              <input type="text" id="foodPortion" placeholder="Contoh: 1 piring, 200g">
+            </div>
+            <div class="form-group">
+              <label>Deskripsi Detail Makanan (Opsional)</label>
+              <textarea id="foodDesc" placeholder="Contoh: Digoreng pakai minyak banyak, tambah telur dadar, tanpa gula..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Waktu Makan</label>
+              <select id="mealTime">
+                <option value="sarapan">🌅 Sarapan</option>
+                <option value="makan_siang" selected>☀️ Makan Siang</option>
+                <option value="makan_malam">🌙 Makan Malam</option>
+                <option value="snack">🍎 Snack</option>
+              </select>
+            </div>
+            <div id="nutrisiContainer" class="hidden">
+              <div class="nutrisi-box">
+                <h4 class="nutrisi-box-title"><i data-lucide="flame"></i> Makronutrisi</h4>
+                <div class="nutrisi-grid">
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="flame"></i></div>
+                    <div class="nc-details">
+                      <label>Kalori (kcal) *</label>
+                      <input type="number" id="foodCal" placeholder="0" min="0" required>
+                    </div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="drumstick"></i></div>
+                    <div class="nc-details">
+                      <label>Protein (g)</label>
+                      <input type="number" id="foodProtein" placeholder="0" min="0" step="0.1">
+                    </div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="wheat"></i></div>
+                    <div class="nc-details">
+                      <label>Karbohidrat (g)</label>
+                      <input type="number" id="foodCarbs" placeholder="0" min="0" step="0.1">
+                    </div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="apple"></i></div>
+                    <div class="nc-details">
+                      <label>Lemak (g)</label>
+                      <input type="number" id="foodFat" placeholder="0" min="0" step="0.1">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="nutrisi-box">
+                <h4 class="nutrisi-box-title"><i data-lucide="flask-conical"></i> Mikronutrisi (Opsional)</h4>
+                <div class="nutrisi-grid">
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="leaf"></i></div>
+                    <div class="nc-details"><label>Serat (g)</label><input type="number" id="foodFiber" placeholder="0" min="0" step="0.1"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="lollipop"></i></div>
+                    <div class="nc-details"><label>Gula (g)</label><input type="number" id="foodSugar" placeholder="0" min="0" step="0.1"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="salt"></i></div>
+                    <div class="nc-details"><label>Sodium (mg)</label><input type="number" id="foodSodium" placeholder="0" min="0"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="bone"></i></div>
+                    <div class="nc-details"><label>Kalsium (mg)</label><input type="number" id="foodCalcium" placeholder="0" min="0"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="anvil"></i></div>
+                    <div class="nc-details"><label>Zat Besi (mg)</label><input type="number" id="foodIron" placeholder="0" min="0" step="0.1"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="citrus"></i></div>
+                    <div class="nc-details"><label>Vit C (mg)</label><input type="number" id="foodVitC" placeholder="0" min="0" step="0.1"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="sun"></i></div>
+                    <div class="nc-details"><label>Vit D (mcg)</label><input type="number" id="foodVitD" placeholder="0" min="0" step="0.1"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="hexagon"></i></div>
+                    <div class="nc-details"><label>Zinc (mg)</label><input type="number" id="foodZinc" placeholder="0" min="0" step="0.1"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" onclick="clearFoodForm()">Reset</button>
+              <button type="button" class="btn-primary" style="background-color: var(--accent);" id="analyzeTextBtn" onclick="analyzeTextFood()"><i data-lucide="zap" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Analisis Nutrisi</button>
+              <button type="submit" class="btn-primary hidden" id="btnSimpanMakanan"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Makanan</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Photo AI Form -->
+        <div id="photoForm" class="log-panel hidden">
+          <div class="photo-upload-area" id="photoUploadArea">
+            <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(this)">
+            <div class="upload-icon"><i data-lucide="camera" style="width:48px;height:48px;"></i></div>
+            <p>Tap atau drag foto makanan kamu di sini</p>
+            <small>Didukung: JPG, PNG, WEBP</small>
+          </div>
+          <div id="photoPreviewWrap" class="hidden">
+            <img id="photoPreview" src="" alt="Preview">
+            <div class="photo-actions">
+              <button class="btn-secondary" onclick="clearPhoto()"><i data-lucide="trash-2" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Hapus Foto</button>
+              <button class="btn-primary" id="analyzeBtn" onclick="analyzePhoto()"><i data-lucide="zap" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Analisis Nutrisi</button>
+            </div>
+          </div>
+          <div id="photoResult" class="hidden"></div>
+        </div>
+      </div>
+
+      <!-- ===== HISTORY PAGE ===== -->
+      <div id="page-history" class="page">
+        <div class="page-header">
+          <div>
+            <h2>History</h2>
+            <p class="page-subtitle">Pantau progress nutrisi kamu</p>
+          </div>
+        </div>
+        <div class="period-tabs">
+          <button class="period-tab active" onclick="setPeriod('7')" id="p7">7 Hari</button>
+          <button class="period-tab" onclick="setPeriod('14')" id="p14">14 Hari</button>
+          <button class="period-tab" onclick="setPeriod('30')" id="p30">30 Hari</button>
+          <button class="period-tab" onclick="setPeriod('60')" id="p60">60 Hari</button>
+          <button class="period-tab" onclick="setPeriod('90')" id="p90">90 Hari</button>
+          <button class="period-tab" onclick="setPeriod('180')" id="p180">180 Hari</button>
+          <button class="period-tab" onclick="setPeriod('365')" id="p365">1 Tahun</button>
+          <button class="period-tab" onclick="setPeriod('custom')" id="pCustom">Custom</button>
+        </div>
+        <div id="customDateRange" class="custom-date-range hidden">
+          <input type="date" id="dateFrom" onchange="loadHistory()">
+          <span>sampai</span>
+          <input type="date" id="dateTo" onchange="loadHistory()">
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="bar-chart-2" style="display:inline-block;vertical-align:text-bottom;"></i> Tren Kalori</h3>
+          <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+          </div>
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="pie-chart" style="display:inline-block;vertical-align:text-bottom;"></i> Proporsi Makronutrisi</h3>
+          <div class="chart-container">
+            <canvas id="macroChart"></canvas>
+          </div>
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="clipboard-list" style="display:inline-block;vertical-align:text-bottom;"></i> Rata-rata Harian</h3>
+          <div class="history-avg-grid" id="historyAvgGrid"></div>
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="calendar" style="display:inline-block;vertical-align:text-bottom;"></i> Riwayat Per Hari</h3>
+          <div id="historyList" class="history-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== CALCULATOR PAGE ===== -->
+      <div id="page-calculator" class="page">
+        <div class="page-header">
+          <div>
+            <h2><i data-lucide="calculator" style="display:inline-block;vertical-align:text-bottom;"></i> Kalkulator Fitness</h2>
+            <p class="page-subtitle">Recalibrate target nutrisi kamu</p>
+          </div>
+        </div>
+        <div class="section-card">
+          <form id="recalcForm" class="calc-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Tinggi Badan (cm)</label>
+                <input type="number" id="r_tb" placeholder="170" min="100" max="250">
+              </div>
+              <div class="form-group">
+                <label>Berat Badan (kg)</label>
+                <input type="number" id="r_bb" placeholder="70" min="30" max="300">
+              </div>
+              <div class="form-group">
+                <label>Usia</label>
+                <input type="number" id="r_usia" placeholder="25" min="10" max="100">
+              </div>
+              <div class="form-group">
+                <label>Jenis Kelamin</label>
+                <select id="r_gender">
+                  <option value="pria">Pria</option>
+                  <option value="wanita">Wanita</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label>Level Aktivitas</label>
+              <select id="r_aktivitas">
+                <option value="sedentary">Sedentary (Hampir tidak olahraga)</option>
+                <option value="light">Light (Olahraga 1-3x/minggu)</option>
+                <option value="moderate" selected>Moderate (Olahraga 3-5x/minggu)</option>
+                <option value="active">Active (Olahraga 6-7x/minggu)</option>
+                <option value="very_active">Very Active (Olahraga keras setiap hari)</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>Target</label>
+              <div class="target-grid" id="recalcTargetGrid">
+                <button type="button" class="target-btn" data-target="cutting_aggressive"><i data-lucide="flame" style="width:16px;height:16px;"></i> Cutting Agresif<span>-1kg/minggu</span></button>
+                <button type="button" class="target-btn" data-target="cutting_slow"><i data-lucide="scissors" style="width:16px;height:16px;"></i> Cutting Perlahan<span>-0.5kg/minggu</span></button>
+                <button type="button" class="target-btn active" data-target="maintain"><i data-lucide="scale" style="width:16px;height:16px;"></i> Pertahankan BB<span>0 kg/minggu</span></button>
+                <button type="button" class="target-btn" data-target="bulking_slow"><i data-lucide="activity" style="width:16px;height:16px;"></i> Bulking Perlahan<span>+0.5kg/minggu</span></button>
+                <button type="button" class="target-btn" data-target="bulking_aggressive"><i data-lucide="rocket" style="width:16px;height:16px;"></i> Bulking Agresif<span>+1kg/minggu</span></button>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label>Catatan Tambahan (opsional)</label>
+              <textarea id="r_catatan" placeholder="Update kondisi kamu..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-full"><i data-lucide="refresh-cw" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Update Target</button>
+          </form>
+          <div id="recalcResult" class="calc-result hidden"></div>
+        </div>
+        <div class="section-card" id="currentProfileCard">
+          <h3 class="section-title"><i data-lucide="user" style="display:inline-block;vertical-align:text-bottom;"></i> Profil Saat Ini</h3>
+          <div id="currentProfileDisplay"></div>
+        </div>
+      </div>
+
+      <!-- ===== SETTINGS PAGE ===== -->
+      <div id="page-settings" class="page">
+        <div class="page-header">
+          <div>
+            <h2><i data-lucide="settings" style="display:inline-block;vertical-align:text-bottom;"></i> Settings</h2>
+            <p class="page-subtitle">Kelola API dan data kamu</p>
+          </div>
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="key" style="display:inline-block;vertical-align:text-bottom;"></i> API Keys</h3>
+          <p class="setting-desc">Masukkan API Key untuk menghubungkan aplikasi dengan sistem server.</p>
+          <div class="form-group">
+            <label>Secret Token (Groq - Analisis Teks)</label>
+            <div class="api-input-wrap">
+              <input type="password" id="apiKeyInput" placeholder="sk-..." class="api-input">
+              <button class="btn-icon" onclick="toggleApiVis('apiKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
+            <label>Secret Token (OpenRouter - Analisis Gambar)</label>
+            <div class="api-input-wrap">
+              <input type="password" id="visionKeyInput" placeholder="sk-or-..." class="api-input">
+              <button class="btn-icon" onclick="toggleApiVis('visionKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveApiKey()"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan API Keys</button>
+          </div>
+          <div id="apiStatus" class="api-status"></div>
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="database" style="display:inline-block;vertical-align:text-bottom;"></i> Manajemen Data</h3>
+          <div class="setting-item">
+            <div>
+              <strong>Export Data</strong>
+              <p>Download semua data nutrisi kamu dalam format JSON</p>
+            </div>
+            <button class="btn-secondary" onclick="exportData()"><i data-lucide="download" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Export</button>
+          </div>
+          <div class="setting-item danger-zone">
+            <div>
+              <strong>Hapus Semua Data</strong>
+              <p>Ini akan menghapus seluruh riwayat makanan dan profil kamu</p>
+            </div>
+            <button class="btn-danger" onclick="confirmClearAll()"><i data-lucide="trash-2" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Hapus Semua</button>
+          </div>
+        </div>
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="info" style="display:inline-block;vertical-align:text-bottom;"></i> Tentang App</h3>
+          <p class="setting-desc">LebihFit v1.0 — Smart nutrition tracker. Dibuat dan dikembangkan oleh <b><a href="https://instagram.com/jadilebihfit" target="_blank" style="color: var(--accent);">@jadilebihfit</a></b>.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- EDIT FOOD MODAL -->
+  <div id="editModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="edit" style="display:inline-block;vertical-align:text-bottom;"></i> Edit Makanan</h3>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      <form id="editFoodForm" class="food-form">
+        <input type="hidden" id="editFoodId">
+        <div class="form-group">
+          <label>Nama Makanan</label>
+          <input type="text" id="editFoodName" required>
+        </div>
+        <div class="form-group">
+          <label>Porsi</label>
+          <input type="text" id="editFoodPortion">
+        </div>
+        <div class="form-group">
+          <label>Waktu Makan</label>
+          <select id="editMealTime">
+            <option value="sarapan">🌅 Sarapan</option>
+            <option value="makan_siang">☀️ Makan Siang</option>
+            <option value="makan_malam">🌙 Makan Malam</option>
+            <option value="snack">🍎 Snack</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label>Kalori</label><input type="number" id="editCal" min="0"></div>
+          <div class="form-group"><label>Protein (g)</label><input type="number" id="editProtein" min="0" step="0.1"></div>
+          <div class="form-group"><label>Karbo (g)</label><input type="number" id="editCarbs" min="0" step="0.1"></div>
+          <div class="form-group"><label>Lemak (g)</label><input type="number" id="editFat" min="0" step="0.1"></div>
+          <div class="form-group"><label>Serat (g)</label><input type="number" id="editFiber" min="0" step="0.1"></div>
+          <div class="form-group"><label>Gula (g)</label><input type="number" id="editSugar" min="0" step="0.1"></div>
+          <div class="form-group"><label>Sodium (mg)</label><input type="number" id="editSodium" min="0"></div>
+          <div class="form-group"><label>Kalsium (mg)</label><input type="number" id="editCalcium" min="0"></div>
+          <div class="form-group"><label>Zat Besi (mg)</label><input type="number" id="editIron" min="0" step="0.1"></div>
+          <div class="form-group"><label>Vit C (mg)</label><input type="number" id="editVitC" min="0" step="0.1"></div>
+          <div class="form-group"><label>Vit D (mcg)</label><input type="number" id="editVitD" min="0" step="0.1"></div>
+          <div class="form-group"><label>Zinc (mg)</label><input type="number" id="editZinc" min="0" step="0.1"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Batal</button>
+          <button type="submit" class="btn-primary"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
