@@ -345,12 +345,13 @@ function renderDashboard() {
                 </div>
                 <div class="food-item-cal">${item.cal || 0} kcal</div>
                 <div class="food-item-actions">
-                    <button class="food-action-btn" onclick="openEditModal('${item.id}')" title="Edit">✏️</button>
-                    <button class="food-action-btn" onclick="confirmDeleteFood('${item.id}')" title="Hapus">🗑️</button>
+                    <button class="food-action-btn" onclick="openEditModal('${item.id}')" title="Edit"><i data-lucide="edit" style="width:16px;height:16px;"></i></button>
+                    <button class="food-action-btn" onclick="confirmDeleteFood('${item.id}')" title="Hapus"><i data-lucide="trash-2" style="width:16px;height:16px;color:var(--danger)"></i></button>
                 </div>
             </div>
         `).join('');
     }
+    if (window.lucide) lucide.createIcons();
 }
 
 function formatMealTime(val) {
@@ -526,8 +527,9 @@ async function analyzePhoto() {
         resultDiv.innerHTML = `<p style="color:var(--danger)">Error: ${error.message}</p>`;
         resultDiv.classList.remove('hidden');
     } finally {
-        btn.innerHTML = '🤖 Analisis AI';
+        btn.innerHTML = '<i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;"></i> Analisis AI';
         btn.disabled = false;
+        if(window.lucide) lucide.createIcons();
     }
 }
 
@@ -861,7 +863,7 @@ document.getElementById('recalcForm').addEventListener('submit', async (e) => {
         setProfile(finalProfile);
         
         resultDiv.innerHTML = `
-            <div style="color:var(--success);margin-bottom:12px;font-weight:600">✅ Profil Berhasil Diupdate!</div>
+            <div style="color:var(--success);margin-bottom:12px;font-weight:600"><i data-lucide="check-circle" style="display:inline-block;vertical-align:text-bottom;"></i> Profil Berhasil Diupdate!</div>
             <div class="result-grid">
                 <div class="result-item"><div class="val">${aiResult.cal}</div><div class="lbl">Kcal</div></div>
                 <div class="result-item"><div class="val">${aiResult.protein}g</div><div class="lbl">Protein</div></div>
@@ -877,8 +879,9 @@ document.getElementById('recalcForm').addEventListener('submit', async (e) => {
         resultDiv.innerHTML = `<p style="color:var(--danger)">Error: ${error.message}</p>`;
         resultDiv.classList.remove('hidden');
     } finally {
-        btn.innerHTML = '🤖 Update Target dengan AI';
+        btn.innerHTML = '<i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;"></i> Update Target dengan AI';
         btn.disabled = false;
+        if(window.lucide) lucide.createIcons();
     }
 });
 
@@ -900,12 +903,13 @@ function saveApiKey() {
 function updateApiStatus(hasKey) {
     const div = document.getElementById('apiStatus');
     if (hasKey) {
+        div.innerHTML = '<i data-lucide="check-circle" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;color:var(--success)"></i> API Key tersimpan. Fitur siap digunakan.';
         div.className = 'api-status ok';
-        div.innerHTML = '✅ API Key tersimpan. Fitur siap digunakan.';
     } else {
+        div.innerHTML = '<i data-lucide="alert-triangle" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;color:var(--danger)"></i> API Key belum diset. Fitur AI tidak bisa digunakan.';
         div.className = 'api-status err';
-        div.innerHTML = '⚠️ API Key belum diset. Fitur AI tidak bisa digunakan.';
     }
+    if(window.lucide) lucide.createIcons();
 }
 
 function exportData() {
@@ -923,7 +927,7 @@ function exportData() {
 }
 
 function confirmClearAll() {
-    if (confirm('⚠️ PERINGATAN BAAHAYA! ⚠️\n\nApakah kamu YAKIN ingin menghapus SEMUA data nutrisi dan profil kamu? Data yang dihapus tidak bisa dikembalikan!')) {
+    if (confirm('PERINGATAN BAHAYA!\n\nApakah kamu YAKIN ingin menghapus SEMUA data nutrisi dan profil kamu? Data yang dihapus tidak bisa dikembalikan!')) {
         DB.del('lf_profile');
         DB.del('lf_logs');
         showToast('Semua data telah dihapus. Reloading...', 'error');
