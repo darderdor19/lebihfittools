@@ -30,7 +30,7 @@ a{color:var(--accent);text-decoration:none}
 .btn-icon:hover{background:var(--surface2)}
 
 /* ===== ONBOARDING ===== */
-.onboarding-overlay{position:fixed;inset:0;background:var(--bg);z-index:1000;display:block;padding:20px;overflow-y:auto}
+.onboarding-overlay{position:absolute;top:0;left:0;right:0;min-height:100vh;background:var(--bg);z-index:1000;display:block;padding:20px;}
 .onboarding-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;max-width:640px;width:100%;margin:40px auto;animation:slideUp .5s ease}
 .onboarding-header{text-align:center;margin-bottom:32px}
 .logo-glow{font-size:3rem;filter:drop-shadow(0 0 20px var(--accent));margin-bottom:12px}
@@ -210,7 +210,7 @@ a{color:var(--accent);text-decoration:none}
 .profile-item .val{font-weight:700;margin-top:4px}
 
 /* ===== MODAL ===== */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay{position:absolute;top:0;left:0;right:0;min-height:100vh;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;backdrop-filter:blur(4px)}
 .modal-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;animation:slideUp .3s ease}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .modal-header h3{font-size:1.1rem;font-weight:700}
