@@ -163,16 +163,17 @@ function sumNutrients(items) {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ===== AI API =====
-async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile', isVision = false) {
-  const key = isVision ? getVisionKey() : getApiKey();
-  if (!key) throw new Error(isVision ? 'Vision API Key belum diset. Buka Settings.' : 'API Key belum diset. Buka Settings.');
+async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile', isVision = false, isGroqVision = false) {
+  // isGroqVision: vision call tapi pakai Groq (cepat) bukan OpenRouter
+  const key = (isVision && !isGroqVision) ? getVisionKey() : getApiKey();
+  if (!key) throw new Error((isVision && !isGroqVision) ? 'Vision API Key belum diset. Buka Settings.' : 'API Key belum diset. Buka Settings.');
   
   let endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-  if (isVision) {
+  if (isVision && !isGroqVision) {
     endpoint = 'https://openrouter.ai/api/v1/chat/completions';
   }
 
-  const body = { model: model, messages, max_tokens: 1200 };
+  const body = { model: model, messages, max_tokens: 800 };
   if (json && !isVision) body.response_format = { type: 'json_object' };
   
   const res = await fetch(endpoint, {
@@ -195,11 +196,11 @@ Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON 
 
   const msgs = [{ role:'user', content:[
     { type:'text', text: prompt },
-    { type:'image_url', image_url:{ url:`data:${mime};base64,${base64}` } }
+    { type:'image_url', image_url:{ url:`data:${mime};base64,${base64}`, detail: 'low' } }
   ]}];
 
-  // Gunakan model vision gratis dari OpenRouter yang tersedia
-  const raw = await callAI(msgs, false, 'nvidia/nemotron-nano-12b-v2-vl:free', true);
+  // Gunakan Groq llama-4 vision - gratis dan super cepat
+  const raw = await callAI(msgs, false, 'meta-llama/llama-4-scout-17b-16e-instruct', false, true);
   
   if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
   

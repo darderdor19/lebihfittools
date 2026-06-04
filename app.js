@@ -463,13 +463,27 @@ function handlePhotoUpload(input) {
         const file = input.files[0];
         const reader = new FileReader();
         reader.onload = (e) => {
+            // Show preview with original
             document.getElementById('photoPreview').src = e.target.result;
             document.getElementById('photoPreviewWrap').classList.remove('hidden');
             document.getElementById('photoUploadArea').classList.add('hidden');
             
-            const base64Data = e.target.result.split(',')[1];
-            currentPhotoBase64 = base64Data;
-            currentPhotoMime = file.type;
+            // Compress image before sending to AI (max 512px, 60% quality)
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX = 512;
+                let w = img.width, h = img.height;
+                if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+                else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                currentPhotoBase64 = compressed.split(',')[1];
+                currentPhotoMime = 'image/jpeg';
+            };
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
