@@ -79,7 +79,7 @@ a{color:var(--accent);text-decoration:none}
 .nav-btn:hover{background:var(--surface2);color:var(--text)}
 .nav-btn.active{background:rgba(108,99,255,.15);color:var(--accent);font-weight:600}
 .nav-icon{font-size:1.1rem;width:24px;text-align:center}
-.sidebar-profile{padding:16px;padding-bottom:40px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
+.sidebar-profile{padding:16px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
 .main-content{margin-left:220px;flex:1;padding:32px;min-height:100dvh}
 .mobile-topbar{display:none}
 .sidebar-overlay{display:none}
@@ -255,6 +255,7 @@ a{color:var(--accent);text-decoration:none}
     margin-top: -16px;
     border-bottom: 1px solid var(--border);
   }
+  .sidebar-profile{padding-bottom:80px}
   .page-header .btn-primary{width:100%}
   .form-actions{flex-direction:column}
   .form-actions button{width:100%}
