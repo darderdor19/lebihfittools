@@ -596,11 +596,11 @@ document.getElementById('editFoodForm').addEventListener('submit', (e) => {
 });
 
 function confirmDeleteFood(id) {
-    if (confirm('Yakin ingin menghapus makanan ini?')) {
+    showCustomConfirm('Yakin ingin menghapus makanan ini?', () => {
         deleteFoodItem(id);
         renderDashboard();
-        showToast('Makanan dihapus', 'info');
-    }
+        showToast('Makanan dihapus!', 'info');
+    });
 }
 
 // History
@@ -927,17 +927,119 @@ function exportData() {
 }
 
 function confirmClearAll() {
-    if (confirm('PERINGATAN BAHAYA!\n\nApakah kamu YAKIN ingin menghapus SEMUA data nutrisi dan profil kamu? Data yang dihapus tidak bisa dikembalikan!')) {
+    showCustomConfirm('PERINGATAN BAHAYA!<br><br>Apakah kamu YAKIN ingin menghapus SEMUA data nutrisi dan profil kamu? Data yang dihapus tidak bisa dikembalikan!', () => {
         DB.del('lf_profile');
         DB.del('lf_logs');
         showToast('Semua data telah dihapus. Reloading...', 'error');
         setTimeout(() => location.reload(), 1500);
-    }
+    }, true);
 }
 
 function logout() {
-    if (confirm("Yakin ingin log out bro?")) {
+    showCustomConfirm("Yakin ingin log out bro?", () => {
         clearAuthUser();
         window.location.reload();
+    });
+}
+
+// ===== CUSTOM POPUPS (MODALS) =====
+
+// --- Custom Select (Bottom Sheet) ---
+let currentSelectInputId = null;
+
+const selectOptionsData = {
+    'gender': [
+        {val: 'pria', label: 'Pria'},
+        {val: 'wanita', label: 'Wanita'}
+    ],
+    'aktivitas': [
+        {val: 'sedentary', label: 'Sedentary (Hampir tidak olahraga)'},
+        {val: 'light', label: 'Light (Olahraga 1-3x/minggu)'},
+        {val: 'moderate', label: 'Moderate (Olahraga 3-5x/minggu)'},
+        {val: 'active', label: 'Active (Olahraga 6-7x/minggu)'},
+        {val: 'very_active', label: 'Very Active (Olahraga keras setiap hari)'}
+    ],
+    'mealTime': [
+        {val: 'sarapan', label: 'Sarapan'},
+        {val: 'makan_siang', label: 'Makan Siang'},
+        {val: 'makan_malam', label: 'Makan Malam'},
+        {val: 'snack', label: 'Snack'}
+    ],
+    'editMealTime': [
+        {val: 'sarapan', label: 'Sarapan'},
+        {val: 'makan_siang', label: 'Makan Siang'},
+        {val: 'makan_malam', label: 'Makan Malam'},
+        {val: 'snack', label: 'Snack'}
+    ]
+};
+
+const selectTitles = {
+    'gender': 'Jenis Kelamin',
+    'aktivitas': 'Level Aktivitas',
+    'mealTime': 'Waktu Makan',
+    'editMealTime': 'Waktu Makan'
+};
+
+function openCustomSelect(inputId) {
+    currentSelectInputId = inputId;
+    const currentVal = document.getElementById(inputId).value;
+    const title = selectTitles[inputId] || 'Pilih Opsi';
+    const options = selectOptionsData[inputId] || [];
+    
+    document.getElementById('customSheetTitle').innerText = title;
+    
+    const optionsHtml = options.map(opt => `
+        <div class="custom-sheet-opt ${opt.val === currentVal ? 'selected' : ''}" onclick="selectCustomOption('${opt.val}', '${opt.label}')">
+            <span>${opt.label}</span>
+            ${opt.val === currentVal ? '<i data-lucide="check" style="width:18px;height:18px"></i>' : ''}
+        </div>
+    `).join('');
+    
+    document.getElementById('customSheetOptions').innerHTML = optionsHtml;
+    document.getElementById('customSheetOverlay').classList.add('active');
+    if(window.lucide) lucide.createIcons();
+}
+
+function selectCustomOption(val, label) {
+    if (currentSelectInputId) {
+        document.getElementById(currentSelectInputId).value = val;
+        document.getElementById(currentSelectInputId + '_label').innerText = label;
     }
+    closeCustomSelect();
+}
+
+function closeCustomSelect(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('customSheetOverlay').classList.remove('active');
+}
+
+// --- Custom Confirm (Modal) ---
+let confirmCallback = null;
+
+function showCustomConfirm(msg, callback, isDanger = false) {
+    document.getElementById('customConfirmMsg').innerHTML = msg;
+    confirmCallback = callback;
+    
+    const iconDiv = document.getElementById('customConfirmIcon');
+    if (isDanger) {
+        iconDiv.innerHTML = '<i data-lucide="alert-octagon" style="width:48px;height:48px"></i>';
+        iconDiv.className = 'custom-confirm-icon danger';
+    } else {
+        iconDiv.innerHTML = '<i data-lucide="help-circle" style="width:48px;height:48px"></i>';
+        iconDiv.className = 'custom-confirm-icon';
+    }
+    
+    const btn = document.getElementById('customConfirmBtn');
+    btn.onclick = () => {
+        if (confirmCallback) confirmCallback();
+        closeCustomConfirm();
+    };
+    
+    document.getElementById('customConfirmOverlay').classList.add('active');
+    if(window.lucide) lucide.createIcons();
+}
+
+function closeCustomConfirm() {
+    document.getElementById('customConfirmOverlay').classList.remove('active');
+    confirmCallback = null;
 }

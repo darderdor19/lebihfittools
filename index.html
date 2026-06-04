@@ -66,21 +66,20 @@
           </div>
           <div class="form-group">
             <label>Jenis Kelamin</label>
-            <select id="gender">
-              <option value="pria">Pria</option>
-              <option value="wanita">Wanita</option>
-            </select>
+            <input type="hidden" id="gender" value="pria">
+            <div class="custom-select-trigger" onclick="openCustomSelect('gender')">
+              <span id="gender_label">Pria</span>
+              <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+            </div>
           </div>
         </div>
         <div class="form-group full-width">
           <label>Level Aktivitas</label>
-          <select id="aktivitas">
-            <option value="sedentary">Sedentary (Hampir tidak olahraga)</option>
-            <option value="light">Light (Olahraga 1-3x/minggu)</option>
-            <option value="moderate" selected>Moderate (Olahraga 3-5x/minggu)</option>
-            <option value="active">Active (Olahraga 6-7x/minggu)</option>
-            <option value="very_active">Very Active (Olahraga keras setiap hari)</option>
-          </select>
+          <input type="hidden" id="aktivitas" value="moderate">
+          <div class="custom-select-trigger" onclick="openCustomSelect('aktivitas')">
+            <span id="aktivitas_label">Moderate (Olahraga 3-5x/minggu)</span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+          </div>
         </div>
         <div class="form-group full-width">
           <label>Target</label>
@@ -277,12 +276,11 @@
             </div>
             <div class="form-group">
               <label>Waktu Makan</label>
-              <select id="mealTime">
-                <option value="sarapan">Sarapan</option>
-                <option value="makan_siang" selected>Makan Siang</option>
-                <option value="makan_malam">Makan Malam</option>
-                <option value="snack">Snack</option>
-              </select>
+              <input type="hidden" id="mealTime" value="makan_siang">
+              <div class="custom-select-trigger" onclick="openCustomSelect('mealTime')">
+                <span id="mealTime_label">Makan Siang</span>
+                <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+              </div>
             </div>
             <div id="nutrisiContainer" class="hidden">
               <div class="nutrisi-box">
@@ -569,12 +567,11 @@
         </div>
         <div class="form-group">
           <label>Waktu Makan</label>
-          <select id="editMealTime">
-            <option value="sarapan">Sarapan</option>
-            <option value="makan_siang">Makan Siang</option>
-            <option value="makan_malam">Makan Malam</option>
-            <option value="snack">Snack</option>
-          </select>
+          <input type="hidden" id="editMealTime" value="sarapan">
+          <div class="custom-select-trigger" onclick="openCustomSelect('editMealTime')">
+            <span id="editMealTime_label">Sarapan</span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+          </div>
         </div>
         <div class="form-grid">
           <div class="form-group"><label>Kalori</label><input type="number" id="editCal" min="0"></div>
@@ -600,6 +597,29 @@
 
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- CUSTOM BOTTOM SHEET -->
+  <div id="customSheetOverlay" class="custom-sheet-overlay" onclick="closeCustomSelect(event)">
+    <div class="custom-sheet" onclick="event.stopPropagation()">
+      <div class="custom-sheet-header">
+        <h3 class="custom-sheet-title" id="customSheetTitle">Pilih Opsi</h3>
+        <button class="btn-icon" onclick="closeCustomSelect()" style="color:var(--text2)"><i data-lucide="x"></i></button>
+      </div>
+      <div class="custom-sheet-options" id="customSheetOptions"></div>
+    </div>
+  </div>
+
+  <!-- CUSTOM CONFIRM MODAL -->
+  <div id="customConfirmOverlay" class="custom-confirm-overlay">
+    <div class="custom-confirm">
+      <div class="custom-confirm-icon" id="customConfirmIcon"><i data-lucide="alert-triangle" style="width:48px;height:48px"></i></div>
+      <div class="custom-confirm-msg" id="customConfirmMsg">Apakah Anda yakin?</div>
+      <div class="custom-confirm-actions">
+        <button class="btn-secondary" onclick="closeCustomConfirm()">Batal</button>
+        <button class="btn-primary" id="customConfirmBtn">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Firebase SDK -->
