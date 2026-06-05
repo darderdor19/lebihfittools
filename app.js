@@ -166,6 +166,7 @@ function showPage(pageId) {
     if (pageId === 'history') {
         setPeriod('week');
     }
+    if (pageId === 'settings') checkTelegramStatus();
     if (pageId === 'calculator') {
         prefillRecalcForm();
     }
@@ -924,6 +925,48 @@ function updateApiStatus(hasKey) {
         div.className = 'api-status err';
     }
     if(window.lucide) lucide.createIcons();
+}
+
+// ===== TELEGRAM CONNECT =====
+const BOT_USERNAME = 'LebihFitBot'; // Ganti dengan username bot lu
+
+function connectTelegram() {
+    const authUser = getAuthUser();
+    if (!authUser || !authUser.email) {
+        showToast('Login dulu sebelum connect Telegram!', 'error');
+        return;
+    }
+
+    // Encode email untuk deep link
+    const encodedEmail = authUser.email.replace('@', '_at_').replace(/\./g, '_dot_');
+    const deepLink = `https://t.me/${BOT_USERNAME}?start=${encodedEmail}`;
+
+    document.getElementById('telegramLinkBox').classList.remove('hidden');
+    document.getElementById('telegramDeepLink').href = deepLink;
+    document.getElementById('telegramLinkText').value = deepLink;
+    if(window.lucide) lucide.createIcons();
+}
+
+async function checkTelegramStatus() {
+    const authUser = getAuthUser();
+    if (!authUser || !authUser.email) return;
+    const statusDiv = document.getElementById('telegramStatus');
+    if (!statusDiv) return;
+
+    // Check Firebase if telegram is linked
+    if (!fbDb) return;
+    const safeEmailKey = authUser.email.replace(/[\.\#\$\[\]]/g, '_');
+    try {
+        const snapshot = await fbDb.ref(`users/${safeEmailKey}/telegram_chat_id`).once('value');
+        const chatId = snapshot.val();
+        if (chatId) {
+            statusDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--success);"><i data-lucide="check-circle" style="width:18px;height:18px;"></i> <span>Telegram sudah terhubung!</span></div>`;
+            document.getElementById('btnConnectTelegram').textContent = 'Hubungkan Ulang';
+        } else {
+            statusDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text2);"><i data-lucide="circle" style="width:18px;height:18px;"></i> <span>Belum terhubung</span></div>`;
+        }
+        if(window.lucide) lucide.createIcons();
+    } catch(e) {}
 }
 
 function exportData() {

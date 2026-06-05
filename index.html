@@ -512,9 +512,9 @@
             </div>
           </div>
           <div class="form-group" style="margin-top: 12px;">
-            <label>Secret Token (OpenRouter - Analisis Gambar)</label>
+            <label>Secret Token (OpenRouter - Analisis Gambar) <span style="font-size:0.75rem;color:var(--text3);font-weight:400;">(Tidak diperlukan lagi - gunakan Groq)</span></label>
             <div class="api-input-wrap">
-              <input type="password" id="visionKeyInput" placeholder="sk-or-..." class="api-input">
+              <input type="password" id="visionKeyInput" placeholder="sk-or-... (opsional)" class="api-input">
               <button class="btn-icon" onclick="toggleApiVis('visionKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
             </div>
           </div>
@@ -522,6 +522,23 @@
             <button class="btn-primary" onclick="saveApiKey()"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan API Keys</button>
           </div>
           <div id="apiStatus" class="api-status"></div>
+        </div>
+        <!-- TELEGRAM CONNECT -->
+        <div class="section-card" id="telegramSection">
+          <h3 class="section-title"><i data-lucide="send" style="display:inline-block;vertical-align:text-bottom;"></i> Telegram Bot</h3>
+          <p class="setting-desc">Hubungkan akun LebihFit lu dengan Telegram untuk log makanan langsung dari bot tanpa buka web!</p>
+          <div id="telegramStatus" style="margin: 16px 0;"></div>
+          <button class="btn-primary" onclick="connectTelegram()" id="btnConnectTelegram">
+            <i data-lucide="send" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Hubungkan Telegram
+          </button>
+          <div id="telegramLinkBox" class="hidden" style="margin-top:16px;background:var(--surface2);border:1px solid var(--accent3);border-radius:var(--radius-sm);padding:16px;">
+            <p style="font-size:0.85rem;color:var(--text2);margin-bottom:12px;">Klik link di bawah untuk membuka bot dan hubungkan akun:</p>
+            <a id="telegramDeepLink" href="#" target="_blank" class="btn-primary btn-full" style="display:block;text-align:center;text-decoration:none;">
+              <i data-lucide="external-link" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Buka @LebihFitBot di Telegram
+            </a>
+            <p style="font-size:0.75rem;color:var(--text3);margin-top:12px;text-align:center;">Atau salin link ini dan buka di Telegram</p>
+            <input type="text" id="telegramLinkText" readonly onclick="this.select()" style="width:100%;margin-top:6px;font-size:0.75rem;background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:8px;border-radius:var(--radius-sm);cursor:pointer;">
+          </div>
         </div>
         <div class="section-card">
           <h3 class="section-title"><i data-lucide="database" style="display:inline-block;vertical-align:text-bottom;"></i> Manajemen Data</h3>
@@ -628,6 +645,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="core.js?v=3"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
