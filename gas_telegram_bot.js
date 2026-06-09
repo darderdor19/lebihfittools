@@ -994,7 +994,7 @@ function sendDailyEmail(email, name, logs, analysisText, total, profile) {
       
       '<div style="margin-top:30px;padding-top:20px;border-top:1px solid #1a2d42;text-align:center">' +
         '<a href="https://darderdor19.github.io/lebihfittools/" style="background:linear-gradient(135deg,#005c66,#00a6b8);color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;font-weight:bold;letter-spacing:1px;font-size:0.85rem;display:inline-block;box-shadow:0 4px 10px rgba(0,240,255,0.2);margin: 6px">Buka Web App</a>' +
-        '<a href="https://t.me/lebihfittracker_bot" style="background:linear-gradient(135deg,#1c74a3,#229ED9);color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;font-weight:bold;letter-spacing:1px;font-size:0.85rem;display:inline-block;box-shadow:0 4px 10px rgba(34,158,217,0.2);margin: 6px">Akses Telegram Bot</a>' +
+        '<a href="https://t.me/jadilebihfit_bot" style="background:linear-gradient(135deg,#1c74a3,#229ED9);color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;font-weight:bold;letter-spacing:1px;font-size:0.85rem;display:inline-block;box-shadow:0 4px 10px rgba(34,158,217,0.2);margin: 6px">Akses Telegram Bot</a>' +
       '</div>' +
       
       '<p style="color:#4a6b7c;font-size:0.75rem;text-align:center;margin-top:30px">Email ini dikirimkan otomatis oleh sistem tracker LebihFit setiap jam 12 malam.</p>' +

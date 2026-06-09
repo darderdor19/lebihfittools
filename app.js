@@ -1167,7 +1167,7 @@ function updateApiStatus(hasKey) {
 }
 
 // ===== TELEGRAM CONNECT =====
-const BOT_USERNAME = 'lebihfittracker_bot';
+const BOT_USERNAME = 'jadilebihfit_bot';
 
 function connectTelegram() {
     const authUser = getAuthUser();
