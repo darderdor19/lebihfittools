@@ -676,7 +676,11 @@ function setWebhook() {
   var webhookUrl = ScriptApp.getService().getUrl();
   var res = UrlFetchApp.fetch(TG_API + '/setWebhook', {
     method: 'POST', contentType: 'application/json',
-    payload: JSON.stringify({ url: webhookUrl, allowed_updates: ['message', 'callback_query'] })
+    payload: JSON.stringify({ 
+      url: webhookUrl, 
+      allowed_updates: ['message', 'callback_query'],
+      drop_pending_updates: true 
+    })
   });
   Logger.log('Webhook: ' + res.getContentText());
   
