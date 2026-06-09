@@ -711,7 +711,7 @@ a{color:var(--accent);text-decoration:none}
 /* ===== TELEGRAM BUTTON DASHBOARD ===== */
 .btn-telegram-dash{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#229ED9,#1a8bc0);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border:none;cursor:pointer;transition:.2s;letter-spacing:.5px;box-shadow:0 4px 15px rgba(34,158,217,.3)}
 .btn-telegram-dash:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(34,158,217,.5)}
-@media(max-width:768px){.btn-telegram-dash{padding:8px 12px;font-size:.8rem}}
+@media(max-width:768px){.btn-telegram-dash{display:none!important}}
 
 /* ===== AI ANALYSIS CARD ===== */
 .ai-analysis-card {
