@@ -928,7 +928,7 @@ function updateApiStatus(hasKey) {
 }
 
 // ===== TELEGRAM CONNECT =====
-const BOT_USERNAME = 'LebihFitBot'; // Ganti dengan username bot lu
+const BOT_USERNAME = 'lebihfittracker_bot';
 
 function connectTelegram() {
     const authUser = getAuthUser();
