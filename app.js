@@ -766,7 +766,7 @@ function renderHistoryChart(data) {
     
     // Create gradient fill
     const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-    gradient.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
+    gradient.addColorStop(0, 'rgba(0, 240, 255, 0.2)');
     gradient.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
     
     currentChart = new Chart(canvas, {
@@ -805,23 +805,22 @@ function renderHistoryChart(data) {
                     cornerRadius: 8,
                     displayColors: false,
                     padding: 12,
-                    titleFont: { family: 'monospace', weight: 'bold', size: 12 },
-                    bodyFont: { family: 'monospace', size: 12 }
+                    titleFont: { family: '"Inter", sans-serif', weight: 'bold', size: 12 },
+                    bodyFont: { family: '"Inter", sans-serif', size: 12 }
                 }
             },
             scales: {
                 y: { 
                     beginAtZero: true, 
                     grid: { 
-                        color: 'rgba(255, 255, 255, 0.05)', 
-                        borderDash: [5, 5], // Elegant horizontal dashed gridlines
+                        color: 'rgba(255, 255, 255, 0.03)', 
                         drawBorder: false 
                     }, 
-                    ticks: { color: '#8caebf', font: { family: 'monospace', size: 10 } } 
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } } 
                 },
                 x: { 
                     grid: { display: false }, 
-                    ticks: { color: '#8caebf', font: { family: 'monospace', size: 10 } } 
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } } 
                 }
             }
         }
@@ -845,15 +844,13 @@ function renderHistoryChart(data) {
                 data: [avgProtein, avgCarbs, avgFat],
                 backgroundColor: ['#00f0ff', '#fbbf24', '#ff3366'],
                 borderWidth: 0,
-                borderRadius: 10, // Modern rounded edges
-                spacing: 5,       // Gaps between segments
                 hoverOffset: 6
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '83%', // Thin ring design
+            cutout: '78%', // Clean ring design matching reference
             plugins: { 
                 legend: { display: false }, // Use custom HTML legend instead
                 tooltip: {
@@ -864,8 +861,8 @@ function renderHistoryChart(data) {
                     borderWidth: 1,
                     cornerRadius: 8,
                     padding: 12,
-                    titleFont: { family: 'monospace', weight: 'bold', size: 12 },
-                    bodyFont: { family: 'monospace', size: 12 },
+                    titleFont: { family: '"Inter", sans-serif', weight: 'bold', size: 12 },
+                    bodyFont: { family: '"Inter", sans-serif', size: 12 },
                     callbacks: {
                         label: function(context) {
                             let val = context.raw || 0;
@@ -887,17 +884,17 @@ function renderHistoryChart(data) {
                 const centerX = (left + right) / 2;
                 const centerY = (top + bottom) / 2;
                 
-                // Subtitle: TOTAL MAKRO
-                ctx.font = 'normal 9px monospace';
-                ctx.fillStyle = '#8caebf';
+                // Value (Large, Bold) on top
+                ctx.font = 'bold 22px "Inter", "Plus Jakarta Sans", sans-serif';
+                ctx.fillStyle = '#ffffff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('TOTAL MAKRO', centerX, centerY - 10);
+                ctx.fillText(`${Math.round(total)}g`, centerX, centerY - 6);
                 
-                // Title: [X]g
-                ctx.font = 'bold 20px monospace';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(`${Math.round(total)}g`, centerX, centerY + 10);
+                // Subtitle (Small, Muted) below
+                ctx.font = 'normal 10px "Inter", "Plus Jakarta Sans", sans-serif';
+                ctx.fillStyle = '#8caebf';
+                ctx.fillText('TOTAL MAKRO', centerX, centerY + 14);
                 
                 ctx.restore();
             }
@@ -916,31 +913,22 @@ function renderHistoryChart(data) {
             <div class="macro-legend-item" style="color: #00f0ff;">
                 <div class="macro-legend-dot" style="background-color: #00f0ff;"></div>
                 <div class="macro-legend-info">
-                    <div class="macro-legend-val-row">
-                        <span class="macro-legend-val">${avgProtein.toFixed(1)}g</span>
-                        <span class="macro-legend-pct">${proteinPct}%</span>
-                    </div>
-                    <span class="macro-legend-lbl">Protein</span>
+                    <span class="macro-legend-val">${avgProtein.toFixed(1)}g</span>
+                    <span class="macro-legend-lbl">Protein (${proteinPct}%)</span>
                 </div>
             </div>
             <div class="macro-legend-item" style="color: #fbbf24;">
                 <div class="macro-legend-dot" style="background-color: #fbbf24;"></div>
                 <div class="macro-legend-info">
-                    <div class="macro-legend-val-row">
-                        <span class="macro-legend-val">${avgCarbs.toFixed(1)}g</span>
-                        <span class="macro-legend-pct">${carbsPct}%</span>
-                    </div>
-                    <span class="macro-legend-lbl">Karbo</span>
+                    <span class="macro-legend-val">${avgCarbs.toFixed(1)}g</span>
+                    <span class="macro-legend-lbl">Karbo (${carbsPct}%)</span>
                 </div>
             </div>
             <div class="macro-legend-item" style="color: #ff3366;">
                 <div class="macro-legend-dot" style="background-color: #ff3366;"></div>
                 <div class="macro-legend-info">
-                    <div class="macro-legend-val-row">
-                        <span class="macro-legend-val">${avgFat.toFixed(1)}g</span>
-                        <span class="macro-legend-pct">${fatPct}%</span>
-                    </div>
-                    <span class="macro-legend-lbl">Lemak</span>
+                    <span class="macro-legend-val">${avgFat.toFixed(1)}g</span>
+                    <span class="macro-legend-lbl">Lemak (${fatPct}%)</span>
                 </div>
             </div>
         `;
