@@ -86,7 +86,19 @@ function handleMessage(msg) {
   
   logToFirebase('handleMessage', { userId: userId, chatId: chatId, text: text, state: state });
 
-  if (text === '/start') return onStart(chatId, userId);
+  // Handle /start commands (both plain and with payload)
+  if (text.indexOf('/start') === 0) {
+    var parts = text.split(' ');
+    if (parts.length > 1) {
+      // Decode email dari parameter start
+      var payload = parts[1];
+      var email = payload.replace(/_at_/g, '@').replace(/_dot_/g, '.');
+      logToFirebase('handleMessage_start_payload', { email: email });
+      return onEmailInput(chatId, userId, email);
+    }
+    return onStart(chatId, userId);
+  }
+
   if (text === '/menu') return showMainMenu(chatId, userId);
   if (text === '/help') return sendHelp(chatId);
 
