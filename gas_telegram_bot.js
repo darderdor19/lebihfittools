@@ -15,13 +15,43 @@ const TG_API = 'https://api.telegram.org/bot' + BOT_TOKEN;
 // ====================================================
 // ENTRY POINTS
 // ====================================================
-function doPost(e) {
+function logToFirebase(tag, data) {
   try {
-    const body = JSON.parse(e.postData.contents);
+    var timestamp = new Date().toISOString();
+    var logKey = timestamp.replace(/[.#$\[\]]/g, '_') + '_' + Math.floor(Math.random() * 1000);
+    setFirebase('bot_logs/' + logKey, {
+      timestamp: timestamp,
+      tag: tag,
+      data: data
+    });
+  } catch (e) {
+    // ignore
+  }
+}
+
+function doPost(e) {
+  var chatIdForErr = null;
+  try {
+    const contents = e.postData.contents;
+    logToFirebase('doPost_received', contents);
+    const body = JSON.parse(contents);
+    if (body.message) {
+      chatIdForErr = body.message.chat.id;
+    } else if (body.callback_query && body.callback_query.message) {
+      chatIdForErr = body.callback_query.message.chat.id;
+    }
 
     // OTP handler untuk web app (menangani format requestOTP & verifyOTP dari app.js)
-    if (body.action === 'requestOTP') return handleRequestOTPCombined(body);
-    if (body.action === 'verifyOTP') return handleVerifyOTPCombined(body);
+    if (body.action === 'requestOTP') {
+      var res = handleRequestOTPCombined(body);
+      logToFirebase('requestOTP_response', res.getContentText());
+      return res;
+    }
+    if (body.action === 'verifyOTP') {
+      var res = handleVerifyOTPCombined(body);
+      logToFirebase('verifyOTP_response', res.getContentText());
+      return res;
+    }
 
     // Telegram update
     if (body.message) handleMessage(body.message);
@@ -29,6 +59,14 @@ function doPost(e) {
 
   } catch (err) {
     Logger.log('doPost ERR: ' + err);
+    logToFirebase('doPost_error', err.toString() + ' | Stack: ' + err.stack);
+    if (chatIdForErr) {
+      try {
+        sendMessage(chatIdForErr, "⚠️ *Error Bot:* " + err.toString() + "\n\nHubungi developer atau coba lagi.", null, '');
+      } catch (sendErr) {
+        Logger.log('Failed to send error message: ' + sendErr);
+      }
+    }
   }
   return ContentService.createTextOutput('OK');
 }
@@ -45,6 +83,8 @@ function handleMessage(msg) {
   const userId = msg.from.id;
   const text = (msg.text || '').trim();
   const state = getState(userId);
+  
+  logToFirebase('handleMessage', { userId: userId, chatId: chatId, text: text, state: state });
 
   if (text === '/start') return onStart(chatId, userId);
   if (text === '/menu') return showMainMenu(chatId, userId);
@@ -56,6 +96,7 @@ function handleMessage(msg) {
 
   // Default: jika sudah login, langsung proses sebagai makanan
   const email = getLinkedEmail(userId);
+  logToFirebase('handleMessage_default', { email: email });
   if (!email) return promptLogin(chatId, userId);
 
   setState(userId, 'AWAIT_FOOD');
@@ -114,16 +155,20 @@ function promptLogin(chatId, userId) {
 }
 
 function onEmailInput(chatId, userId, email) {
+  logToFirebase('onEmailInput_start', { chatId: chatId, userId: userId, email: email });
   if (!email.includes('@') || !email.includes('.')) {
     return sendMessage(chatId, 'Format email tidak valid. Coba lagi!');
   }
-  setState(userId, 'AWAIT_OTP');
-  setCache(userId + '_email', email);
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  setCache(userId + '_otp', otp);
-
+  
   try {
+    setState(userId, 'AWAIT_OTP');
+    setCache(userId + '_email', email);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    setCache(userId + '_otp', otp);
+    
+    logToFirebase('onEmailInput_otp_generated', { email: email, otp: otp });
+
     MailApp.sendEmail({
       to: email,
       subject: 'Kode OTP LebihFit Bot - ' + otp,
@@ -135,47 +180,58 @@ function onEmailInput(chatId, userId, email) {
         '<span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span>' +
         '</div><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
     });
+    
+    logToFirebase('onEmailInput_email_sent', { email: email });
+    
     sendMessage(chatId,
       'OTP dikirim ke *' + email + '*\n\nCek email lu dan kirim kode 6 digit di sini:',
       null
     );
   } catch (err) {
+    logToFirebase('onEmailInput_error', err.toString() + ' | Stack: ' + err.stack);
     setState(userId, null);
-    sendMessage(chatId, 'Gagal kirim OTP: ' + err.message + '\n\nPastikan email benar ya.');
+    sendMessage(chatId, 'Gagal kirim OTP: ' + err.message + '\n\nPastikan email benar ya.', null, '');
   }
 }
 
 function onOtpInput(chatId, userId, otpInput) {
-  const storedOtp = getCache(userId + '_otp');
-  const storedEmail = getCache(userId + '_email');
+  logToFirebase('onOtpInput_start', { chatId: chatId, userId: userId, otpInput: otpInput });
+  try {
+    const storedOtp = getCache(userId + '_otp');
+    const storedEmail = getCache(userId + '_email');
+    logToFirebase('onOtpInput_stored', { storedOtp: storedOtp, storedEmail: storedEmail });
 
-  if (!storedOtp || !storedEmail) {
+    if (!storedOtp || !storedEmail) {
+      setState(userId, null);
+      return sendMessage(chatId, 'OTP expired. Ketik /start untuk coba lagi.');
+    }
+    if (otpInput.trim() !== storedOtp) {
+      return sendMessage(chatId, 'Kode OTP salah. Coba lagi!');
+    }
+
+    // Link account
+    setFirebase('telegram_links/' + userId, {
+      email: storedEmail,
+      chatId: chatId,
+      linkedAt: new Date().toISOString()
+    });
+    setFirebase('users/' + safe(storedEmail) + '/telegram_chat_id', chatId.toString());
+
     setState(userId, null);
-    return sendMessage(chatId, 'OTP expired. Ketik /start untuk coba lagi.');
+    deleteCache(userId + '_otp');
+    deleteCache(userId + '_email');
+
+    const profile = getFirebase('users/' + safe(storedEmail) + '/lf_profile');
+    const userName = profile ? (profile.name || 'Bro') : 'Bro';
+
+    sendMessage(chatId,
+      'Login berhasil, *' + userName + '*!\n\nAkun LebihFit lu sudah terhubung. Pilih menu:',
+      mainMenuKeyboard()
+    );
+  } catch (err) {
+    logToFirebase('onOtpInput_error', err.toString() + ' | Stack: ' + err.stack);
+    sendMessage(chatId, 'Error verifikasi OTP: ' + err.message, null, '');
   }
-  if (otpInput.trim() !== storedOtp) {
-    return sendMessage(chatId, 'Kode OTP salah. Coba lagi!');
-  }
-
-  // Link account
-  setFirebase('telegram_links/' + userId, {
-    email: storedEmail,
-    chatId: chatId,
-    linkedAt: new Date().toISOString()
-  });
-  setFirebase('users/' + safe(storedEmail) + '/telegram_chat_id', chatId.toString());
-
-  setState(userId, null);
-  deleteCache(userId + '_otp');
-  deleteCache(userId + '_email');
-
-  const profile = getFirebase('users/' + safe(storedEmail) + '/lf_profile');
-  const userName = profile ? (profile.name || 'Bro') : 'Bro';
-
-  sendMessage(chatId,
-    'Login berhasil, *' + userName + '*!\n\nAkun LebihFit lu sudah terhubung. Pilih menu:',
-    mainMenuKeyboard()
-  );
 }
 
 // ====================================================
@@ -629,28 +685,31 @@ function getLinkedEmail(userId) {
 // STATE & CACHE
 // ====================================================
 function setState(userId, state) {
-  var c = CacheService.getScriptCache();
-  if (state) c.put('state_' + userId, state, 3600);
-  else c.remove('state_' + userId);
+  setFirebase('telegram_states/' + userId, state);
 }
 function getState(userId) {
-  return CacheService.getScriptCache().get('state_' + userId) || null;
+  return getFirebase('telegram_states/' + userId) || null;
 }
 function setCache(key, value) {
-  CacheService.getScriptCache().put('lf_' + key, value, 600);
+  setFirebase('telegram_cache/' + key, value);
 }
 function getCache(key) {
-  return CacheService.getScriptCache().get('lf_' + key);
+  return getFirebase('telegram_cache/' + key) || null;
 }
 function deleteCache(key) {
-  CacheService.getScriptCache().remove('lf_' + key);
+  setFirebase('telegram_cache/' + key, null);
 }
 
 // ====================================================
 // TELEGRAM HELPERS
 // ====================================================
-function sendMessage(chatId, text, keyboard) {
-  var payload = { chat_id: chatId, text: text, parse_mode: 'Markdown' };
+function sendMessage(chatId, text, keyboard, parseMode) {
+  var payload = { chat_id: chatId, text: text };
+  if (parseMode !== null && parseMode !== undefined) {
+    if (parseMode) payload.parse_mode = parseMode;
+  } else {
+    payload.parse_mode = 'Markdown';
+  }
   if (keyboard) payload.reply_markup = keyboard;
   UrlFetchApp.fetch(TG_API + '/sendMessage', {
     method: 'POST', contentType: 'application/json',
@@ -729,6 +788,20 @@ function setWebhook() {
   // Setup midnight email trigger automatically
   createMidnightTrigger();
   Logger.log('Midnight email trigger set up successfully.');
+}
+
+function testEmail() {
+  var userEmail = Session.getActiveUser().getEmail();
+  try {
+    MailApp.sendEmail({
+      to: userEmail,
+      subject: 'LebihFit Test Email',
+      body: 'Jika lu menerima email ini, berarti otorisasi pengiriman email LebihFit sudah sukses!'
+    });
+    Logger.log('Test email sent successfully to ' + userEmail);
+  } catch (err) {
+    Logger.log('Test email failed: ' + err);
+  }
 }
 
 // ====================================================
