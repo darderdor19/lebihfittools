@@ -44,12 +44,12 @@ function doPost(e) {
     // OTP handler untuk web app (menangani format requestOTP & verifyOTP dari app.js)
     if (body.action === 'requestOTP') {
       var res = handleRequestOTPCombined(body);
-      logToFirebase('requestOTP_response', res.getContentText());
+      logToFirebase('requestOTP_response', res.getContent());
       return res;
     }
     if (body.action === 'verifyOTP') {
       var res = handleVerifyOTPCombined(body);
-      logToFirebase('verifyOTP_response', res.getContentText());
+      logToFirebase('verifyOTP_response', res.getContent());
       return res;
     }
 
@@ -774,7 +774,8 @@ function jsonResp(obj) {
 // SETUP — Jalankan setWebhook() SEKALI setelah deploy
 // ====================================================
 function setWebhook() {
-  var webhookUrl = ScriptApp.getService().getUrl();
+  // Gunakan URL web app yang dipublish secara manual agar 100% akurat
+  var webhookUrl = 'https://script.google.com/macros/s/AKfycbxwEGkpYlxxJYlvzOaOoEO7YDrurUmbDP-E-BBb7M22xDRg7cPH3lOUMSBkCAWO06sCDQ/exec';
   var res = UrlFetchApp.fetch(TG_API + '/setWebhook', {
     method: 'POST', contentType: 'application/json',
     payload: JSON.stringify({ 
