@@ -1,439 +1,670 @@
 // ====================================================
-// LEBIHFIT - Google Apps Script
-// Fitur: OTP Email + Telegram Bot Webhook
+// LEBIHFIT TELEGRAM BOT - Full Featured
 // ====================================================
-// SETUP INSTRUCTIONS:
-// 1. Buka script.google.com → buat project baru
-// 2. Paste seluruh kode ini
-// 3. Isi Script Properties (Project Settings → Script Properties):
-//    - TELEGRAM_BOT_TOKEN = (token bot Telegram lu)
-//    - GROQ_API_KEY = (API key Groq lu)
-//    - FIREBASE_URL = https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app
-//    - FIREBASE_API_KEY = AIzaSyAL69COk7XKUnKalpBY9QmLSMddHv0lEe4
-// 4. Deploy → New Deployment → Web App → Execute as Me → Anyone
-// 5. Copy URL deploy, set webhook: jalankan fungsi setWebhook() sekali
+// SCRIPT PROPERTIES yang harus diisi:
+//   TELEGRAM_BOT_TOKEN = token dari BotFather
+//   GROQ_API_KEY       = API key Groq lu
 // ====================================================
 
-const PROPS = PropertiesService.getScriptProperties();
-
-function getConfig() {
-  return {
-    TELEGRAM_TOKEN: PROPS.getProperty('TELEGRAM_BOT_TOKEN'),
-    GROQ_KEY: PROPS.getProperty('GROQ_API_KEY'),
-    FIREBASE_URL: PROPS.getProperty('FIREBASE_URL') || 'https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app',
-    FIREBASE_API_KEY: PROPS.getProperty('FIREBASE_API_KEY') || 'AIzaSyAL69COk7XKUnKalpBY9QmLSMddHv0lEe4',
-  };
-}
+const PROPS    = PropertiesService.getScriptProperties();
+const BOT_TOKEN = PROPS.getProperty('TELEGRAM_BOT_TOKEN');
+const GROQ_KEY  = PROPS.getProperty('GROQ_API_KEY');
+const FB_URL    = 'https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app';
+const TG_API    = 'https://api.telegram.org/bot' + BOT_TOKEN;
 
 // ====================================================
-// HTTP HANDLER
+// ENTRY POINTS
 // ====================================================
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
 
-    // Telegram webhook
-    if (body.message || body.callback_query) {
-      handleTelegramUpdate(body);
-      return ContentService.createTextOutput('OK');
-    }
+    // OTP handler untuk web app (tetap ada)
+    if (body.action === 'sendOTP')   return handleSendOTP(body);
+    if (body.action === 'verifyOTP') return handleVerifyOTP(body);
 
-    // OTP request (dari web app)
-    if (body.action === 'sendOTP') {
-      return handleSendOTP(body);
-    }
-    if (body.action === 'verifyOTP') {
-      return handleVerifyOTP(body);
-    }
+    // Telegram update
+    if (body.message)        handleMessage(body.message);
+    if (body.callback_query) handleCallback(body.callback_query);
 
-    return jsonResponse({ ok: false, error: 'Unknown action' });
-  } catch (err) {
-    Logger.log('doPost error: ' + err);
-    return ContentService.createTextOutput('ERROR');
+  } catch(err) {
+    Logger.log('doPost ERR: ' + err);
   }
+  return ContentService.createTextOutput('OK');
 }
 
-function doGet(e) {
-  // Health check
-  return ContentService.createTextOutput(JSON.stringify({ status: 'LebihFit GAS OK', time: new Date().toISOString() }))
+function doGet() {
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, service: 'LebihFit Bot' }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ====================================================
-// OTP FUNCTIONS (original)
+// MESSAGE HANDLER
 // ====================================================
-const otpStore = {}; // In-memory, gunakan CacheService untuk production
+function handleMessage(msg) {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const text   = (msg.text || '').trim();
+  const state  = getState(userId);
 
-function handleSendOTP(body) {
-  const { email, name } = body;
-  if (!email) return jsonResponse({ ok: false, error: 'Email required' });
+  if (text === '/start') return onStart(chatId, userId);
+  if (text === '/menu')  return showMainMenu(chatId, userId);
+  if (text === '/help')  return sendHelp(chatId);
+
+  if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text);
+  if (state === 'AWAIT_OTP')   return onOtpInput(chatId, userId, text);
+  if (state === 'AWAIT_FOOD')  return onFoodInput(chatId, userId, text);
+
+  // Default: jika sudah login, langsung proses sebagai makanan
+  const email = getLinkedEmail(userId);
+  if (!email) return promptLogin(chatId, userId);
+
+  setState(userId, 'AWAIT_FOOD');
+  return onFoodInput(chatId, userId, text);
+}
+
+// ====================================================
+// CALLBACK QUERY HANDLER
+// ====================================================
+function handleCallback(cb) {
+  const chatId = cb.message.chat.id;
+  const userId = cb.from.id;
+  const data   = cb.data;
+  answerCallback(cb.id);
+
+  const email = getLinkedEmail(userId);
+
+  if (data === 'menu')        return showMainMenu(chatId, userId);
+  if (data === 'dashboard')   return email ? showDashboard(chatId, email)     : promptLogin(chatId, userId);
+  if (data === 'log_food')    return email ? promptFoodInput(chatId, userId)   : promptLogin(chatId, userId);
+  if (data === 'history')     return email ? showHistory(chatId, email)        : promptLogin(chatId, userId);
+  if (data === 'settings')    return showSettings(chatId, userId, email);
+  if (data === 'logout')      return doLogout(chatId, userId);
+  if (data === 'confirm_yes') return confirmSaveFood(chatId, userId);
+  if (data === 'confirm_no')  return cancelFood(chatId, userId);
+  if (data === 'hist_7')      return showHistoryDays(chatId, email, 7);
+  if (data === 'hist_14')     return showHistoryDays(chatId, email, 14);
+  if (data === 'hist_30')     return showHistoryDays(chatId, email, 30);
+}
+
+// ====================================================
+// START & LOGIN FLOW
+// ====================================================
+function onStart(chatId, userId) {
+  const email = getLinkedEmail(userId);
+  if (email) {
+    const profile  = getFirebase('users/' + safe(email) + '/lf_profile');
+    const userName = profile ? (profile.name || 'Bro') : 'Bro';
+    sendMessage(chatId,
+      '*Selamat datang kembali, ' + userName + '!*\n\nPilih menu di bawah:',
+      mainMenuKeyboard()
+    );
+  } else {
+    promptLogin(chatId, userId);
+  }
+}
+
+function promptLogin(chatId, userId) {
+  setState(userId, 'AWAIT_EMAIL');
+  sendMessage(chatId,
+    '*LebihFit Tracker Bot*\n\n' +
+    'Halo! Untuk mulai, login dulu ya.\n\n' +
+    'Kirim *email* yang lu pakai di LebihFit web app:',
+    null
+  );
+}
+
+function onEmailInput(chatId, userId, email) {
+  if (!email.includes('@') || !email.includes('.')) {
+    return sendMessage(chatId, 'Format email tidak valid. Coba lagi!');
+  }
+  setState(userId, 'AWAIT_OTP');
+  setCache(userId + '_email', email);
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const cache = CacheService.getScriptCache();
-  cache.put('otp_' + email, JSON.stringify({ otp, name, expires: Date.now() + 10 * 60 * 1000 }), 600);
+  setCache(userId + '_otp', otp);
 
   try {
     MailApp.sendEmail({
       to: email,
-      subject: '🔐 Kode OTP LebihFit - ' + otp,
-      htmlBody: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;">
-          <h2 style="color:#00f0ff;text-align:center;">LebihFit</h2>
-          <p>Halo <b>${name || 'Bro'}</b>!</p>
-          <p>Kode OTP lu:</p>
-          <div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center;margin:20px 0;">
-            <span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff;">${otp}</span>
-          </div>
-          <p style="color:#8caebf;font-size:0.85rem;">Berlaku 10 menit. Jangan share ke siapapun.</p>
-        </div>
-      `
+      subject: 'Kode OTP LebihFit Bot - ' + otp,
+      htmlBody:
+        '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px">' +
+        '<h2 style="color:#00f0ff;text-align:center">LebihFit Bot</h2>' +
+        '<p>Kode OTP untuk login Telegram Bot:</p>' +
+        '<div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center;margin:20px 0">' +
+        '<span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span>' +
+        '</div><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
     });
-    return jsonResponse({ ok: true });
-  } catch (err) {
-    return jsonResponse({ ok: false, error: err.message });
+    sendMessage(chatId,
+      'OTP dikirim ke *' + email + '*\n\nCek email lu dan kirim kode 6 digit di sini:',
+      null
+    );
+  } catch(err) {
+    setState(userId, null);
+    sendMessage(chatId, 'Gagal kirim OTP: ' + err.message + '\n\nPastikan email benar ya.');
+  }
+}
+
+function onOtpInput(chatId, userId, otpInput) {
+  const storedOtp   = getCache(userId + '_otp');
+  const storedEmail = getCache(userId + '_email');
+
+  if (!storedOtp || !storedEmail) {
+    setState(userId, null);
+    return sendMessage(chatId, 'OTP expired. Ketik /start untuk coba lagi.');
+  }
+  if (otpInput.trim() !== storedOtp) {
+    return sendMessage(chatId, 'Kode OTP salah. Coba lagi!');
+  }
+
+  // Link account
+  setFirebase('telegram_links/' + userId, {
+    email: storedEmail,
+    chatId: chatId,
+    linkedAt: new Date().toISOString()
+  });
+  setFirebase('users/' + safe(storedEmail) + '/telegram_chat_id', chatId.toString());
+
+  setState(userId, null);
+  deleteCache(userId + '_otp');
+  deleteCache(userId + '_email');
+
+  const profile  = getFirebase('users/' + safe(storedEmail) + '/lf_profile');
+  const userName = profile ? (profile.name || 'Bro') : 'Bro';
+
+  sendMessage(chatId,
+    'Login berhasil, *' + userName + '*!\n\nAkun LebihFit lu sudah terhubung. Pilih menu:',
+    mainMenuKeyboard()
+  );
+}
+
+// ====================================================
+// MAIN MENU
+// ====================================================
+function showMainMenu(chatId, userId) {
+  const email = getLinkedEmail(userId);
+  if (!email) return promptLogin(chatId, userId);
+
+  const profile  = getFirebase('users/' + safe(email) + '/lf_profile');
+  const userName = profile ? (profile.name || 'Bro') : 'Bro';
+
+  sendMessage(chatId,
+    'Halo, *' + userName + '*! Mau ngapain hari ini?',
+    mainMenuKeyboard()
+  );
+}
+
+function mainMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '📊 Dashboard',   callback_data: 'dashboard' },
+        { text: '🍽️ Log Makanan', callback_data: 'log_food'  }
+      ],
+      [
+        { text: '📈 History',   callback_data: 'history'  },
+        { text: '⚙️ Settings', callback_data: 'settings' }
+      ]
+    ]
+  };
+}
+
+// ====================================================
+// DASHBOARD
+// ====================================================
+function showDashboard(chatId, email) {
+  const today   = todayKey();
+  const logs    = getFirebase('users/' + safe(email) + '/lf_logs_' + today) || [];
+  const profile = getFirebase('users/' + safe(email) + '/lf_profile');
+  const total   = sumNutrients(logs);
+  const calTarget  = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
+  const remaining  = calTarget - Math.round(total.cal);
+  const pct        = calTarget > 0 ? Math.min(100, Math.round(total.cal / calTarget * 100)) : 0;
+  const bar        = progressBar(pct);
+
+  var msg = '*Dashboard - ' + formatDate(new Date()) + '*\n\n';
+  msg += 'Kalori: *' + Math.round(total.cal) + ' / ' + calTarget + ' kcal*\n';
+  msg += bar + ' ' + pct + '%\n';
+  msg += remaining > 0
+    ? 'Sisa: *' + remaining + ' kcal*\n'
+    : 'Melebihi target: *' + Math.abs(remaining) + ' kcal*\n';
+  msg += '\n';
+  msg += 'Protein: *' + total.protein.toFixed(1) + 'g*\n';
+  msg += 'Karbo:   *' + total.carbs.toFixed(1) + 'g*\n';
+  msg += 'Lemak:   *' + total.fat.toFixed(1) + 'g*\n';
+  msg += 'Serat:   *' + total.fiber.toFixed(1) + 'g*\n';
+  msg += '\n*' + logs.length + ' makanan* tercatat hari ini\n';
+
+  if (logs.length > 0) {
+    msg += '\n*Log Makanan:*\n';
+    var shown = logs.slice(-5);
+    for (var i = 0; i < shown.length; i++) {
+      msg += (i+1) + '. ' + shown[i].name + ' - ' + Math.round(shown[i].cal) + ' kcal\n';
+    }
+    if (logs.length > 5) msg += '_...dan ' + (logs.length - 5) + ' lainnya_\n';
+  }
+
+  sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
+      [{ text: '🏠 Menu Utama', callback_data: 'menu' }]
+    ]
+  });
+}
+
+// ====================================================
+// LOG MAKANAN
+// ====================================================
+function promptFoodInput(chatId, userId) {
+  setState(userId, 'AWAIT_FOOD');
+  sendMessage(chatId,
+    '*Log Makanan*\n\nKetik nama makanan yang lu makan:\n\n_Contoh:_\nnasi goreng ayam 1 piring\nayam geprek sambel 200g\nkopi susu gula 1 gelas',
+    { inline_keyboard: [[{ text: 'Batal', callback_data: 'menu' }]] }
+  );
+}
+
+function onFoodInput(chatId, userId, text) {
+  if (!text || text.length < 2) {
+    return sendMessage(chatId, 'Deskripsi makanan terlalu pendek. Coba lagi!');
+  }
+  const email = getLinkedEmail(userId);
+  if (!email) return promptLogin(chatId, userId);
+
+  setState(userId, null);
+  sendChatAction(chatId, 'typing');
+  sendMessage(chatId, 'Menganalisis: _' + text + '_...', null);
+
+  try {
+    var nutrition = analyzeWithGroq(text);
+    setCache(userId + '_pending', JSON.stringify(nutrition));
+
+    var msg = 'Hasil Analisis AI:\n\n';
+    msg += '*' + nutrition.name + '*\n';
+    msg += 'Porsi: ' + (nutrition.portion || '1 porsi') + '\n\n';
+    msg += 'Kalori: *' + Math.round(nutrition.cal || 0) + ' kcal*\n';
+    msg += 'Protein: *' + Number(nutrition.protein || 0).toFixed(1) + 'g*\n';
+    msg += 'Karbo: *' + Number(nutrition.carbs || 0).toFixed(1) + 'g*\n';
+    msg += 'Lemak: *' + Number(nutrition.fat || 0).toFixed(1) + 'g*\n';
+    msg += 'Serat: *' + Number(nutrition.fiber || 0).toFixed(1) + 'g*\n\n';
+    msg += '_Simpan ke dashboard?_';
+
+    sendMessage(chatId, msg, {
+      inline_keyboard: [[
+        { text: 'Simpan', callback_data: 'confirm_yes' },
+        { text: 'Batal',  callback_data: 'confirm_no'  }
+      ]]
+    });
+  } catch(err) {
+    Logger.log('onFoodInput ERR: ' + err);
+    sendMessage(chatId, 'Gagal analisis: ' + err.message, {
+      inline_keyboard: [[
+        { text: 'Coba Lagi', callback_data: 'log_food' },
+        { text: 'Menu',      callback_data: 'menu'     }
+      ]]
+    });
+  }
+}
+
+function confirmSaveFood(chatId, userId) {
+  var email = getLinkedEmail(userId);
+  if (!email) return promptLogin(chatId, userId);
+
+  var raw = getCache(userId + '_pending');
+  if (!raw) return sendMessage(chatId, 'Data expired. Silakan log ulang.', mainMenuKeyboard());
+
+  var nutrition = JSON.parse(raw);
+  deleteCache(userId + '_pending');
+
+  var today   = todayKey();
+  var logsKey = 'lf_logs_' + today;
+  var existing = getFirebase('users/' + safe(email) + '/' + logsKey) || [];
+
+  var newItem = {
+    id:        Utilities.getUuid(),
+    name:      nutrition.name || 'Makanan',
+    portion:   nutrition.portion || '1 porsi',
+    cal:       nutrition.cal     || 0,
+    protein:   nutrition.protein || 0,
+    carbs:     nutrition.carbs   || 0,
+    fat:       nutrition.fat     || 0,
+    fiber:     nutrition.fiber   || 0,
+    sugar:     nutrition.sugar   || 0,
+    sodium:    nutrition.sodium  || 0,
+    calcium:   nutrition.calcium || 0,
+    iron:      nutrition.iron    || 0,
+    vitC:      nutrition.vitC    || 0,
+    vitD:      nutrition.vitD    || 0,
+    zinc:      nutrition.zinc    || 0,
+    mealTime:  guessMealTime(),
+    loggedAt:  new Date().toISOString(),
+    source:    'telegram'
+  };
+
+  existing.push(newItem);
+  setFirebase('users/' + safe(email) + '/' + logsKey, existing);
+
+  var total     = sumNutrients(existing);
+  var profile   = getFirebase('users/' + safe(email) + '/lf_profile');
+  var calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
+
+  var msg = '*' + newItem.name + '* tersimpan!\n\n';
+  msg += 'Total hari ini: *' + Math.round(total.cal) + ' / ' + calTarget + ' kcal*\n\n';
+  msg += 'Log lagi atau lihat dashboard?';
+
+  sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [
+        { text: 'Log Lagi',   callback_data: 'log_food'  },
+        { text: 'Dashboard',  callback_data: 'dashboard' }
+      ],
+      [{ text: 'Menu Utama', callback_data: 'menu' }]
+    ]
+  });
+}
+
+function cancelFood(chatId, userId) {
+  deleteCache(userId + '_pending');
+  sendMessage(chatId, 'Dibatalkan.', mainMenuKeyboard());
+}
+
+// ====================================================
+// HISTORY
+// ====================================================
+function showHistory(chatId, email) {
+  sendMessage(chatId, '*History*\n\nPilih rentang waktu:', {
+    inline_keyboard: [
+      [
+        { text: '7 Hari',  callback_data: 'hist_7'  },
+        { text: '14 Hari', callback_data: 'hist_14' },
+        { text: '30 Hari', callback_data: 'hist_30' }
+      ],
+      [{ text: 'Menu Utama', callback_data: 'menu' }]
+    ]
+  });
+}
+
+function showHistoryDays(chatId, email, days) {
+  var results = [];
+  for (var i = 0; i < days; i++) {
+    var d = new Date();
+    d.setDate(d.getDate() - i);
+    var key  = d.toISOString().slice(0, 10);
+    var logs = getFirebase('users/' + safe(email) + '/lf_logs_' + key) || [];
+    if (logs.length > 0) {
+      var t = sumNutrients(logs);
+      results.push({ date: key, cal: Math.round(t.cal), count: logs.length });
+    }
+  }
+
+  if (results.length === 0) {
+    return sendMessage(chatId, 'Belum ada data untuk ' + days + ' hari terakhir.', {
+      inline_keyboard: [[{ text: 'Menu Utama', callback_data: 'menu' }]]
+    });
+  }
+
+  var totalCal = 0;
+  for (var j = 0; j < results.length; j++) totalCal += results[j].cal;
+  var avgCal = Math.round(totalCal / results.length);
+
+  var msg = '*History ' + days + ' Hari Terakhir*\n\n';
+  msg += 'Rata-rata: *' + avgCal + ' kcal/hari*\n';
+  msg += 'Hari aktif: *' + results.length + ' hari*\n\n';
+  msg += '*Detail:*\n';
+
+  var shown = results.slice(0, 10);
+  for (var k = 0; k < shown.length; k++) {
+    var r = shown[k];
+    var dt = new Date(r.date);
+    var label = (dt.getDate()) + '/' + (dt.getMonth() + 1);
+    msg += label + ': *' + r.cal + ' kcal* (' + r.count + ' makanan)\n';
+  }
+  if (results.length > 10) msg += '_...dan ' + (results.length - 10) + ' hari lainnya_\n';
+
+  sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [{ text: 'Dashboard Hari Ini', callback_data: 'dashboard' }],
+      [{ text: 'Menu Utama',         callback_data: 'menu'      }]
+    ]
+  });
+}
+
+// ====================================================
+// SETTINGS
+// ====================================================
+function showSettings(chatId, userId, email) {
+  var msg = '*Settings*\n\n';
+  if (email) {
+    var profile = getFirebase('users/' + safe(email) + '/lf_profile');
+    msg += 'Akun: *' + email + '*\n';
+    if (profile) {
+      msg += 'Target: *' + Math.round((profile.targets && profile.targets.cal) ? profile.targets.cal : 0) + ' kcal/hari*\n';
+      msg += 'Tujuan: *' + (profile.target || '-').replace(/_/g, ' ').toUpperCase() + '*\n';
+      msg += 'BB/TB: *' + profile.bb + 'kg / ' + profile.tb + 'cm*\n';
+    }
+    msg += '\n_Untuk ubah profil, gunakan web app._';
+    sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [{ text: 'Logout', callback_data: 'logout' }],
+        [{ text: 'Menu Utama', callback_data: 'menu' }]
+      ]
+    });
+  } else {
+    msg += 'Belum login.';
+    sendMessage(chatId, msg, {
+      inline_keyboard: [[{ text: 'Login', callback_data: 'menu' }]]
+    });
+  }
+}
+
+function doLogout(chatId, userId) {
+  var email = getLinkedEmail(userId);
+  if (email) {
+    setFirebase('telegram_links/' + userId, null);
+    setFirebase('users/' + safe(email) + '/telegram_chat_id', null);
+  }
+  setState(userId, null);
+  sendMessage(chatId, 'Logout berhasil! Ketik /start untuk login lagi.', null);
+}
+
+// ====================================================
+// HELP
+// ====================================================
+function sendHelp(chatId) {
+  sendMessage(chatId,
+    '*LebihFit Bot - Bantuan*\n\n' +
+    '/start - Mulai atau Menu Utama\n' +
+    '/menu  - Tampilkan menu\n' +
+    '/help  - Bantuan\n\n' +
+    '*Log Makanan Cepat:*\n' +
+    'Langsung ketik nama makanan:\n' +
+    'nasi goreng ayam 1 piring\n' +
+    'mie ayam bakso 1 porsi\n\n' +
+    'Bot otomatis analisis dan minta konfirmasi sebelum disimpan!',
+    { inline_keyboard: [[{ text: 'Menu Utama', callback_data: 'menu' }]] }
+  );
+}
+
+// ====================================================
+// OTP UNTUK WEB APP
+// ====================================================
+function handleSendOTP(body) {
+  var email = body.email;
+  var name  = body.name;
+  if (!email) return jsonResp({ ok: false, error: 'Email required' });
+  var otp = Math.floor(100000 + Math.random() * 900000).toString();
+  var cache = CacheService.getScriptCache();
+  cache.put('otp_' + email, JSON.stringify({ otp: otp, name: name, expires: Date.now() + 600000 }), 600);
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: 'Kode OTP LebihFit - ' + otp,
+      htmlBody: '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px"><h2 style="color:#00f0ff;text-align:center">LebihFit</h2><p>Halo <b>' + (name||'Bro') + '</b>! Kode OTP:<br><br><div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center"><span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span></div><br><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
+    });
+    return jsonResp({ ok: true });
+  } catch(e) {
+    return jsonResp({ ok: false, error: e.message });
   }
 }
 
 function handleVerifyOTP(body) {
-  const { email, otp } = body;
-  if (!email || !otp) return jsonResponse({ ok: false, error: 'Email and OTP required' });
-
-  const cache = CacheService.getScriptCache();
-  const stored = cache.get('otp_' + email);
-  if (!stored) return jsonResponse({ ok: false, error: 'OTP expired atau tidak ditemukan' });
-
-  const data = JSON.parse(stored);
-  if (data.otp !== otp.toString()) return jsonResponse({ ok: false, error: 'OTP salah' });
-  if (Date.now() > data.expires) return jsonResponse({ ok: false, error: 'OTP sudah expired' });
-
+  var email = body.email;
+  var otp   = body.otp;
+  if (!email || !otp) return jsonResp({ ok: false, error: 'Email and OTP required' });
+  var cache  = CacheService.getScriptCache();
+  var stored = cache.get('otp_' + email);
+  if (!stored) return jsonResp({ ok: false, error: 'OTP expired' });
+  var data = JSON.parse(stored);
+  if (data.otp !== otp.toString()) return jsonResp({ ok: false, error: 'OTP salah' });
   cache.remove('otp_' + email);
-  return jsonResponse({ ok: true, name: data.name });
-}
-
-// ====================================================
-// TELEGRAM BOT
-// ====================================================
-function handleTelegramUpdate(update) {
-  const cfg = getConfig();
-  if (!cfg.TELEGRAM_TOKEN) return;
-
-  let msg, chatId, text, userId;
-
-  if (update.message) {
-    msg = update.message;
-    chatId = msg.chat.id;
-    text = msg.text || '';
-    userId = msg.from.id;
-  } else if (update.callback_query) {
-    const cb = update.callback_query;
-    chatId = cb.message.chat.id;
-    text = cb.data;
-    userId = cb.from.id;
-    answerCallback(cfg.TELEGRAM_TOKEN, cb.id);
-  }
-
-  if (!chatId) return;
-
-  // --- COMMANDS ---
-  if (text.startsWith('/start')) {
-    const parts = text.split(' ');
-    if (parts[1]) {
-      // Deep link dengan email token
-      handleLinkAccount(cfg, chatId, userId, decodeURIComponent(parts[1]));
-    } else {
-      sendMessage(cfg.TELEGRAM_TOKEN, chatId, 
-        `🤖 *LebihFit Bot*\n\nHalo! Gua bisa bantu lu log makanan langsung dari Telegram.\n\n*Cara pakai:*\n1. Buka LebihFit di web\n2. Pergi ke Settings → Connect Telegram\n3. Klik link yang muncul untuk menghubungkan akun\n\nSetelah terhubung, cukup kirim nama makanan ke sini dan gua akan analisis nutrisinya! 🍽️`,
-        { parse_mode: 'Markdown' }
-      );
-    }
-    return;
-  }
-
-  if (text === '/help') {
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId,
-      `📖 *Cara Pakai LebihFit Bot:*\n\n*Log Makanan:*\nCukup kirim nama makanan, contoh:\n• _nasi goreng 1 piring_\n• _ayam bakar 200g + nasi_\n• _kopi susu gula 1 gelas_\n\n*Commands:*\n/status - Cek kalori hari ini\n/help - Bantuan\n\nGua akan langsung analisis dan simpan ke dashboard lu! 🚀`,
-      { parse_mode: 'Markdown' }
-    );
-    return;
-  }
-
-  if (text === '/status') {
-    handleStatusCommand(cfg, chatId, userId);
-    return;
-  }
-
-  // --- LOG FOOD ---
-  const linked = getLinkedEmail(userId);
-  if (!linked) {
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId,
-      `⚠️ Akun belum terhubung!\n\nBuka LebihFit web → Settings → Connect Telegram untuk menghubungkan akun lu dulu ya.`
-    );
-    return;
-  }
-
-  // Process food log
-  processFoodLog(cfg, chatId, userId, linked, text);
-}
-
-function handleLinkAccount(cfg, chatId, userId, emailToken) {
-  // emailToken adalah email yang di-encode
-  const email = emailToken.replace(/_at_/g, '@').replace(/_dot_/g, '.');
-  
-  // Verify email exists in Firebase
-  const userData = firebaseGet(cfg, `users/${safeEmail(email)}/lf_user_email`);
-  
-  if (!userData) {
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId,
-      `❌ Email tidak ditemukan. Pastikan lu sudah login di LebihFit web terlebih dahulu.`
-    );
-    return;
-  }
-
-  // Save Telegram link: chatId → email
-  firebaseSet(cfg, `telegram_links/${userId}`, { email, chatId, linkedAt: new Date().toISOString() });
-  // Also save reverse: email → telegramId
-  firebaseSet(cfg, `users/${safeEmail(email)}/telegram_chat_id`, chatId);
-  
-  sendMessage(cfg.TELEGRAM_TOKEN, chatId,
-    `✅ *Akun berhasil terhubung!*\n\n📧 Email: ${email}\n\nSekarang lu bisa langsung kirim nama makanan ke sini dan gua akan otomatis analisis dan simpan ke dashboard LebihFit lu!\n\nContoh:\n_nasi goreng telur 1 piring_\n_ayam geprek sambel 1 porsi_`,
-    { parse_mode: 'Markdown' }
-  );
-}
-
-function handleStatusCommand(cfg, chatId, userId) {
-  const linked = getLinkedEmail(userId);
-  if (!linked) {
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId, `Akun belum terhubung. Buka Settings di web app.`);
-    return;
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const logsKey = `lf_logs_${today}`;
-  const logs = firebaseGet(cfg, `users/${safeEmail(linked)}/lf_logs_${today}`);
-  const profile = firebaseGet(cfg, `users/${safeEmail(linked)}/lf_profile`);
-
-  if (!logs || logs.length === 0) {
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId, `📊 *Status Hari Ini*\n\nBelum ada makanan yang di-log hari ini.`, { parse_mode: 'Markdown' });
-    return;
-  }
-
-  const total = logs.reduce((acc, item) => {
-    acc.cal += item.cal || 0;
-    acc.protein += item.protein || 0;
-    acc.carbs += item.carbs || 0;
-    acc.fat += item.fat || 0;
-    return acc;
-  }, { cal: 0, protein: 0, carbs: 0, fat: 0 });
-
-  const target = profile ? profile.targets : null;
-  const calTarget = target ? Math.round(target.cal) : '?';
-
-  let statusMsg = `📊 *Status Nutrisi Hari Ini*\n\n`;
-  statusMsg += `🔥 Kalori: *${Math.round(total.cal)}* / ${calTarget} kcal\n`;
-  statusMsg += `💪 Protein: *${total.protein.toFixed(1)}g*\n`;
-  statusMsg += `🌾 Karbo: *${total.carbs.toFixed(1)}g*\n`;
-  statusMsg += `🥑 Lemak: *${total.fat.toFixed(1)}g*\n\n`;
-  statusMsg += `📝 Total ${logs.length} item makanan`;
-
-  sendMessage(cfg.TELEGRAM_TOKEN, chatId, statusMsg, { parse_mode: 'Markdown' });
-}
-
-function processFoodLog(cfg, chatId, userId, email, text) {
-  // Send typing indicator
-  sendChatAction(cfg.TELEGRAM_TOKEN, chatId, 'typing');
-
-  sendMessage(cfg.TELEGRAM_TOKEN, chatId, `🔍 Menganalisis: _${text}_...`, { parse_mode: 'Markdown' });
-
-  try {
-    const nutrition = analyzeTextWithGroq(cfg, text);
-    if (!nutrition) {
-      sendMessage(cfg.TELEGRAM_TOKEN, chatId, `❌ Gagal menganalisis makanan. Coba lagi dengan deskripsi yang lebih jelas.`);
-      return;
-    }
-
-    // Save to Firebase
-    const today = new Date().toISOString().slice(0, 10);
-    const logsKey = `lf_logs_${today}`;
-    const existingLogs = firebaseGet(cfg, `users/${safeEmail(email)}/${logsKey}`) || [];
-    
-    const newItem = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      name: nutrition.name || text,
-      portion: nutrition.portion || '1 porsi',
-      cal: nutrition.cal || 0,
-      protein: nutrition.protein || 0,
-      carbs: nutrition.carbs || 0,
-      fat: nutrition.fat || 0,
-      fiber: nutrition.fiber || 0,
-      sugar: nutrition.sugar || 0,
-      sodium: nutrition.sodium || 0,
-      calcium: nutrition.calcium || 0,
-      iron: nutrition.iron || 0,
-      vitC: nutrition.vitC || 0,
-      vitD: nutrition.vitD || 0,
-      zinc: nutrition.zinc || 0,
-      mealTime: guessMealTime(),
-      loggedAt: new Date().toISOString(),
-      source: 'telegram'
-    };
-
-    existingLogs.push(newItem);
-    firebaseSet(cfg, `users/${safeEmail(email)}/${logsKey}`, existingLogs);
-
-    // Build response message
-    let reply = `✅ *${newItem.name}* berhasil disimpan!\n\n`;
-    reply += `🔥 Kalori: *${Math.round(newItem.cal)} kcal*\n`;
-    reply += `💪 Protein: *${newItem.protein.toFixed(1)}g*\n`;
-    reply += `🌾 Karbo: *${newItem.carbs.toFixed(1)}g*\n`;
-    reply += `🥑 Lemak: *${newItem.fat.toFixed(1)}g*\n\n`;
-    reply += `_Data sudah masuk ke dashboard LebihFit lu!_ 📊`;
-
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId, reply, { parse_mode: 'Markdown' });
-  } catch (err) {
-    Logger.log('processFoodLog error: ' + err);
-    sendMessage(cfg.TELEGRAM_TOKEN, chatId, `❌ Error: ${err.message}`);
-  }
+  return jsonResp({ ok: true, name: data.name });
 }
 
 // ====================================================
 // GROQ AI
 // ====================================================
-function analyzeTextWithGroq(cfg, foodText) {
-  if (!cfg.GROQ_KEY) throw new Error('GROQ_API_KEY belum diset di Script Properties');
-
-  const prompt = `Berikan estimasi nutrisi untuk makanan berikut:
-"${foodText}"
-
-Jawab HANYA dengan JSON valid format:
-{"name":"nama makanan","portion":"estimasi porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
-Semua nilai numerik dalam satuan standar (g/mg/mcg). Jawab murni JSON tanpa teks lain.`;
-
-  const response = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
+function analyzeWithGroq(text) {
+  if (!GROQ_KEY) throw new Error('GROQ_API_KEY belum diset di Script Properties');
+  var prompt = 'Berikan estimasi nutrisi untuk: "' + text + '"\nJawab HANYA JSON:\n{"name":"nama makanan","portion":"porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}';
+  var res = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + cfg.GROQ_KEY,
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Authorization': 'Bearer ' + GROQ_KEY, 'Content-Type': 'application/json' },
     payload: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 400,
+      max_tokens: 300,
       response_format: { type: 'json_object' }
     }),
     muteHttpExceptions: true
   });
-
-  const data = JSON.parse(response.getContentText());
-  if (!data.choices || !data.choices[0]) throw new Error('Groq tidak mengembalikan data');
-  
-  const raw = data.choices[0].message.content;
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (match) return JSON.parse(match[0]);
-  return JSON.parse(raw);
+  var data = JSON.parse(res.getContentText());
+  if (!data.choices || !data.choices[0]) throw new Error('Groq error');
+  return JSON.parse(data.choices[0].message.content);
 }
 
 // ====================================================
 // FIREBASE HELPERS
 // ====================================================
-function safeEmail(email) {
-  return email.replace(/[.#$\[\]]/g, '_');
+function safe(email) { return email.replace(/[.#$\[\]]/g, '_'); }
+
+function getFirebase(path) {
+  try {
+    var res = UrlFetchApp.fetch(FB_URL + '/' + path + '.json', { muteHttpExceptions: true });
+    var val = JSON.parse(res.getContentText());
+    return val === null ? null : val;
+  } catch(e) { return null; }
 }
 
-function firebaseGet(cfg, path) {
+function setFirebase(path, value) {
   try {
-    const url = `${cfg.FIREBASE_URL}/${path}.json?auth=${cfg.FIREBASE_API_KEY}`;
-    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    return JSON.parse(res.getContentText());
-  } catch (e) {
-    Logger.log('firebaseGet error: ' + e);
-    return null;
-  }
-}
-
-function firebaseSet(cfg, path, value) {
-  try {
-    const url = `${cfg.FIREBASE_URL}/${path}.json?auth=${cfg.FIREBASE_API_KEY}`;
-    UrlFetchApp.fetch(url, {
-      method: 'PUT',
+    UrlFetchApp.fetch(FB_URL + '/' + path + '.json', {
+      method:      value === null ? 'DELETE' : 'PUT',
       contentType: 'application/json',
-      payload: JSON.stringify(value),
+      payload:     value !== null ? JSON.stringify(value) : '',
       muteHttpExceptions: true
     });
-  } catch (e) {
-    Logger.log('firebaseSet error: ' + e);
-  }
+  } catch(e) { Logger.log('FB SET err: ' + e); }
+}
+
+function getLinkedEmail(userId) {
+  var data = getFirebase('telegram_links/' + userId);
+  return (data && data.email) ? data.email : null;
 }
 
 // ====================================================
-// TELEGRAM LINK HELPER
+// STATE & CACHE
 // ====================================================
-function getLinkedEmail(telegramUserId) {
-  const cfg = getConfig();
-  const data = firebaseGet(cfg, `telegram_links/${telegramUserId}`);
-  return data ? data.email : null;
+function setState(userId, state) {
+  var c = CacheService.getScriptCache();
+  if (state) c.put('state_' + userId, state, 3600);
+  else        c.remove('state_' + userId);
+}
+function getState(userId) {
+  return CacheService.getScriptCache().get('state_' + userId) || null;
+}
+function setCache(key, value) {
+  CacheService.getScriptCache().put('lf_' + key, value, 600);
+}
+function getCache(key) {
+  return CacheService.getScriptCache().get('lf_' + key);
+}
+function deleteCache(key) {
+  CacheService.getScriptCache().remove('lf_' + key);
+}
+
+// ====================================================
+// TELEGRAM HELPERS
+// ====================================================
+function sendMessage(chatId, text, keyboard) {
+  var payload = { chat_id: chatId, text: text, parse_mode: 'Markdown' };
+  if (keyboard) payload.reply_markup = keyboard;
+  UrlFetchApp.fetch(TG_API + '/sendMessage', {
+    method: 'POST', contentType: 'application/json',
+    payload: JSON.stringify(payload), muteHttpExceptions: true
+  });
+}
+function sendChatAction(chatId, action) {
+  UrlFetchApp.fetch(TG_API + '/sendChatAction', {
+    method: 'POST', contentType: 'application/json',
+    payload: JSON.stringify({ chat_id: chatId, action: action }), muteHttpExceptions: true
+  });
+}
+function answerCallback(cbId) {
+  UrlFetchApp.fetch(TG_API + '/answerCallbackQuery', {
+    method: 'POST', contentType: 'application/json',
+    payload: JSON.stringify({ callback_query_id: cbId }), muteHttpExceptions: true
+  });
+}
+
+// ====================================================
+// UTILITIES
+// ====================================================
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+function formatDate(d) {
+  var days   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function progressBar(pct) {
+  var filled = Math.round(pct / 10);
+  var bar = '';
+  for (var i = 0; i < 10; i++) bar += (i < filled) ? '\u2588' : '\u2591';
+  return bar;
 }
 
 function guessMealTime() {
-  const hour = new Date().getHours() + 7; // UTC+7 WIB
-  const h = hour % 24;
-  if (h >= 5 && h < 10) return 'sarapan';
+  var h = (new Date().getHours() + 7) % 24;
+  if (h >= 5  && h < 10) return 'sarapan';
   if (h >= 10 && h < 14) return 'makan_siang';
   if (h >= 14 && h < 17) return 'snack_siang';
   if (h >= 17 && h < 21) return 'makan_malam';
   return 'snack_malam';
 }
 
-// ====================================================
-// TELEGRAM API HELPERS
-// ====================================================
-function sendMessage(token, chatId, text, options = {}) {
-  const payload = { chat_id: chatId, text: text, ...options };
-  UrlFetchApp.fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  });
+function sumNutrients(items) {
+  var keys = ['cal','protein','carbs','fat','fiber','sugar','sodium','calcium','iron','vitC','vitD','zinc'];
+  var acc  = { cal:0, protein:0, carbs:0, fat:0, fiber:0, sugar:0, sodium:0, calcium:0, iron:0, vitC:0, vitD:0, zinc:0 };
+  for (var i = 0; i < items.length; i++) {
+    for (var j = 0; j < keys.length; j++) acc[keys[j]] += items[i][keys[j]] || 0;
+  }
+  return acc;
 }
 
-function sendChatAction(token, chatId, action) {
-  UrlFetchApp.fetch(`https://api.telegram.org/bot${token}/sendChatAction`, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify({ chat_id: chatId, action: action }),
-    muteHttpExceptions: true
-  });
-}
-
-function answerCallback(token, callbackId) {
-  UrlFetchApp.fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify({ callback_query_id: callbackId }),
-    muteHttpExceptions: true
-  });
-}
-
-// ====================================================
-// SETUP WEBHOOK (jalankan sekali setelah deploy)
-// ====================================================
-function setWebhook() {
-  const cfg = getConfig();
-  const token = cfg.TELEGRAM_TOKEN;
-  
-  // Ganti URL ini dengan URL deploy GAS lu
-  const WEBHOOK_URL = ScriptApp.getService().getUrl();
-  
-  const res = UrlFetchApp.fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-    method: 'POST',
-    contentType: 'application/json',
-    payload: JSON.stringify({ url: WEBHOOK_URL })
-  });
-  
-  Logger.log('setWebhook result: ' + res.getContentText());
-}
-
-function jsonResponse(obj) {
+function jsonResp(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ====================================================
+// SETUP — Jalankan setWebhook() SEKALI setelah deploy
+// ====================================================
+function setWebhook() {
+  var webhookUrl = ScriptApp.getService().getUrl();
+  var res = UrlFetchApp.fetch(TG_API + '/setWebhook', {
+    method: 'POST', contentType: 'application/json',
+    payload: JSON.stringify({ url: webhookUrl, allowed_updates: ['message','callback_query'] })
+  });
+  Logger.log('Webhook: ' + res.getContentText());
 }
