@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwc-dizRUMCBGBS61h96Znw3QLslZBnRmSA52JQB0TizZ0TsruV65mJpL_wmyBS5RAI/exec"; // Ganti dengan Web App URL dari Google Apps Script
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwFHoWKueLR7ZuXTyjPP_EwqZ50aGhvOmThBx-uy-Ti5uvkWc7RWr4_CWx0jfq-pikKsw/exec";
 let tempAuthEmail = "";
 let tempAuthName = "";
 
