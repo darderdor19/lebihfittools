@@ -711,10 +711,17 @@ function sendMessage(chatId, text, keyboard, parseMode) {
     payload.parse_mode = 'Markdown';
   }
   if (keyboard) payload.reply_markup = keyboard;
-  UrlFetchApp.fetch(TG_API + '/sendMessage', {
-    method: 'POST', contentType: 'application/json',
-    payload: JSON.stringify(payload), muteHttpExceptions: true
-  });
+  try {
+    var res = UrlFetchApp.fetch(TG_API + '/sendMessage', {
+      method: 'POST', contentType: 'application/json',
+      payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    var code = res.getResponseCode();
+    var respText = res.getContentText();
+    logToFirebase('sendMessage_response', { status: code, body: respText, chatId: chatId });
+  } catch (e) {
+    logToFirebase('sendMessage_exception', e.toString());
+  }
 }
 function sendChatAction(chatId, action) {
   UrlFetchApp.fetch(TG_API + '/sendChatAction', {
