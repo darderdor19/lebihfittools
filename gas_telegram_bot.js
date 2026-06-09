@@ -92,9 +92,9 @@ function handleMessage(msg) {
     if (parts.length > 1) {
       // Decode email dari parameter start
       var payload = parts[1];
-      var email = payload.replace(/_at_/g, '@').replace(/_dot_/g, '.');
-      logToFirebase('handleMessage_start_payload', { email: email });
-      return onEmailInput(chatId, userId, email);
+      var startEmail = payload.replace(/_at_/g, '@').replace(/_dot_/g, '.');
+      logToFirebase('handleMessage_start_payload', { email: startEmail });
+      return onEmailInput(chatId, userId, startEmail);
     }
     return onStart(chatId, userId);
   }
