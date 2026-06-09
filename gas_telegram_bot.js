@@ -775,7 +775,7 @@ function jsonResp(obj) {
 // ====================================================
 function setWebhook() {
   // Gunakan URL web app yang dipublish secara manual agar 100% akurat
-  var webhookUrl = 'https://script.google.com/macros/s/AKfycbxwEGkpYlxxJYlvzOaOoEO7YDrurUmbDP-E-BBb7M22xDRg7cPH3lOUMSBkCAWO06sCDQ/exec';
+  var webhookUrl = 'https://script.google.com/macros/s/AKfycbwJKz3DwDQ7RC--c3yah7OviAW5ej41q2hrc9Rwwef_ccBbFWf-LL0lyEswej-mJkO2Rw/exec';
   var res = UrlFetchApp.fetch(TG_API + '/setWebhook', {
     method: 'POST', contentType: 'application/json',
     payload: JSON.stringify({ 
