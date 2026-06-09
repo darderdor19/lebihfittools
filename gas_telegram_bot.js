@@ -41,6 +41,14 @@ function doPost(e) {
       chatIdForErr = body.callback_query.message.chat.id;
     }
 
+    // Debug webhook info to see Telegram delivery errors
+    try {
+      var infoRes = UrlFetchApp.fetch(TG_API + '/getWebhookInfo');
+      logToFirebase('webhook_info_debug', JSON.parse(infoRes.getContentText()));
+    } catch (webhookErr) {
+      logToFirebase('webhook_info_error', webhookErr.toString());
+    }
+
     // OTP handler untuk web app (menangani format requestOTP & verifyOTP dari app.js)
     if (body.action === 'requestOTP') {
       var res = handleRequestOTPCombined(body);
