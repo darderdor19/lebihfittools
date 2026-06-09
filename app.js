@@ -69,11 +69,28 @@ async function requestOTP() {
     btn.disabled = true;
 
     try {
+        console.log('[OTP] Sending requestOTP to:', GAS_URL);
         const res = await fetch(GAS_URL, {
             method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'requestOTP', email: email, name: name })
         });
-        const data = await res.json();
+        
+        console.log('[OTP] Response status:', res.status, res.statusText);
+        const rawText = await res.text();
+        console.log('[OTP] Raw response:', rawText);
+        
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch(parseErr) {
+            console.error('[OTP] JSON parse failed:', parseErr, 'Raw:', rawText);
+            showToast("Server error: respons bukan JSON. Cek console.", "error");
+            return;
+        }
+        
+        console.log('[OTP] Parsed response:', data);
         
         if (data.success) {
             tempAuthEmail = email;
@@ -86,6 +103,7 @@ async function requestOTP() {
             showToast(data.error || "Gagal mengirim OTP", "error");
         }
     } catch (error) {
+        console.error('[OTP] Fetch error:', error);
         showToast("Network error: " + error.message, "error");
     } finally {
         btn.innerHTML = originalText;
@@ -106,11 +124,28 @@ async function verifyOTP() {
     btn.disabled = true;
 
     try {
+        console.log('[OTP] Sending verifyOTP to:', GAS_URL);
         const res = await fetch(GAS_URL, {
             method: 'POST',
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'verifyOTP', email: tempAuthEmail, otp: otp })
         });
-        const data = await res.json();
+        
+        console.log('[OTP] Verify response status:', res.status, res.statusText);
+        const rawText = await res.text();
+        console.log('[OTP] Verify raw response:', rawText);
+        
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch(parseErr) {
+            console.error('[OTP] Verify JSON parse failed:', parseErr, 'Raw:', rawText);
+            showToast("Server error: respons bukan JSON. Cek console.", "error");
+            return;
+        }
+        
+        console.log('[OTP] Verify parsed response:', data);
         
         if (data.success) {
             setAuthUser(data.data.email, data.data.name || tempAuthName);
@@ -132,6 +167,7 @@ async function verifyOTP() {
             showToast(data.error || "OTP Salah", "error");
         }
     } catch (error) {
+        console.error('[OTP] Verify fetch error:', error);
         showToast("Network error: " + error.message, "error");
     } finally {
         btn.innerHTML = originalText;
