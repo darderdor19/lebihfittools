@@ -758,8 +758,9 @@ function generateAIAnalysisForGAS(logs, profile) {
   for (var i = 0; i < logs.length; i++) {
     prompt += '- ' + logs[i].name + ': ' + logs[i].cal + ' kcal (P: ' + (logs[i].protein || 0) + 'g, K: ' + (logs[i].carbs || 0) + 'g, L: ' + (logs[i].fat || 0) + 'g)\n';
   }
-  prompt += 'Total konsumsi: Kalori ' + Math.round(total.cal) + ' kcal, Protein ' + total.protein.toFixed(1) + 'g, Karbo ' + total.carbs.toFixed(1) + 'g, Lemak ' + total.fat.toFixed(1) + 'g, Gula ' + total.sugar.toFixed(1) + 'g, Sodium ' + total.sodium.toFixed(1) + 'mg.\n\n';
-  prompt += 'Berikan evaluasi singkat mengenai konsumsi hari ini dan berikan saran praktis/konkrit apa yang sebaiknya dilakukan besok untuk mencapai target kebugaran mereka. Jawab dalam bahasa Indonesia, maksimal 3 kalimat. Format jawaban langsung teks analisis saja, tanpa kata pengantar atau penutup.';
+  prompt += 'Total Gizi Makro: Kalori ' + Math.round(total.cal) + ' kcal, Protein ' + total.protein.toFixed(1) + 'g, Karbo ' + total.carbs.toFixed(1) + 'g, Lemak ' + total.fat.toFixed(1) + 'g.\n';
+  prompt += 'Total Gizi Mikro: Serat ' + total.fiber.toFixed(1) + 'g, Gula ' + total.sugar.toFixed(1) + 'g, Sodium ' + total.sodium.toFixed(1) + 'mg, Kalsium ' + total.calcium.toFixed(1) + 'mg, Zat Besi ' + total.iron.toFixed(1) + 'mg, Vit C ' + total.vitC.toFixed(1) + 'mg, Vit D ' + total.vitD.toFixed(1) + 'mcg, Zinc ' + total.zinc.toFixed(1) + 'mg.\n\n';
+  prompt += 'Berikan evaluasi mengenai konsumsi makro dan mikro nutrisi hari ini, serta berikan saran praktis/konkrit makro dan mikro nutrisi apa yang sebaiknya dilakukan besok untuk mencapai target kebugaran mereka. Jawab dalam bahasa Indonesia, maksimal 4 kalimat. Format jawaban langsung teks analisis saja, tanpa kata pengantar atau penutup.';
 
   var res = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',

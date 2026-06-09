@@ -784,7 +784,7 @@ function renderHistoryChart(data) {
                 pointBackgroundColor: '#00f0ff',
                 pointBorderColor: '#0b121c',
                 pointBorderWidth: 2,
-                pointRadius: 4,
+                pointRadius: 0, // Clean line without visible points unless hovered
                 pointHoverRadius: 6,
                 pointHoverBackgroundColor: '#ffffff',
                 pointHoverBorderColor: '#00f0ff',
@@ -802,17 +802,21 @@ function renderHistoryChart(data) {
                     bodyColor: '#e0f7fa',
                     borderColor: 'rgba(0, 240, 255, 0.3)',
                     borderWidth: 1,
-                    cornerRadius: 4,
+                    cornerRadius: 8,
                     displayColors: false,
-                    padding: 10,
-                    titleFont: { family: 'monospace', weight: 'bold' },
-                    bodyFont: { family: 'monospace' }
+                    padding: 12,
+                    titleFont: { family: 'monospace', weight: 'bold', size: 12 },
+                    bodyFont: { family: 'monospace', size: 12 }
                 }
             },
             scales: {
                 y: { 
                     beginAtZero: true, 
-                    grid: { color: 'rgba(0, 240, 255, 0.05)', drawBorder: false }, 
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.05)', 
+                        borderDash: [5, 5], // Elegant horizontal dashed gridlines
+                        drawBorder: false 
+                    }, 
                     ticks: { color: '#8caebf', font: { family: 'monospace', size: 10 } } 
                 },
                 x: { 
@@ -841,34 +845,27 @@ function renderHistoryChart(data) {
                 data: [avgProtein, avgCarbs, avgFat],
                 backgroundColor: ['#00f0ff', '#fbbf24', '#ff3366'],
                 borderWidth: 0,
-                hoverOffset: 4
+                borderRadius: 10, // Modern rounded edges
+                spacing: 5,       // Gaps between segments
+                hoverOffset: 6
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '80%',
+            cutout: '83%', // Thin ring design
             plugins: { 
-                legend: { 
-                    position: 'bottom', 
-                    labels: { 
-                        color: '#8caebf', 
-                        font: { family: 'monospace', size: 11 },
-                        padding: 15,
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    } 
-                },
+                legend: { display: false }, // Use custom HTML legend instead
                 tooltip: {
                     backgroundColor: 'rgba(11, 18, 28, 0.95)',
                     titleColor: '#e0f7fa',
                     bodyColor: '#e0f7fa',
                     borderColor: 'rgba(0, 240, 255, 0.3)',
                     borderWidth: 1,
-                    cornerRadius: 4,
-                    padding: 10,
-                    titleFont: { family: 'monospace', weight: 'bold' },
-                    bodyFont: { family: 'monospace' },
+                    cornerRadius: 8,
+                    padding: 12,
+                    titleFont: { family: 'monospace', weight: 'bold', size: 12 },
+                    bodyFont: { family: 'monospace', size: 12 },
                     callbacks: {
                         label: function(context) {
                             let val = context.raw || 0;
@@ -877,8 +874,77 @@ function renderHistoryChart(data) {
                     }
                 }
             }
-        }
+        },
+        plugins: [{
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                const { ctx, chartArea: { top, right, bottom, left } } = chart;
+                ctx.save();
+                
+                const dataset = chart.data.datasets[0];
+                const total = dataset.data.reduce((a, b) => a + b, 0);
+                
+                const centerX = (left + right) / 2;
+                const centerY = (top + bottom) / 2;
+                
+                // Subtitle: TOTAL MAKRO
+                ctx.font = 'normal 9px monospace';
+                ctx.fillStyle = '#8caebf';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('TOTAL MAKRO', centerX, centerY - 10);
+                
+                // Title: [X]g
+                ctx.font = 'bold 20px monospace';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${Math.round(total)}g`, centerX, centerY + 10);
+                
+                ctx.restore();
+            }
+        }]
     });
+
+    // Render Custom HTML Legend
+    const totalGrams = avgProtein + avgCarbs + avgFat;
+    const proteinPct = totalGrams > 0 ? Math.round((avgProtein / totalGrams) * 100) : 0;
+    const carbsPct = totalGrams > 0 ? Math.round((avgCarbs / totalGrams) * 100) : 0;
+    const fatPct = totalGrams > 0 ? Math.round((avgFat / totalGrams) * 100) : 0;
+
+    const legendContainer = document.getElementById('macroLegend');
+    if (legendContainer) {
+        legendContainer.innerHTML = `
+            <div class="macro-legend-item" style="color: #00f0ff;">
+                <div class="macro-legend-dot" style="background-color: #00f0ff;"></div>
+                <div class="macro-legend-info">
+                    <div class="macro-legend-val-row">
+                        <span class="macro-legend-val">${avgProtein.toFixed(1)}g</span>
+                        <span class="macro-legend-pct">${proteinPct}%</span>
+                    </div>
+                    <span class="macro-legend-lbl">Protein</span>
+                </div>
+            </div>
+            <div class="macro-legend-item" style="color: #fbbf24;">
+                <div class="macro-legend-dot" style="background-color: #fbbf24;"></div>
+                <div class="macro-legend-info">
+                    <div class="macro-legend-val-row">
+                        <span class="macro-legend-val">${avgCarbs.toFixed(1)}g</span>
+                        <span class="macro-legend-pct">${carbsPct}%</span>
+                    </div>
+                    <span class="macro-legend-lbl">Karbo</span>
+                </div>
+            </div>
+            <div class="macro-legend-item" style="color: #ff3366;">
+                <div class="macro-legend-dot" style="background-color: #ff3366;"></div>
+                <div class="macro-legend-info">
+                    <div class="macro-legend-val-row">
+                        <span class="macro-legend-val">${avgFat.toFixed(1)}g</span>
+                        <span class="macro-legend-pct">${fatPct}%</span>
+                    </div>
+                    <span class="macro-legend-lbl">Lemak</span>
+                </div>
+            </div>
+        `;
+    }
 }
 
 function renderHistoryStats(data) {
