@@ -181,36 +181,27 @@ function onEmailInput(chatId, userId, email) {
   }
   
   try {
-    setState(userId, 'AWAIT_OTP');
-    setCache(userId + '_email', email);
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setCache(userId + '_otp', otp);
-    
-    logToFirebase('onEmailInput_otp_generated', { email: email, otp: otp });
-
-    MailApp.sendEmail({
-      to: email,
-      subject: 'Kode OTP LebihFit Bot - ' + otp,
-      htmlBody:
-        '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px">' +
-        '<h2 style="color:#00f0ff;text-align:center">LebihFit Bot</h2>' +
-        '<p>Kode OTP untuk login Telegram Bot:</p>' +
-        '<div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center;margin:20px 0">' +
-        '<span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span>' +
-        '</div><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
+    // Hubungkan akun secara langsung tanpa OTP
+    setFirebase('telegram_links/' + userId, {
+      email: email,
+      chatId: chatId,
+      linkedAt: new Date().toISOString()
     });
-    
-    logToFirebase('onEmailInput_email_sent', { email: email });
-    
+    setFirebase('users/' + safe(email) + '/telegram_chat_id', chatId.toString());
+
+    setState(userId, null);
+
+    const profile = getFirebase('users/' + safe(email) + '/lf_profile');
+    const userName = profile ? (profile.name || 'Bro') : 'Bro';
+
     sendMessage(chatId,
-      'OTP dikirim ke *' + email + '*\n\nCek email lu dan kirim kode 6 digit di sini:',
-      null
+      'Login berhasil, *' + userName + '*!\n\nAkun LebihFit lu sudah terhubung secara instan. Pilih menu:',
+      mainMenuKeyboard()
     );
   } catch (err) {
     logToFirebase('onEmailInput_error', err.toString() + ' | Stack: ' + err.stack);
     setState(userId, null);
-    sendMessage(chatId, 'Gagal kirim OTP: ' + err.message + '\n\nPastikan email benar ya.', null, '');
+    sendMessage(chatId, 'Gagal menghubungkan akun: ' + err.message, null, '');
   }
 }
 
