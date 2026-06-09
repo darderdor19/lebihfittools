@@ -128,13 +128,80 @@ a{color:var(--accent);text-decoration:none}
 .fiber-fill{background:linear-gradient(90deg,#00d9a6,#00b4d8)}
 
 /* ===== MICRONUTRIENTS ===== */
-.micro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.micro-item{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)}
-.micro-label{font-size:.75rem;color:var(--text2);margin-bottom:4px}
-.micro-val{font-size:1rem;font-weight:700}
-.micro-bar{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
-.micro-bar-fill{height:100%;background:var(--success);border-radius:2px;transition:width 1s ease}
-.micro-bar-fill.over{background:var(--warning)}
+.micro-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 768px) {
+  .micro-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+.micro-item {
+  background: var(--surface2);
+  border-radius: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: border-color 0.2s;
+}
+.micro-item:hover {
+  border-color: var(--text3);
+}
+.micro-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  width: 80px;
+  flex-shrink: 0;
+}
+.micro-bar {
+  flex-grow: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 4px;
+}
+.micro-bar-fill {
+  height: 100%;
+  background: var(--accent); /* Cyan */
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.micro-bar-fill.over {
+  background: var(--danger); /* Red/Pink */
+  box-shadow: 0 0 8px rgba(255, 51, 102, 0.5);
+}
+.micro-val {
+  font-size: 0.8rem;
+  color: var(--text2);
+  font-family: monospace;
+  width: 95px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.micro-val strong {
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 800;
+}
+.micro-divider {
+  color: var(--text3);
+  margin: 0 2px;
+}
+.micro-unit {
+  font-size: 0.7rem;
+  color: var(--text2);
+  margin-left: 1px;
+}
 
 /* ===== FOOD LIST ===== */
 .food-list{display:flex;flex-direction:column;gap:10px}
@@ -367,24 +434,232 @@ a{color:var(--accent);text-decoration:none}
 .custom-confirm-actions button{flex:1}
 
 /* ===== BMI GAUGE CARD ===== */
-.bmi-card{padding:20px}
-.bmi-left{display:flex;flex-direction:column;gap:12px}
-.bmi-stats-row{display:flex;gap:10px;flex-wrap:wrap}
-.bmi-stat-chip{display:flex;flex-direction:column;align-items:center;padding:10px 16px;border-radius:10px;border:1px solid;min-width:90px;flex:1;text-align:center}
-.bmi-chip-label{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.bmi-chip-val{font-size:1rem;font-weight:800;color:var(--text)}
-.bmi-gauge-wrap{position:relative;display:flex;justify-content:center;align-items:flex-end}
-.bmi-gauge-svg{width:100%;max-width:280px;height:auto;filter:drop-shadow(0 0 12px rgba(0,240,255,.15))}
-.bmi-center-val{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;margin-bottom:-4px}
-.bmi-center-val span{display:block;font-size:2rem;font-weight:900;color:var(--text);line-height:1}
-.bmi-center-val small{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
-.bmi-status-label{text-align:center;font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:6px 16px;border-radius:20px;border:1px solid;align-self:center}
-.bmi-status-label.kurus{color:#3b82f6;border-color:#3b82f6;background:rgba(59,130,246,.1)}
-.bmi-status-label.normal{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.1)}
-.bmi-status-label.overweight{color:#f97316;border-color:#f97316;background:rgba(249,115,22,.1)}
-.bmi-status-label.obese{color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.1)}
+.bmi-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+@media (min-width: 768px) {
+  .bmi-card {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
+    gap: 32px;
+  }
+}
+.bmi-gauge-pane {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.bmi-gauge-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 250px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.bmi-gauge-svg {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 10px rgba(0,240,255,0.1));
+}
+/* Needle animation */
+#bmiNeedle {
+  transition: transform 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.bmi-center-val {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.bmi-center-val span {
+  display: block;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  font-family: monospace;
+}
+.bmi-center-val small {
+  font-size: 0.75rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.bmi-info-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.bmi-status-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bmi-status-title {
+  font-size: 0.75rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.bmi-status-label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.02);
+  width: 100%;
+}
+.bmi-status-label.kurus {
+  color: #3b82f6;
+  border-color: rgba(59,130,246,0.3);
+  background: rgba(59,130,246,0.08);
+  box-shadow: 0 0 10px rgba(59,130,246,0.15);
+}
+.bmi-status-label.normal {
+  color: #22c55e;
+  border-color: rgba(34,197,94,0.3);
+  background: rgba(34,197,94,0.08);
+  box-shadow: 0 0 10px rgba(34,197,94,0.15);
+}
+.bmi-status-label.overweight {
+  color: #f97316;
+  border-color: rgba(249,115,22,0.3);
+  background: rgba(249,115,22,0.08);
+  box-shadow: 0 0 10px rgba(249,115,22,0.15);
+}
+.bmi-status-label.obese {
+  color: #ef4444;
+  border-color: rgba(239,68,68,0.3);
+  background: rgba(239,68,68,0.08);
+  box-shadow: 0 0 10px rgba(239,68,68,0.15);
+}
+.bmi-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 480px) {
+  .bmi-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.bmi-stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.bmi-stat-chip:hover {
+  border-color: var(--text3);
+}
+.bmi-chip-label {
+  font-size: 0.65rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+.bmi-chip-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+  font-family: monospace;
+}
+.chip-current-weight {
+  background: rgba(0, 240, 255, 0.04);
+  border-color: rgba(0, 240, 255, 0.2);
+}
+.chip-current-weight .bmi-chip-val {
+  color: var(--accent);
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
+}
+.chip-target-weight {
+  background: rgba(108, 99, 255, 0.04);
+  border-color: rgba(108, 99, 255, 0.2);
+}
+.chip-target-weight .bmi-chip-val {
+  color: #a78bfa;
+  text-shadow: 0 0 5px rgba(167, 139, 250, 0.2);
+}
+.chip-height {
+  background: rgba(251, 191, 36, 0.04);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+.chip-height .bmi-chip-val {
+  color: #fbbf24;
+  text-shadow: 0 0 5px rgba(251, 191, 36, 0.2);
+}
 
 /* ===== TELEGRAM BUTTON DASHBOARD ===== */
 .btn-telegram-dash{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#229ED9,#1a8bc0);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border:none;cursor:pointer;transition:.2s;letter-spacing:.5px;box-shadow:0 4px 15px rgba(34,158,217,.3)}
 .btn-telegram-dash:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(34,158,217,.5)}
 @media(max-width:768px){.btn-telegram-dash{padding:8px 12px;font-size:.8rem}}
+
+/* ===== AI ANALYSIS CARD ===== */
+.ai-analysis-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.02);
+  overflow: hidden;
+}
+.ai-analysis-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.ai-analysis-content {
+  padding: 16px;
+  background: rgba(0, 240, 255, 0.015);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 240, 255, 0.04);
+  line-height: 1.6;
+}
+.ai-analysis-text {
+  font-size: 0.9rem;
+  color: var(--text);
+  margin: 0;
+}
+.loading-dots {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.loading-dots::after {
+  content: '...';
+  animation: dots 1.5s steps(4, end) infinite;
+  width: 12px;
+}
+@keyframes dots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}

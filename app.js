@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwFHoWKueLR7ZuXTyjPP_EwqZ50aGhvOmThBx-uy-Ti5uvkWc7RWr4_CWx0jfq-pikKsw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwHjuucrbXZR_ioX_6EL9YsmNHTkjKnpduRp8ISrSR5bN9ny_3W3xf1Y7WkbC_G99UNIA/exec";
 let tempAuthEmail = "";
 let tempAuthName = "";
 
@@ -316,9 +316,11 @@ function renderDashboard() {
         const over = val > target ? 'over' : '';
         return `
             <div class="micro-item">
-                <div class="micro-label">${m.label}</div>
-                <div class="micro-val">${Math.round(val)}${m.unit} <small style="font-size:0.7em;color:var(--text2)">/ ${target}</small></div>
-                <div class="micro-bar"><div class="micro-bar-fill ${over}" style="width:${pct}%"></div></div>
+                <span class="micro-label">${m.label}</span>
+                <div class="micro-bar">
+                    <div class="micro-bar-fill ${over}" style="width:${pct}%"></div>
+                </div>
+                <span class="micro-val"><strong>${Math.round(val)}</strong><span class="micro-divider">/</span>${target}<span class="micro-unit">${m.unit}</span></span>
             </div>
         `;
     }).join('');
@@ -377,6 +379,64 @@ function renderDashboard() {
         else if (bmi < 25)   { lbl.textContent = 'Normal';      lbl.classList.add('normal'); }
         else if (bmi < 30)   { lbl.textContent = 'Overweight';  lbl.classList.add('overweight'); }
         else                 { lbl.textContent = 'Obesitas';     lbl.classList.add('obese'); }
+    }
+    
+    // Call daily AI Analysis
+    updateDailyAIAnalysis(logs, profile, authUser ? authUser.email : null);
+}
+
+async function updateDailyAIAnalysis(logs, profile, email) {
+    const aiCard = document.getElementById('aiAnalysisCard');
+    const aiContent = document.getElementById('aiAnalysisContent');
+    if (!aiCard || !aiContent) return;
+
+    if (!logs || logs.length === 0 || !email) {
+        aiCard.style.display = 'none';
+        return;
+    }
+    
+    aiCard.style.display = 'block';
+    
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = `ai_analysis_${email}_${today}`;
+    const cached = localStorage.getItem(cacheKey);
+    let cacheData = null;
+    try {
+        if (cached) cacheData = JSON.parse(cached);
+    } catch(e){}
+
+    if (cacheData && cacheData.logCount === logs.length) {
+        aiContent.innerHTML = `<p class="ai-analysis-text">${cacheData.text}</p>`;
+        return;
+    }
+
+    aiContent.innerHTML = `<div class="loading-dots">Menganalisis nutrisi hari ini</div>`;
+
+    try {
+        const totals = sumNutrients(logs);
+        const calTarget = profile.targets.cal || 2000;
+        const prompt = `Analisis makanan hari ini untuk user:
+Profil: Gender ${profile.gender}, BB ${profile.bb}kg, TB ${profile.tb}cm, Target ${profile.target} (Target Kalori: ${calTarget} kcal).
+Makanan hari ini (${logs.length} item):
+${logs.map(l => `- ${l.name}: ${l.cal} kcal (P: ${l.protein || 0}g, K: ${l.carbs || 0}g, L: ${l.fat || 0}g)`).join('\n')}
+Total konsumsi: Kalori ${Math.round(totals.cal)} kcal, Protein ${totals.protein.toFixed(1)}g, Karbo ${totals.carbs.toFixed(1)}g, Lemak ${totals.fat.toFixed(1)}g, Gula ${totals.sugar.toFixed(1)}g, Sodium ${totals.sodium.toFixed(1)}mg.
+
+Berikan evaluasi singkat mengenai konsumsi hari ini dan berikan saran praktis/konkrit apa yang sebaiknya dilakukan besok untuk mencapai target kebugaran mereka. Jawab dalam bahasa Indonesia, maksimal 3 kalimat. Format jawaban langsung teks analisis saja, tanpa kata pengantar atau penutup.`;
+
+        const text = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
+        
+        if (text) {
+            const cleanText = text.trim();
+            aiContent.innerHTML = `<p class="ai-analysis-text">${cleanText}</p>`;
+            const newCache = { text: cleanText, logCount: logs.length, timestamp: Date.now() };
+            localStorage.setItem(cacheKey, JSON.stringify(newCache));
+            syncToFirebase('lf_analysis_' + today, newCache);
+        } else {
+            aiContent.innerHTML = `<p style="color:var(--text3)">Gagal memuat analisis AI.</p>`;
+        }
+    } catch (err) {
+        console.error(err);
+        aiContent.innerHTML = `<p style="color:var(--text3)">Gagal memuat analisis AI: ${err.message}</p>`;
     }
 }
 
@@ -692,8 +752,9 @@ function loadHistory() {
 }
 
 function renderHistoryChart(data) {
-    const ctx = document.getElementById('historyChart');
-    if (!ctx) return;
+    const canvas = document.getElementById('historyChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
     const labels = data.map(d => {
         const date = new Date(d.date);
@@ -703,26 +764,61 @@ function renderHistoryChart(data) {
     
     if (currentChart) currentChart.destroy();
     
-    currentChart = new Chart(ctx, {
+    // Create gradient fill
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
+    gradient.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+    
+    currentChart = new Chart(canvas, {
         type: 'line',
         data: {
             labels,
             datasets: [{
                 label: 'Kalori',
                 data: cals,
-                borderColor: '#6c63ff',
-                backgroundColor: 'rgba(108, 99, 255, 0.1)',
+                borderColor: '#00f0ff',
+                borderWidth: 3,
+                backgroundColor: gradient,
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                pointBackgroundColor: '#00f0ff',
+                pointBorderColor: '#0b121c',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#ffffff',
+                pointHoverBorderColor: '#00f0ff',
+                pointHoverBorderWidth: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(11, 18, 28, 0.95)',
+                    titleColor: '#e0f7fa',
+                    bodyColor: '#e0f7fa',
+                    borderColor: 'rgba(0, 240, 255, 0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 4,
+                    displayColors: false,
+                    padding: 10,
+                    titleFont: { family: 'monospace', weight: 'bold' },
+                    bodyFont: { family: 'monospace' }
+                }
+            },
             scales: {
-                y: { beginAtZero: true, grid: { color: '#2a2a3d' }, ticks: { color: '#9999b3' } },
-                x: { grid: { color: '#2a2a3d' }, ticks: { color: '#9999b3' } }
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(0, 240, 255, 0.05)', drawBorder: false }, 
+                    ticks: { color: '#8caebf', font: { family: 'monospace', size: 10 } } 
+                },
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { color: '#8caebf', font: { family: 'monospace', size: 10 } } 
+                }
             }
         }
     });
@@ -743,15 +839,43 @@ function renderHistoryChart(data) {
             labels: ['Protein', 'Karbo', 'Lemak'],
             datasets: [{
                 data: [avgProtein, avgCarbs, avgFat],
-                backgroundColor: ['#a78bfa', '#ffcc02', '#ff4d6d'],
-                borderWidth: 0
+                backgroundColor: ['#00f0ff', '#fbbf24', '#ff3366'],
+                borderWidth: 0,
+                hoverOffset: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '80%',
             plugins: { 
-                legend: { position: 'bottom', labels: { color: '#9999b3' } } 
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: '#8caebf', 
+                        font: { family: 'monospace', size: 11 },
+                        padding: 15,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    } 
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(11, 18, 28, 0.95)',
+                    titleColor: '#e0f7fa',
+                    bodyColor: '#e0f7fa',
+                    borderColor: 'rgba(0, 240, 255, 0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 4,
+                    padding: 10,
+                    titleFont: { family: 'monospace', weight: 'bold' },
+                    bodyFont: { family: 'monospace' },
+                    callbacks: {
+                        label: function(context) {
+                            let val = context.raw || 0;
+                            return ` ${context.label}: ${val.toFixed(1)}g`;
+                        }
+                    }
+                }
             }
         }
     });

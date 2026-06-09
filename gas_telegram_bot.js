@@ -246,6 +246,15 @@ function showDashboard(chatId, email) {
       msg += (i + 1) + '. ' + shown[i].name + ' - ' + Math.round(shown[i].cal) + ' kcal\n';
     }
     if (logs.length > 5) msg += '_...dan ' + (logs.length - 5) + ' lainnya_\n';
+    
+    // Fetch cached AI analysis from Firebase
+    try {
+      var aiAnalysis = getFirebase('users/' + safe(email) + '/lf_analysis_' + today);
+      if (aiAnalysis && aiAnalysis.text) {
+        msg += '\n🤖 *Analisis AI & Saran Esok Hari:*\n';
+        msg += '_' + aiAnalysis.text + '_\n';
+      }
+    } catch(e) {}
   }
 
   sendMessage(chatId, msg, {
@@ -670,4 +679,182 @@ function setWebhook() {
     payload: JSON.stringify({ url: webhookUrl, allowed_updates: ['message', 'callback_query'] })
   });
   Logger.log('Webhook: ' + res.getContentText());
+  
+  // Setup midnight email trigger automatically
+  createMidnightTrigger();
+  Logger.log('Midnight email trigger set up successfully.');
+}
+
+// ====================================================
+// SETUP DAILY MIDNIGHT EMAIL TRIGGER
+// ====================================================
+function createMidnightTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'sendDailyAIAnalysisEmail') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  // Buat trigger harian jam 12 malam
+  ScriptApp.newTrigger('sendDailyAIAnalysisEmail')
+    .timeBased()
+    .everyDays(1)
+    .atHour(0)
+    .create();
+}
+
+// ====================================================
+// DAILY MIDNIGHT EMAIL SENDER
+// ====================================================
+function sendDailyAIAnalysisEmail() {
+  var users = getFirebase('users') || {};
+  var today = todayKey();
+  
+  for (var safeEmail in users) {
+    try {
+      var user = users[safeEmail];
+      var email = user.lf_user_email;
+      if (!email) continue;
+      
+      var logsKey = 'lf_logs_' + today;
+      var logs = user[logsKey] || [];
+      if (logs.length === 0) continue; // Skip if no logs today
+      
+      var analysisKey = 'lf_analysis_' + today;
+      var analysisData = user[analysisKey];
+      var analysisText = "";
+      
+      if (analysisData && analysisData.text && analysisData.logCount === logs.length) {
+        analysisText = analysisData.text;
+      } else {
+        // Generate daily analysis using Groq in GAS
+        analysisText = generateAIAnalysisForGAS(logs, user.lf_profile);
+        // Cache it back to Firebase
+        setFirebase('users/' + safeEmail + '/' + analysisKey, {
+          text: analysisText,
+          logCount: logs.length,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Send styled daily report email
+      sendDailyEmail(email, user.lf_user_name || 'Bro', logs, analysisText, sumNutrients(logs), user.lf_profile);
+      Logger.log('Sent daily report email to: ' + email);
+    } catch(err) {
+      Logger.log('Error sendDailyAIAnalysisEmail for ' + safeEmail + ': ' + err);
+    }
+  }
+}
+
+function generateAIAnalysisForGAS(logs, profile) {
+  if (!GROQ_KEY) throw new Error('GROQ_API_KEY belum diset');
+  
+  var total = sumNutrients(logs);
+  var calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+  
+  var prompt = 'Analisis makanan hari ini untuk user:\n';
+  prompt += 'Target Kalori: ' + calTarget + ' kcal.\n';
+  prompt += 'Makanan hari ini (' + logs.length + ' item):\n';
+  for (var i = 0; i < logs.length; i++) {
+    prompt += '- ' + logs[i].name + ': ' + logs[i].cal + ' kcal (P: ' + (logs[i].protein || 0) + 'g, K: ' + (logs[i].carbs || 0) + 'g, L: ' + (logs[i].fat || 0) + 'g)\n';
+  }
+  prompt += 'Total konsumsi: Kalori ' + Math.round(total.cal) + ' kcal, Protein ' + total.protein.toFixed(1) + 'g, Karbo ' + total.carbs.toFixed(1) + 'g, Lemak ' + total.fat.toFixed(1) + 'g, Gula ' + total.sugar.toFixed(1) + 'g, Sodium ' + total.sodium.toFixed(1) + 'mg.\n\n';
+  prompt += 'Berikan evaluasi singkat mengenai konsumsi hari ini dan berikan saran praktis/konkrit apa yang sebaiknya dilakukan besok untuk mencapai target kebugaran mereka. Jawab dalam bahasa Indonesia, maksimal 3 kalimat. Format jawaban langsung teks analisis saja, tanpa kata pengantar atau penutup.';
+
+  var res = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + GROQ_KEY, 'Content-Type': 'application/json' },
+    payload: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 300
+    }),
+    muteHttpExceptions: true
+  });
+  
+  var data = JSON.parse(res.getContentText());
+  if (!data.choices || !data.choices[0]) throw new Error('Groq error');
+  return data.choices[0].message.content.trim();
+}
+
+function sendDailyEmail(email, name, logs, analysisText, total, profile) {
+  var subject = "Analisis Nutrisi Harian LebihFit Kamu";
+  
+  var calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+  var proteinTarget = Math.round((profile && profile.targets) ? profile.targets.protein : 0);
+  var carbsTarget = Math.round((profile && profile.targets) ? profile.targets.carbs : 0);
+  var fatTarget = Math.round((profile && profile.targets) ? profile.targets.fat : 0);
+  
+  // Create progress bar helper for email
+  function getProgressLine(val, target, unit, name) {
+    var pct = target > 0 ? Math.min(100, Math.round(val / target * 100)) : 0;
+    var filled = Math.round(pct / 10);
+    var bar = '';
+    for (var i = 0; i < 10; i++) bar += (i < filled) ? '■' : '□';
+    return '<div style="margin:8px 0;font-size:0.85rem;font-family:monospace;color:#e0f7fa">' + 
+           name + ': <strong>' + Math.round(val) + '</strong>/' + Math.round(target) + unit + ' (' + pct + '%)<br>' +
+           '<span style="color:#00f0ff">' + bar + '</span></div>';
+  }
+  
+  var progressHtml = getProgressLine(total.cal, calTarget, ' kcal', 'KALORI') +
+                     getProgressLine(total.protein, proteinTarget, 'g', 'PROTEIN') +
+                     getProgressLine(total.carbs, carbsTarget, 'g', 'KARBOHIDRAT') +
+                     getProgressLine(total.fat, fatTarget, 'g', 'LEMAK');
+  
+  var logsHtml = "";
+  for (var i = 0; i < logs.length; i++) {
+    logsHtml += '<tr style="border-bottom:1px solid #1a2d42">' +
+                '<td style="padding:10px;color:#e0f7fa;font-size:0.9rem">' + logs[i].name + '</td>' +
+                '<td style="padding:10px;color:#8caebf;text-align:center;font-size:0.85rem">' + (logs[i].portion || '1 porsi') + '</td>' +
+                '<td style="padding:10px;color:#00f0ff;text-align:right;font-weight:bold;font-size:0.9rem">' + Math.round(logs[i].cal) + ' kcal</td>' +
+                '</tr>';
+  }
+  
+  var htmlBody = 
+    '<div style="font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:550px;margin:0 auto;border:1px solid #00f0ff;box-shadow:0 0 20px rgba(0,240,255,0.15)">' +
+      '<div style="text-align:center;margin-bottom:24px">' +
+        '<h2 style="color:#00f0ff;margin:0;letter-spacing:2px;text-transform:uppercase">LebihFit</h2>' +
+        '<span style="color:#8caebf;font-size:0.85rem">Laporan & Analisis Nutrisi Harian</span>' +
+      '</div>' +
+      
+      '<p>Halo <strong>' + name + '</strong>,</p>' +
+      '<p>Berikut adalah laporan lengkap konsumsi hari ini dan rekomendasi AI untuk besok:</p>' +
+      
+      '<div style="background:#0b121c;border-left:4px solid #00f0ff;padding:16px;border-radius:4px;margin:20px 0;font-style:italic;color:#e0f7fa">' +
+        '<strong style="color:#00f0ff;display:block;margin-bottom:6px;font-style:normal">🤖 Analisis AI & Saran Esok Hari:</strong>' +
+        '"' + analysisText + '"' +
+      '</div>' +
+      
+      '<div style="background:#0b121c;padding:16px;border-radius:4px;margin:20px 0;border:1px solid #1a2d42">' +
+        '<strong style="color:#00f0ff;display:block;margin-bottom:10px">📊 Ringkasan Nutrisi Hari Ini:</strong>' +
+        progressHtml +
+      '</div>' +
+      
+      '<h3 style="color:#00f0ff;border-bottom:1px solid #1a2d42;padding-bottom:6px;margin-top:24px">🍽️ Log Makanan Hari Ini</h3>' +
+      '<table style="width:100%;border-collapse:collapse;margin-top:10px">' +
+        '<thead>' +
+          '<tr style="background:#0b121c;color:#8caebf;font-size:0.85rem">' +
+            '<th style="padding:10px;text-align:left">Makanan</th>' +
+            '<th style="padding:10px;text-align:center">Porsi</th>' +
+            '<th style="padding:10px;text-align:right">Kalori</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody>' +
+          logsHtml +
+        '</tbody>' +
+      '</table>' +
+      
+      '<div style="margin-top:30px;padding-top:20px;border-top:1px solid #1a2d42;text-align:center">' +
+        '<a href="https://darderdor19.github.io/lebihfittools/" style="background:linear-gradient(135deg,#005c66,#00a6b8);color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;font-weight:bold;letter-spacing:1px;font-size:0.85rem;display:inline-block;box-shadow:0 4px 10px rgba(0,240,255,0.2);margin: 6px">Buka Web App</a>' +
+        '<a href="https://t.me/lebihfittracker_bot" style="background:linear-gradient(135deg,#1c74a3,#229ED9);color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;font-weight:bold;letter-spacing:1px;font-size:0.85rem;display:inline-block;box-shadow:0 4px 10px rgba(34,158,217,0.2);margin: 6px">Akses Telegram Bot</a>' +
+      '</div>' +
+      
+      '<p style="color:#4a6b7c;font-size:0.75rem;text-align:center;margin-top:30px">Email ini dikirimkan otomatis oleh sistem tracker LebihFit setiap jam 12 malam.</p>' +
+    '</div>';
+    
+  MailApp.sendEmail({
+    to: email,
+    subject: subject,
+    htmlBody: htmlBody
+  });
 }
