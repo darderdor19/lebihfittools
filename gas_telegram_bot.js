@@ -19,9 +19,9 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
 
-    // OTP handler untuk web app (tetap ada)
-    if (body.action === 'sendOTP') return handleSendOTP(body);
-    if (body.action === 'verifyOTP') return handleVerifyOTP(body);
+    // OTP handler untuk web app (menangani format requestOTP & verifyOTP dari app.js)
+    if (body.action === 'requestOTP') return handleRequestOTPCombined(body);
+    if (body.action === 'verifyOTP') return handleVerifyOTPCombined(body);
 
     // Telegram update
     if (body.message) handleMessage(body.message);
@@ -34,8 +34,7 @@ function doPost(e) {
 }
 
 function doGet() {
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, service: 'LebihFit Bot' }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput("LebihFit Combined API & Bot is running!");
 }
 
 // ====================================================
@@ -500,36 +499,79 @@ function sendHelp(chatId) {
 // ====================================================
 // OTP UNTUK WEB APP
 // ====================================================
-function handleSendOTP(body) {
+function handleRequestOTPCombined(body) {
   var email = body.email;
-  var name = body.name;
-  if (!email) return jsonResp({ ok: false, error: 'Email required' });
+  var name = body.name || 'Bro';
+  if (!email || !email.includes('@')) {
+    return respondErrorCombined("Email tidak valid");
+  }
+  
   var otp = Math.floor(100000 + Math.random() * 900000).toString();
   var cache = CacheService.getScriptCache();
-  cache.put('otp_' + email, JSON.stringify({ otp: otp, name: name, expires: Date.now() + 600000 }), 600);
+  cache.put('otp_' + email, JSON.stringify({ otp: otp, name: name }), 600); // 10 menit
+  
   try {
     MailApp.sendEmail({
       to: email,
-      subject: 'Kode OTP LebihFit - ' + otp,
-      htmlBody: '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px"><h2 style="color:#00f0ff;text-align:center">LebihFit</h2><p>Halo <b>' + (name || 'Bro') + '</b>! Kode OTP:<br><br><div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center"><span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span></div><br><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
+      subject: 'Kode Login LebihFit Kamu',
+      htmlBody: '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px">' +
+                '<h2 style="color:#00f0ff;text-align:center">LebihFit</h2>' +
+                '<p>Halo <b>' + name + '</b>!</p>' +
+                '<p>Kode OTP kamu untuk masuk ke LebihFit adalah:</p>' +
+                '<div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center">' +
+                '<span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span>' +
+                '</div><br>' +
+                '<p style="color:#8caebf;font-size:.85rem">Berlaku selama 10 menit. Jangan berikan kode ini kepada siapapun.</p>' +
+                '</div>'
     });
-    return jsonResp({ ok: true });
+    return respondSuccessCombined({ message: "OTP terkirim ke email" });
   } catch (e) {
-    return jsonResp({ ok: false, error: e.message });
+    return respondErrorCombined("Gagal mengirim email: " + e.message);
   }
 }
 
-function handleVerifyOTP(body) {
+function handleVerifyOTPCombined(body) {
   var email = body.email;
   var otp = body.otp;
-  if (!email || !otp) return jsonResp({ ok: false, error: 'Email and OTP required' });
+  if (!email || !otp) {
+    return respondErrorCombined("Data tidak lengkap");
+  }
+  
   var cache = CacheService.getScriptCache();
   var stored = cache.get('otp_' + email);
-  if (!stored) return jsonResp({ ok: false, error: 'OTP expired' });
+  if (!stored) {
+    return respondErrorCombined("Kode OTP sudah kedaluwarsa, silakan request ulang");
+  }
+  
   var data = JSON.parse(stored);
-  if (data.otp !== otp.toString()) return jsonResp({ ok: false, error: 'OTP salah' });
+  if (data.otp !== otp.toString()) {
+    return respondErrorCombined("Kode OTP salah");
+  }
+  
   cache.remove('otp_' + email);
-  return jsonResp({ ok: true, name: data.name });
+  
+  // Daftarkan/simpan profile user ke database Firebase jika belum ada namanya
+  try {
+    setFirebase('users/' + safe(email) + '/lf_profile/lf_user_name', data.name);
+  } catch(err) {
+    Logger.log('Error saving user name to Firebase: ' + err);
+  }
+  
+  return respondSuccessCombined({ 
+    message: "Login berhasil", 
+    email: email, 
+    name: data.name 
+  });
+}
+
+function respondSuccessCombined(data) {
+  return ContentService.createTextOutput(JSON.stringify({ success: true, data: data }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function respondErrorCombined(message) {
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: message }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // ====================================================
