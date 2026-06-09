@@ -353,6 +353,31 @@ function renderDashboard() {
         `).join('');
     }
     if (window.lucide) lucide.createIcons();
+
+    // ---- BMI Gauge ----
+    const bb = profile.bb || 0;
+    const tb = profile.tb || 0;
+    const targetBb = profile.targetBb || profile.bb || 0;
+    if (bb && tb) {
+        const bmi = bb / ((tb / 100) * (tb / 100));
+        const bmiRounded = Math.round(bmi * 10) / 10;
+        document.getElementById('bmiValue').textContent = bmiRounded;
+        document.getElementById('bmiCurrentWeight').textContent = bb + ' kg';
+        document.getElementById('bmiHeight').textContent = tb + ' cm';
+        document.getElementById('bmiTargetWeight').textContent = (targetBb || '--') + (targetBb ? ' kg' : '');
+
+        // Needle: BMI 10=leftmost(-90deg) 40=rightmost(90deg)
+        const clamp = Math.min(40, Math.max(10, bmi));
+        const angle = ((clamp - 10) / 30) * 180 - 90;
+        document.getElementById('bmiNeedle').setAttribute('transform', `rotate(${angle}, 100, 100)`);
+
+        const lbl = document.getElementById('bmiStatusLabel');
+        lbl.className = 'bmi-status-label';
+        if (bmi < 18.5)      { lbl.textContent = 'Kurus';       lbl.classList.add('kurus'); }
+        else if (bmi < 25)   { lbl.textContent = 'Normal';      lbl.classList.add('normal'); }
+        else if (bmi < 30)   { lbl.textContent = 'Overweight';  lbl.classList.add('overweight'); }
+        else                 { lbl.textContent = 'Obesitas';     lbl.classList.add('obese'); }
+    }
 }
 
 function formatMealTime(val) {

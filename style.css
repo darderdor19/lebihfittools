@@ -365,3 +365,26 @@ a{color:var(--accent);text-decoration:none}
 .custom-confirm-msg{font-size:1rem;color:var(--text);margin-bottom:24px;line-height:1.6;font-family:monospace}
 .custom-confirm-actions{display:flex;gap:12px}
 .custom-confirm-actions button{flex:1}
+
+/* ===== BMI GAUGE CARD ===== */
+.bmi-card{padding:20px}
+.bmi-left{display:flex;flex-direction:column;gap:12px}
+.bmi-stats-row{display:flex;gap:10px;flex-wrap:wrap}
+.bmi-stat-chip{display:flex;flex-direction:column;align-items:center;padding:10px 16px;border-radius:10px;border:1px solid;min-width:90px;flex:1;text-align:center}
+.bmi-chip-label{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.bmi-chip-val{font-size:1rem;font-weight:800;color:var(--text)}
+.bmi-gauge-wrap{position:relative;display:flex;justify-content:center;align-items:flex-end}
+.bmi-gauge-svg{width:100%;max-width:280px;height:auto;filter:drop-shadow(0 0 12px rgba(0,240,255,.15))}
+.bmi-center-val{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;margin-bottom:-4px}
+.bmi-center-val span{display:block;font-size:2rem;font-weight:900;color:var(--text);line-height:1}
+.bmi-center-val small{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+.bmi-status-label{text-align:center;font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:6px 16px;border-radius:20px;border:1px solid;align-self:center}
+.bmi-status-label.kurus{color:#3b82f6;border-color:#3b82f6;background:rgba(59,130,246,.1)}
+.bmi-status-label.normal{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.1)}
+.bmi-status-label.overweight{color:#f97316;border-color:#f97316;background:rgba(249,115,22,.1)}
+.bmi-status-label.obese{color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.1)}
+
+/* ===== TELEGRAM BUTTON DASHBOARD ===== */
+.btn-telegram-dash{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#229ED9,#1a8bc0);color:#fff;font-weight:700;font-size:.85rem;text-decoration:none;border:none;cursor:pointer;transition:.2s;letter-spacing:.5px;box-shadow:0 4px 15px rgba(34,158,217,.3)}
+.btn-telegram-dash:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(34,158,217,.5)}
+@media(max-width:768px){.btn-telegram-dash{padding:8px 12px;font-size:.8rem}}

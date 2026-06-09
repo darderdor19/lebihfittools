@@ -6,11 +6,11 @@
 //   GROQ_API_KEY       = API key Groq lu
 // ====================================================
 
-const PROPS    = PropertiesService.getScriptProperties();
+const PROPS = PropertiesService.getScriptProperties();
 const BOT_TOKEN = PROPS.getProperty('TELEGRAM_BOT_TOKEN');
-const GROQ_KEY  = PROPS.getProperty('GROQ_API_KEY');
-const FB_URL    = 'https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app';
-const TG_API    = 'https://api.telegram.org/bot' + BOT_TOKEN;
+const GROQ_KEY = PROPS.getProperty('GROQ_API_KEY');
+const FB_URL = 'https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app';
+const TG_API = 'https://api.telegram.org/bot' + BOT_TOKEN;
 
 // ====================================================
 // ENTRY POINTS
@@ -20,14 +20,14 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
 
     // OTP handler untuk web app (tetap ada)
-    if (body.action === 'sendOTP')   return handleSendOTP(body);
+    if (body.action === 'sendOTP') return handleSendOTP(body);
     if (body.action === 'verifyOTP') return handleVerifyOTP(body);
 
     // Telegram update
-    if (body.message)        handleMessage(body.message);
+    if (body.message) handleMessage(body.message);
     if (body.callback_query) handleCallback(body.callback_query);
 
-  } catch(err) {
+  } catch (err) {
     Logger.log('doPost ERR: ' + err);
   }
   return ContentService.createTextOutput('OK');
@@ -44,16 +44,16 @@ function doGet() {
 function handleMessage(msg) {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  const text   = (msg.text || '').trim();
-  const state  = getState(userId);
+  const text = (msg.text || '').trim();
+  const state = getState(userId);
 
   if (text === '/start') return onStart(chatId, userId);
-  if (text === '/menu')  return showMainMenu(chatId, userId);
-  if (text === '/help')  return sendHelp(chatId);
+  if (text === '/menu') return showMainMenu(chatId, userId);
+  if (text === '/help') return sendHelp(chatId);
 
   if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text);
-  if (state === 'AWAIT_OTP')   return onOtpInput(chatId, userId, text);
-  if (state === 'AWAIT_FOOD')  return onFoodInput(chatId, userId, text);
+  if (state === 'AWAIT_OTP') return onOtpInput(chatId, userId, text);
+  if (state === 'AWAIT_FOOD') return onFoodInput(chatId, userId, text);
 
   // Default: jika sudah login, langsung proses sebagai makanan
   const email = getLinkedEmail(userId);
@@ -69,22 +69,22 @@ function handleMessage(msg) {
 function handleCallback(cb) {
   const chatId = cb.message.chat.id;
   const userId = cb.from.id;
-  const data   = cb.data;
+  const data = cb.data;
   answerCallback(cb.id);
 
   const email = getLinkedEmail(userId);
 
-  if (data === 'menu')        return showMainMenu(chatId, userId);
-  if (data === 'dashboard')   return email ? showDashboard(chatId, email)     : promptLogin(chatId, userId);
-  if (data === 'log_food')    return email ? promptFoodInput(chatId, userId)   : promptLogin(chatId, userId);
-  if (data === 'history')     return email ? showHistory(chatId, email)        : promptLogin(chatId, userId);
-  if (data === 'settings')    return showSettings(chatId, userId, email);
-  if (data === 'logout')      return doLogout(chatId, userId);
+  if (data === 'menu') return showMainMenu(chatId, userId);
+  if (data === 'dashboard') return email ? showDashboard(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'log_food') return email ? promptFoodInput(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'history') return email ? showHistory(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'settings') return showSettings(chatId, userId, email);
+  if (data === 'logout') return doLogout(chatId, userId);
   if (data === 'confirm_yes') return confirmSaveFood(chatId, userId);
-  if (data === 'confirm_no')  return cancelFood(chatId, userId);
-  if (data === 'hist_7')      return showHistoryDays(chatId, email, 7);
-  if (data === 'hist_14')     return showHistoryDays(chatId, email, 14);
-  if (data === 'hist_30')     return showHistoryDays(chatId, email, 30);
+  if (data === 'confirm_no') return cancelFood(chatId, userId);
+  if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
+  if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
+  if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
 }
 
 // ====================================================
@@ -93,7 +93,7 @@ function handleCallback(cb) {
 function onStart(chatId, userId) {
   const email = getLinkedEmail(userId);
   if (email) {
-    const profile  = getFirebase('users/' + safe(email) + '/lf_profile');
+    const profile = getFirebase('users/' + safe(email) + '/lf_profile');
     const userName = profile ? (profile.name || 'Bro') : 'Bro';
     sendMessage(chatId,
       '*Selamat datang kembali, ' + userName + '!*\n\nPilih menu di bawah:',
@@ -140,14 +140,14 @@ function onEmailInput(chatId, userId, email) {
       'OTP dikirim ke *' + email + '*\n\nCek email lu dan kirim kode 6 digit di sini:',
       null
     );
-  } catch(err) {
+  } catch (err) {
     setState(userId, null);
     sendMessage(chatId, 'Gagal kirim OTP: ' + err.message + '\n\nPastikan email benar ya.');
   }
 }
 
 function onOtpInput(chatId, userId, otpInput) {
-  const storedOtp   = getCache(userId + '_otp');
+  const storedOtp = getCache(userId + '_otp');
   const storedEmail = getCache(userId + '_email');
 
   if (!storedOtp || !storedEmail) {
@@ -170,7 +170,7 @@ function onOtpInput(chatId, userId, otpInput) {
   deleteCache(userId + '_otp');
   deleteCache(userId + '_email');
 
-  const profile  = getFirebase('users/' + safe(storedEmail) + '/lf_profile');
+  const profile = getFirebase('users/' + safe(storedEmail) + '/lf_profile');
   const userName = profile ? (profile.name || 'Bro') : 'Bro';
 
   sendMessage(chatId,
@@ -186,7 +186,7 @@ function showMainMenu(chatId, userId) {
   const email = getLinkedEmail(userId);
   if (!email) return promptLogin(chatId, userId);
 
-  const profile  = getFirebase('users/' + safe(email) + '/lf_profile');
+  const profile = getFirebase('users/' + safe(email) + '/lf_profile');
   const userName = profile ? (profile.name || 'Bro') : 'Bro';
 
   sendMessage(chatId,
@@ -205,6 +205,9 @@ function mainMenuKeyboard() {
       [
         { text: '📈 History',   callback_data: 'history'  },
         { text: '⚙️ Settings', callback_data: 'settings' }
+      ],
+      [
+        { text: '🌐 Buka Web App', url: 'https://darderdor19.github.io/lebihfittools/' }
       ]
     ]
   };
@@ -214,14 +217,14 @@ function mainMenuKeyboard() {
 // DASHBOARD
 // ====================================================
 function showDashboard(chatId, email) {
-  const today   = todayKey();
-  const logs    = getFirebase('users/' + safe(email) + '/lf_logs_' + today) || [];
+  const today = todayKey();
+  const logs = getFirebase('users/' + safe(email) + '/lf_logs_' + today) || [];
   const profile = getFirebase('users/' + safe(email) + '/lf_profile');
-  const total   = sumNutrients(logs);
-  const calTarget  = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
-  const remaining  = calTarget - Math.round(total.cal);
-  const pct        = calTarget > 0 ? Math.min(100, Math.round(total.cal / calTarget * 100)) : 0;
-  const bar        = progressBar(pct);
+  const total = sumNutrients(logs);
+  const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
+  const remaining = calTarget - Math.round(total.cal);
+  const pct = calTarget > 0 ? Math.min(100, Math.round(total.cal / calTarget * 100)) : 0;
+  const bar = progressBar(pct);
 
   var msg = '*Dashboard - ' + formatDate(new Date()) + '*\n\n';
   msg += 'Kalori: *' + Math.round(total.cal) + ' / ' + calTarget + ' kcal*\n';
@@ -240,7 +243,7 @@ function showDashboard(chatId, email) {
     msg += '\n*Log Makanan:*\n';
     var shown = logs.slice(-5);
     for (var i = 0; i < shown.length; i++) {
-      msg += (i+1) + '. ' + shown[i].name + ' - ' + Math.round(shown[i].cal) + ' kcal\n';
+      msg += (i + 1) + '. ' + shown[i].name + ' - ' + Math.round(shown[i].cal) + ' kcal\n';
     }
     if (logs.length > 5) msg += '_...dan ' + (logs.length - 5) + ' lainnya_\n';
   }
@@ -248,7 +251,7 @@ function showDashboard(chatId, email) {
   sendMessage(chatId, msg, {
     inline_keyboard: [
       [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
-      [{ text: '🏠 Menu Utama', callback_data: 'menu' }]
+      [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
     ]
   });
 }
@@ -292,15 +295,15 @@ function onFoodInput(chatId, userId, text) {
     sendMessage(chatId, msg, {
       inline_keyboard: [[
         { text: 'Simpan', callback_data: 'confirm_yes' },
-        { text: 'Batal',  callback_data: 'confirm_no'  }
+        { text: 'Batal', callback_data: 'confirm_no' }
       ]]
     });
-  } catch(err) {
+  } catch (err) {
     Logger.log('onFoodInput ERR: ' + err);
     sendMessage(chatId, 'Gagal analisis: ' + err.message, {
       inline_keyboard: [[
         { text: 'Coba Lagi', callback_data: 'log_food' },
-        { text: 'Menu',      callback_data: 'menu'     }
+        { text: 'Menu', callback_data: 'menu' }
       ]]
     });
   }
@@ -316,36 +319,36 @@ function confirmSaveFood(chatId, userId) {
   var nutrition = JSON.parse(raw);
   deleteCache(userId + '_pending');
 
-  var today   = todayKey();
+  var today = todayKey();
   var logsKey = 'lf_logs_' + today;
   var existing = getFirebase('users/' + safe(email) + '/' + logsKey) || [];
 
   var newItem = {
-    id:        Utilities.getUuid(),
-    name:      nutrition.name || 'Makanan',
-    portion:   nutrition.portion || '1 porsi',
-    cal:       nutrition.cal     || 0,
-    protein:   nutrition.protein || 0,
-    carbs:     nutrition.carbs   || 0,
-    fat:       nutrition.fat     || 0,
-    fiber:     nutrition.fiber   || 0,
-    sugar:     nutrition.sugar   || 0,
-    sodium:    nutrition.sodium  || 0,
-    calcium:   nutrition.calcium || 0,
-    iron:      nutrition.iron    || 0,
-    vitC:      nutrition.vitC    || 0,
-    vitD:      nutrition.vitD    || 0,
-    zinc:      nutrition.zinc    || 0,
-    mealTime:  guessMealTime(),
-    loggedAt:  new Date().toISOString(),
-    source:    'telegram'
+    id: Utilities.getUuid(),
+    name: nutrition.name || 'Makanan',
+    portion: nutrition.portion || '1 porsi',
+    cal: nutrition.cal || 0,
+    protein: nutrition.protein || 0,
+    carbs: nutrition.carbs || 0,
+    fat: nutrition.fat || 0,
+    fiber: nutrition.fiber || 0,
+    sugar: nutrition.sugar || 0,
+    sodium: nutrition.sodium || 0,
+    calcium: nutrition.calcium || 0,
+    iron: nutrition.iron || 0,
+    vitC: nutrition.vitC || 0,
+    vitD: nutrition.vitD || 0,
+    zinc: nutrition.zinc || 0,
+    mealTime: guessMealTime(),
+    loggedAt: new Date().toISOString(),
+    source: 'telegram'
   };
 
   existing.push(newItem);
   setFirebase('users/' + safe(email) + '/' + logsKey, existing);
 
-  var total     = sumNutrients(existing);
-  var profile   = getFirebase('users/' + safe(email) + '/lf_profile');
+  var total = sumNutrients(existing);
+  var profile = getFirebase('users/' + safe(email) + '/lf_profile');
   var calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
 
   var msg = '*' + newItem.name + '* tersimpan!\n\n';
@@ -355,10 +358,10 @@ function confirmSaveFood(chatId, userId) {
   sendMessage(chatId, msg, {
     inline_keyboard: [
       [
-        { text: 'Log Lagi',   callback_data: 'log_food'  },
-        { text: 'Dashboard',  callback_data: 'dashboard' }
+        { text: '🍽️ Log Lagi',  callback_data: 'log_food'  },
+        { text: '📊 Dashboard', callback_data: 'dashboard' }
       ],
-      [{ text: 'Menu Utama', callback_data: 'menu' }]
+      [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
     ]
   });
 }
@@ -375,7 +378,7 @@ function showHistory(chatId, email) {
   sendMessage(chatId, '*History*\n\nPilih rentang waktu:', {
     inline_keyboard: [
       [
-        { text: '7 Hari',  callback_data: 'hist_7'  },
+        { text: '7 Hari', callback_data: 'hist_7' },
         { text: '14 Hari', callback_data: 'hist_14' },
         { text: '30 Hari', callback_data: 'hist_30' }
       ],
@@ -389,7 +392,7 @@ function showHistoryDays(chatId, email, days) {
   for (var i = 0; i < days; i++) {
     var d = new Date();
     d.setDate(d.getDate() - i);
-    var key  = d.toISOString().slice(0, 10);
+    var key = d.toISOString().slice(0, 10);
     var logs = getFirebase('users/' + safe(email) + '/lf_logs_' + key) || [];
     if (logs.length > 0) {
       var t = sumNutrients(logs);
@@ -423,8 +426,8 @@ function showHistoryDays(chatId, email, days) {
 
   sendMessage(chatId, msg, {
     inline_keyboard: [
-      [{ text: 'Dashboard Hari Ini', callback_data: 'dashboard' }],
-      [{ text: 'Menu Utama',         callback_data: 'menu'      }]
+      [{ text: '📊 Dashboard Hari Ini', callback_data: 'dashboard' }],
+      [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
     ]
   });
 }
@@ -445,8 +448,8 @@ function showSettings(chatId, userId, email) {
     msg += '\n_Untuk ubah profil, gunakan web app._';
     sendMessage(chatId, msg, {
       inline_keyboard: [
-        [{ text: 'Logout', callback_data: 'logout' }],
-        [{ text: 'Menu Utama', callback_data: 'menu' }]
+        [{ text: '🚪 Logout', callback_data: 'logout' }],
+        [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
       ]
     });
   } else {
@@ -490,7 +493,7 @@ function sendHelp(chatId) {
 // ====================================================
 function handleSendOTP(body) {
   var email = body.email;
-  var name  = body.name;
+  var name = body.name;
   if (!email) return jsonResp({ ok: false, error: 'Email required' });
   var otp = Math.floor(100000 + Math.random() * 900000).toString();
   var cache = CacheService.getScriptCache();
@@ -499,19 +502,19 @@ function handleSendOTP(body) {
     MailApp.sendEmail({
       to: email,
       subject: 'Kode OTP LebihFit - ' + otp,
-      htmlBody: '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px"><h2 style="color:#00f0ff;text-align:center">LebihFit</h2><p>Halo <b>' + (name||'Bro') + '</b>! Kode OTP:<br><br><div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center"><span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span></div><br><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
+      htmlBody: '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px"><h2 style="color:#00f0ff;text-align:center">LebihFit</h2><p>Halo <b>' + (name || 'Bro') + '</b>! Kode OTP:<br><br><div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center"><span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span></div><br><p style="color:#8caebf;font-size:.85rem">Berlaku 10 menit.</p></div>'
     });
     return jsonResp({ ok: true });
-  } catch(e) {
+  } catch (e) {
     return jsonResp({ ok: false, error: e.message });
   }
 }
 
 function handleVerifyOTP(body) {
   var email = body.email;
-  var otp   = body.otp;
+  var otp = body.otp;
   if (!email || !otp) return jsonResp({ ok: false, error: 'Email and OTP required' });
-  var cache  = CacheService.getScriptCache();
+  var cache = CacheService.getScriptCache();
   var stored = cache.get('otp_' + email);
   if (!stored) return jsonResp({ ok: false, error: 'OTP expired' });
   var data = JSON.parse(stored);
@@ -552,18 +555,18 @@ function getFirebase(path) {
     var res = UrlFetchApp.fetch(FB_URL + '/' + path + '.json', { muteHttpExceptions: true });
     var val = JSON.parse(res.getContentText());
     return val === null ? null : val;
-  } catch(e) { return null; }
+  } catch (e) { return null; }
 }
 
 function setFirebase(path, value) {
   try {
     UrlFetchApp.fetch(FB_URL + '/' + path + '.json', {
-      method:      value === null ? 'DELETE' : 'PUT',
+      method: value === null ? 'DELETE' : 'PUT',
       contentType: 'application/json',
-      payload:     value !== null ? JSON.stringify(value) : '',
+      payload: value !== null ? JSON.stringify(value) : '',
       muteHttpExceptions: true
     });
-  } catch(e) { Logger.log('FB SET err: ' + e); }
+  } catch (e) { Logger.log('FB SET err: ' + e); }
 }
 
 function getLinkedEmail(userId) {
@@ -577,7 +580,7 @@ function getLinkedEmail(userId) {
 function setState(userId, state) {
   var c = CacheService.getScriptCache();
   if (state) c.put('state_' + userId, state, 3600);
-  else        c.remove('state_' + userId);
+  else c.remove('state_' + userId);
 }
 function getState(userId) {
   return CacheService.getScriptCache().get('state_' + userId) || null;
@@ -622,8 +625,8 @@ function answerCallback(cbId) {
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 
 function formatDate(d) {
-  var days   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-  var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  var days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
 
@@ -636,7 +639,7 @@ function progressBar(pct) {
 
 function guessMealTime() {
   var h = (new Date().getHours() + 7) % 24;
-  if (h >= 5  && h < 10) return 'sarapan';
+  if (h >= 5 && h < 10) return 'sarapan';
   if (h >= 10 && h < 14) return 'makan_siang';
   if (h >= 14 && h < 17) return 'snack_siang';
   if (h >= 17 && h < 21) return 'makan_malam';
@@ -644,8 +647,8 @@ function guessMealTime() {
 }
 
 function sumNutrients(items) {
-  var keys = ['cal','protein','carbs','fat','fiber','sugar','sodium','calcium','iron','vitC','vitD','zinc'];
-  var acc  = { cal:0, protein:0, carbs:0, fat:0, fiber:0, sugar:0, sodium:0, calcium:0, iron:0, vitC:0, vitD:0, zinc:0 };
+  var keys = ['cal', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium', 'calcium', 'iron', 'vitC', 'vitD', 'zinc'];
+  var acc = { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, calcium: 0, iron: 0, vitC: 0, vitD: 0, zinc: 0 };
   for (var i = 0; i < items.length; i++) {
     for (var j = 0; j < keys.length; j++) acc[keys[j]] += items[i][keys[j]] || 0;
   }
@@ -664,7 +667,7 @@ function setWebhook() {
   var webhookUrl = ScriptApp.getService().getUrl();
   var res = UrlFetchApp.fetch(TG_API + '/setWebhook', {
     method: 'POST', contentType: 'application/json',
-    payload: JSON.stringify({ url: webhookUrl, allowed_updates: ['message','callback_query'] })
+    payload: JSON.stringify({ url: webhookUrl, allowed_updates: ['message', 'callback_query'] })
   });
   Logger.log('Webhook: ' + res.getContentText());
 }
