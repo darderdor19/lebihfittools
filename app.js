@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwHjuucrbXZR_ioX_6EL9YsmNHTkjKnpduRp8ISrSR5bN9ny_3W3xf1Y7WkbC_G99UNIA/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyfUcMoV9i6Gfv-tdRlSaRjSUQxDENcUWqz3iExObzQvO2c-AtbzEqKLHY2fDFpu50TXw/exec";
 let tempAuthEmail = "";
 let tempAuthName = "";
 
