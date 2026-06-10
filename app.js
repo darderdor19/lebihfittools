@@ -430,49 +430,114 @@ async function updateDailyAIAnalysis(logs, profile, email) {
         aiCard.style.display = 'none';
         return;
     }
-    
+
     aiCard.style.display = 'block';
-    
+
     const today = new Date().toISOString().slice(0, 10);
-    const cacheKey = `ai_analysis_${email}_${today}`;
+    const cacheKey = `ai_daily_v2_${email}_${today}`;
     const cached = localStorage.getItem(cacheKey);
     let cacheData = null;
-    try {
-        if (cached) cacheData = JSON.parse(cached);
-    } catch(e){}
+    try { if (cached) cacheData = JSON.parse(cached); } catch(e){}
 
-    if (cacheData && cacheData.logCount === logs.length) {
-        aiContent.innerHTML = `<p class="ai-analysis-text">${cacheData.text}</p>`;
+    // Use cache only if food count matches
+    if (cacheData && cacheData.logCount === logs.length && cacheData.html) {
+        aiContent.innerHTML = cacheData.html;
         return;
     }
 
-    aiContent.innerHTML = `<div class="loading-dots">Menganalisis nutrisi hari ini</div>`;
+    // Show loading spinner
+    aiContent.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;color:var(--text2);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:lfSpin 1s linear infinite;flex-shrink:0;">
+                <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+            </svg>
+            <span style="font-size:0.9rem;">✨ AI Groq menganalisis gizi harian lu...</span>
+        </div>`;
+
+    // Add spin keyframe once
+    if (!document.getElementById('lf-spin-style')) {
+        const st = document.createElement('style');
+        st.id = 'lf-spin-style';
+        st.textContent = '@keyframes lfSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(st);
+    }
 
     try {
         const totals = sumNutrients(logs);
-        const calTarget = profile.targets.cal || 2000;
-        const prompt = `Analisis makanan hari ini untuk user:
-Profil: Gender ${profile.gender}, BB ${profile.bb}kg, TB ${profile.tb}cm, Target ${profile.target} (Target Kalori: ${calTarget} kcal).
-Makanan hari ini (${logs.length} item):
-${logs.map(l => `- ${l.name}: ${l.cal} kcal (P: ${l.protein || 0}g, K: ${l.carbs || 0}g, L: ${l.fat || 0}g)`).join('\n')}
-Total konsumsi: Kalori ${Math.round(totals.cal)} kcal, Protein ${totals.protein.toFixed(1)}g, Karbo ${totals.carbs.toFixed(1)}g, Lemak ${totals.fat.toFixed(1)}g, Gula ${totals.sugar.toFixed(1)}g, Sodium ${totals.sodium.toFixed(1)}mg.
+        const calTarget = (profile.targets && profile.targets.cal) || 2000;
+        const targetProtein = (profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
+        const targetCarbs   = (profile.targets && profile.targets.carbs)   ? profile.targets.carbs   : Math.round((calTarget * 0.50) / 4);
+        const targetFat     = (profile.targets && profile.targets.fat)     ? profile.targets.fat     : Math.round((calTarget * 0.25) / 9);
 
-Berikan evaluasi singkat mengenai konsumsi hari ini dan berikan saran praktis/konkrit apa yang sebaiknya dilakukan besok untuk mencapai target kebugaran mereka. Jawab dalam bahasa Indonesia, maksimal 3 kalimat. Format jawaban langsung teks analisis saja, tanpa kata pengantar atau penutup.`;
+        const calRatio = totals.cal / calTarget;
+        const calStatus = calRatio <= 0.85 ? 'DEFISIT BESAR (-' + Math.round((1-calRatio)*100) + '%)' :
+                          calRatio <= 0.95 ? 'CUTTING/DEFISIT (-' + Math.round((1-calRatio)*100) + '%)' :
+                          calRatio <= 1.05 ? 'MAINTENANCE/ON TRACK' :
+                          calRatio <= 1.15 ? 'SURPLUS RINGAN (+' + Math.round((calRatio-1)*100) + '%)' :
+                                             'SURPLUS BERLEBIH (+' + Math.round((calRatio-1)*100) + '%)';
 
-        const text = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
-        
-        if (text) {
-            const cleanText = text.trim();
-            aiContent.innerHTML = `<p class="ai-analysis-text">${cleanText}</p>`;
-            const newCache = { text: cleanText, logCount: logs.length, timestamp: Date.now() };
+        const foodList = logs.map(l => `- ${l.name} (${l.portion || '1 porsi'}): ${Math.round(l.cal||0)} kcal | P:${(l.protein||0).toFixed(1)}g K:${(l.carbs||0).toFixed(1)}g L:${(l.fat||0).toFixed(1)}g`).join('\n');
+
+        const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):
+
+== DATA HARI INI ==
+Profil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}
+
+Makanan tercatat (${logs.length} item):
+${foodList}
+
+Total aktual vs Target harian:
+- Kalori: ${Math.round(totals.cal)} kcal vs ${calTarget} kcal → ${calStatus}
+- Protein: ${totals.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((totals.protein/targetProtein)*100)}%)
+- Karbohidrat: ${totals.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((totals.carbs/targetCarbs)*100)}%)
+- Lemak: ${totals.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((totals.fat/targetFat)*100)}%)
+- Serat: ${totals.fiber.toFixed(1)}g (ideal ≥25g)
+- Gula: ${totals.sugar.toFixed(1)}g (batas <50g)
+- Sodium: ${Math.round(totals.sodium)}mg (batas <2300mg)
+
+== FORMAT RESPONS ==
+Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:
+
+1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok
+
+2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:
+   - Status (KURANG/OK/BERLEBIH)
+   - Dampak spesifik ke tubuh/performa latihan  
+   - Saran makanan konkret untuk melengkapi hari ini / besok
+
+3. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div
+
+4. Saran Aktivitas → berdasarkan sisa kalori dan goal user, sarankan latihan/aktivitas yang tepat hari ini
+
+5. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)
+
+Gunakan warna: hijau (bg:rgba(50,215,75,0.08) border:#32d74b) = OK/cukup, merah (bg:rgba(255,59,48,0.08) border:#ff3b30) = kurang/berlebih bahaya, kuning (bg:rgba(255,214,10,0.08) border:#ffd60a) = perlu perhatian, biru (bg:rgba(0,122,255,0.08) border:#007AFF) = cutting/defisit. Gunakan emoji relevan. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
+
+        const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
+
+        if (rawHtml) {
+            // Clean up any markdown code fences
+            let cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
+
+            const aiHtml = `
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <b>Dianalisis AI Groq</b> · llama-3.3-70b · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
+                </div>
+                ${cleanHtml}`;
+
+            aiContent.innerHTML = aiHtml;
+
+            // Cache the result
+            const newCache = { html: aiHtml, logCount: logs.length, timestamp: Date.now() };
             localStorage.setItem(cacheKey, JSON.stringify(newCache));
-            syncToFirebase('lf_analysis_' + today, newCache);
+            syncToFirebase('lf_analysis_' + today, { text: 'AI HTML analysis', logCount: logs.length, timestamp: Date.now() });
         } else {
-            aiContent.innerHTML = `<p style="color:var(--text3)">Gagal memuat analisis AI.</p>`;
+            aiContent.innerHTML = `<p style="color:var(--text2);font-size:0.9rem;">Gagal memuat analisis AI. Coba refresh halaman.</p>`;
         }
     } catch (err) {
-        console.error(err);
-        aiContent.innerHTML = `<p style="color:var(--text3)">Gagal memuat analisis AI: ${err.message}</p>`;
+        console.error('[AI Daily]', err);
+        aiContent.innerHTML = `<p style="color:var(--text2);font-size:0.9rem;">Gagal memuat analisis AI: ${err.message}</p>`;
     }
 }
 

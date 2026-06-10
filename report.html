@@ -799,7 +799,7 @@
       `;
       document.getElementById('chartSvgWrapper').innerHTML = svgHtml;
 
-      // 5. Smart Evaluation Notes (Rich HTML)
+      // 5. Smart Evaluation Notes — Real Groq AI
       const loggedDays = dates.filter(d => (logs[d] || []).length > 0).length;
       const avgProtein = totalProtein / dates.length;
       const avgCarbs = totalCarbs / dates.length;
@@ -829,16 +829,6 @@
             Hanya ${loggedDays} dari ${dates.length} hari yang tercatat. Usahakan mencatat makanan setiap hari agar analisis tren menjadi lebih akurat.
           </div>`;
       } else {
-        const ratio = avgCal / targetCal;
-        
-        // Kalori assessment
-        let calBlock = '';
-        let calIcon = '🟢';
-        let calStatus = 'ON TRACK';
-        let calColor = 'rgba(50,215,75,0.08)';
-        let calBorder = 'var(--success)';
-        let calImpact = '';
-        let calSaran = '';
 
         if (ratio <= 0.85) {
           calIcon = '🔵'; calStatus = 'DEFISIT SIGNIFIKAN';
