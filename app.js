@@ -1222,10 +1222,6 @@ function exportData() {
     URL.revokeObjectURL(url);
 }
 
-function generateWeeklyPDFReport() {
-    window.open('report.html', '_blank');
-}
-
 function confirmClearAll() {
     showCustomConfirm('PERINGATAN BAHAYA!<br><br>Apakah kamu YAKIN ingin menghapus SEMUA data nutrisi dan profil kamu? Data yang dihapus tidak bisa dikembalikan!', () => {
         DB.del('lf_profile');
