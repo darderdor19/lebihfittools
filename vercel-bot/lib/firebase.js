@@ -1,40 +1,18 @@
 // ====================================================
-// FIREBASE ADMIN SDK HELPER
+// FIREBASE REST API HELPER (No Admin SDK needed!)
+// Same approach as the GAS version — simple and reliable
 // ====================================================
-const admin = require('firebase-admin');
 
-let db;
-
-function getDb() {
-  if (!db) {
-    if (!admin.apps.length) {
-      // Gunakan individual env vars (lebih reliable di Vercel)
-      // daripada satu JSON blob yang sering bermasalah dengan newline
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY
-        ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-        : undefined;
-
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey
-        }),
-        databaseURL: process.env.FIREBASE_DATABASE_URL
-      });
-    }
-    db = admin.database();
-  }
-  return db;
-}
+const FB_URL = process.env.FIREBASE_DATABASE_URL;
 
 /**
  * Get data from Firebase path
  */
 async function getFirebase(path) {
   try {
-    const snap = await getDb().ref(path).once('value');
-    return snap.val();
+    const res = await fetch(`${FB_URL}/${path}.json`);
+    const val = await res.json();
+    return val === null ? null : val;
   } catch (e) {
     console.error('Firebase GET error:', path, e.message);
     return null;
@@ -46,24 +24,15 @@ async function getFirebase(path) {
  */
 async function setFirebase(path, value) {
   try {
-    if (value === null) {
-      await getDb().ref(path).remove();
-    } else {
-      await getDb().ref(path).set(value);
-    }
+    const method = value === null ? 'DELETE' : 'PUT';
+    const options = {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    };
+    if (value !== null) options.body = JSON.stringify(value);
+    await fetch(`${FB_URL}/${path}.json`, options);
   } catch (e) {
     console.error('Firebase SET error:', path, e.message);
-  }
-}
-
-/**
- * Push to Firebase array
- */
-async function pushFirebase(path, value) {
-  try {
-    await getDb().ref(path).push(value);
-  } catch (e) {
-    console.error('Firebase PUSH error:', path, e.message);
   }
 }
 
@@ -103,7 +72,6 @@ async function getLinkedEmail(userId) {
 module.exports = {
   getFirebase,
   setFirebase,
-  pushFirebase,
   safe,
   getState,
   setState,
