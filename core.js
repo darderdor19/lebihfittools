@@ -89,6 +89,45 @@ const clearAuthUser = () => {
 function getLogs() { return DB.get('lf_logs') || {}; }
 function setLogs(logs) { DB.set('lf_logs', logs); }
 
+// ===== ACTIVITIES (Olahraga & Tidur) =====
+function getActivities() { return DB.get('lf_activities') || {}; }
+function setActivities(acts) { DB.set('lf_activities', acts); }
+
+function getTodayActivities() {
+  const acts = getActivities();
+  return acts[todayKey()] || [];
+}
+
+function saveActivity(item) {
+  const acts = getActivities();
+  const key = item.date || todayKey();
+  if (!acts[key]) acts[key] = [];
+  acts[key].push(item);
+  setActivities(acts);
+}
+
+function deleteActivity(id) {
+  const acts = getActivities();
+  for (const key in acts) {
+    const idx = acts[key].findIndex(i => i.id === id);
+    if (idx !== -1) { acts[key].splice(idx, 1); break; }
+  }
+  setActivities(acts);
+}
+
+function getActivitiesRange(from, to) {
+  const acts = getActivities();
+  const result = {};
+  const cur = new Date(from);
+  while (cur <= to) {
+    const k = cur.toISOString().slice(0, 10);
+    result[k] = acts[k] || [];
+    cur.setDate(cur.getDate() + 1);
+  }
+  return result;
+}
+
+
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

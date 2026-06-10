@@ -200,11 +200,487 @@ function showPage(pageId) {
     // Page specific rendering
     if (pageId === 'dashboard') renderDashboard();
     if (pageId === 'history') {
-        setPeriod('week');
+        setPeriod('7');
+    }
+    if (pageId === 'activity') {
+        renderTodayActivities();
+        if (window.lucide) lucide.createIcons();
     }
     if (pageId === 'settings') checkTelegramStatus();
     if (pageId === 'calculator') {
         prefillRecalcForm();
+    }
+}
+
+// ============================================================
+// KEGIATAN HARIAN — Activity & Sleep Logging
+// ============================================================
+
+// --- Tab Switching ---
+function switchActivityTab(tab) {
+    document.querySelectorAll('.act-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('actPanelSport').style.display = tab === 'sport' ? '' : 'none';
+    document.getElementById('actPanelSleep').style.display = tab === 'sleep' ? '' : 'none';
+    document.getElementById(tab === 'sport' ? 'actTabSport' : 'actTabSleep').classList.add('active');
+}
+
+function switchWorkoutTab(tab) {
+    document.querySelectorAll('.workout-sub-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('wPanelWorkout').style.display = tab === 'workout' ? '' : 'none';
+    document.getElementById('wPanelGym').style.display = tab === 'gym' ? '' : 'none';
+    document.getElementById(tab === 'workout' ? 'wTabWorkout' : 'wTabGym').classList.add('active');
+}
+
+function switchHistoryMainTab(tab) {
+    document.querySelectorAll('.history-main-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('histPanelFood').style.display = tab === 'food' ? '' : 'none';
+    document.getElementById('histPanelActivity').style.display = tab === 'activity' ? '' : 'none';
+    document.getElementById(tab === 'food' ? 'histTabFood' : 'histTabActivity').classList.add('active');
+    if (tab === 'activity') renderActivityHistory();
+}
+
+// --- Workout Functions ---
+let _workoutSession = []; // Current workout session buffer
+let _workoutSetCount = 1;
+
+function selectWorkoutPreset(name) {
+    document.getElementById('workoutExName').value = name;
+    document.getElementById('workoutExName').focus();
+}
+
+function addWorkoutSet() {
+    _workoutSetCount++;
+    const container = document.getElementById('workoutSetsContainer');
+    const row = document.createElement('div');
+    row.className = 'workout-set-row';
+    row.id = `workoutSet_${_workoutSetCount}`;
+    row.innerHTML = `
+        <div class="set-label">Set ${_workoutSetCount}</div>
+        <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_${_workoutSetCount}">
+        <button class="set-remove-btn" onclick="removeWorkoutSet(${_workoutSetCount})"><i data-lucide="x" style="width:14px;height:14px;"></i></button>`;
+    container.appendChild(row);
+    if (window.lucide) lucide.createIcons();
+    // Show remove button on set 1 if >1 sets
+    if (_workoutSetCount > 1) {
+        const firstRemove = document.querySelector('#workoutSet_1 .set-remove-btn');
+        if (firstRemove) { firstRemove.style.opacity = '1'; firstRemove.style.pointerEvents = 'auto'; }
+    }
+}
+
+function removeWorkoutSet(n) {
+    const el = document.getElementById(`workoutSet_${n}`);
+    if (el) el.remove();
+    // Re-label remaining sets
+    const rows = document.querySelectorAll('#workoutSetsContainer .workout-set-row');
+    rows.forEach((row, i) => {
+        row.querySelector('.set-label').textContent = `Set ${i + 1}`;
+    });
+    if (rows.length === 1) {
+        const firstRemove = rows[0].querySelector('.set-remove-btn');
+        if (firstRemove) { firstRemove.style.opacity = '0'; firstRemove.style.pointerEvents = 'none'; }
+    }
+}
+
+function addWorkoutExercise() {
+    const name = document.getElementById('workoutExName').value.trim();
+    if (!name) { showToast('Masukkan nama gerakan dulu', 'error'); return; }
+    // Collect per-set reps
+    const setRows = document.querySelectorAll('#workoutSetsContainer .workout-set-row');
+    const sets = [];
+    setRows.forEach((row, i) => {
+        const repsEl = row.querySelector('.set-input');
+        sets.push({ set: i + 1, reps: parseInt(repsEl.value) || 0 });
+    });
+    _workoutSession.push({ name, sets });
+    renderWorkoutSessionList();
+    // Reset inputs
+    document.getElementById('workoutExName').value = '';
+    document.querySelectorAll('.set-input').forEach(el => el.value = '');
+}
+
+function renderWorkoutSessionList() {
+    const list = document.getElementById('workoutSessionList');
+    const saveBtn = document.getElementById('btnSaveWorkout');
+    if (_workoutSession.length === 0) {
+        list.innerHTML = '';
+        saveBtn.style.display = 'none';
+        return;
+    }
+    saveBtn.style.display = 'block';
+    list.innerHTML = `<div style="font-size:0.8rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Sesi Workout (${_workoutSession.length} gerakan)</div>` +
+        _workoutSession.map((ex, idx) => `
+            <div class="workout-exercise-item">
+                <div>
+                    <div class="exercise-item-name">${ex.name}</div>
+                    <div class="exercise-item-sets">
+                        ${ex.sets.map(s => `<span class="exercise-set-badge">Set ${s.set}: ${s.reps} reps</span>`).join('')}
+                    </div>
+                </div>
+                <button class="exercise-remove-btn" onclick="removeWorkoutExercise(${idx})"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+            </div>`).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+function removeWorkoutExercise(idx) {
+    _workoutSession.splice(idx, 1);
+    renderWorkoutSessionList();
+}
+
+function saveWorkoutSession() {
+    if (_workoutSession.length === 0) { showToast('Tambah minimal 1 gerakan', 'error'); return; }
+    const item = { id: uid(), date: todayKey(), type: 'workout', exercises: [..._workoutSession], createdAt: Date.now() };
+    saveActivity(item);
+    _workoutSession = [];
+    _workoutSetCount = 1;
+    // Reset UI
+    document.getElementById('workoutSessionList').innerHTML = '';
+    document.getElementById('btnSaveWorkout').style.display = 'none';
+    document.getElementById('workoutSetsContainer').innerHTML = `
+        <div class="workout-set-row" id="workoutSet_1">
+            <div class="set-label">Set 1</div>
+            <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_1">
+            <button class="set-remove-btn" onclick="removeWorkoutSet(1)" style="opacity:0;pointer-events:none;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+        </div>`;
+    if (window.lucide) lucide.createIcons();
+    renderTodayActivities();
+    showToast('Sesi workout berhasil disimpan! 💪', 'success');
+}
+
+// --- Gym Functions ---
+let _gymSelectedMuscles = {}; // { muscle: [{ name, sets: [{set, reps}] }] }
+
+function toggleGymMuscle(muscle) {
+    const chip = document.querySelector(`.muscle-chip[data-muscle="${muscle}"]`);
+    if (_gymSelectedMuscles[muscle]) {
+        delete _gymSelectedMuscles[muscle];
+        if (chip) chip.classList.remove('active');
+    } else {
+        _gymSelectedMuscles[muscle] = [{ name: '', sets: [{ set: 1, reps: 0 }] }];
+        if (chip) chip.classList.add('active');
+    }
+    renderGymMuscleInputs();
+    const hasMuscles = Object.keys(_gymSelectedMuscles).length > 0;
+    document.getElementById('btnSaveGym').style.display = hasMuscles ? 'block' : 'none';
+}
+
+const MUSCLE_LABELS = { chest:'Chest', back:'Back', shoulder:'Shoulder', bicep:'Bicep', tricep:'Tricep', forearm:'Forearm', abs:'Abs', traps:'Traps', leg:'Leg' };
+
+function renderGymMuscleInputs() {
+    const container = document.getElementById('gymMuscleInputs');
+    const muscles = Object.keys(_gymSelectedMuscles);
+    if (muscles.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = muscles.map(muscle => {
+        const variations = _gymSelectedMuscles[muscle];
+        return `<div class="gym-muscle-section" id="gymSection_${muscle}">
+            <div class="gym-muscle-title">${MUSCLE_LABELS[muscle] || muscle}</div>
+            ${variations.map((v, vi) => `
+                <div class="gym-variation-row" id="gymVar_${muscle}_${vi}">
+                    <input type="text" class="gym-variation-input" placeholder="Nama gerakan (mis: Bench Press)" value="${v.name}" oninput="updateGymVarName('${muscle}',${vi},this.value)">
+                    <button class="gym-remove-var" onclick="removeGymVariation('${muscle}',${vi})" title="Hapus variasi">✕</button>
+                </div>
+                <div class="gym-sets-per-var">
+                    ${v.sets.map((s, si) => `
+                    <div class="gym-per-set-row">
+                        <span class="gym-per-set-label">Set ${si + 1}</span>
+                        <input type="number" class="set-input" style="max-width:80px;" placeholder="Reps" value="${s.reps || ''}" min="1" oninput="updateGymSetReps('${muscle}',${vi},${si},this.value)">
+                        ${si > 0 ? `<button class="gym-remove-set" onclick="removeGymSet('${muscle}',${vi},${si})" title="Hapus set">✕</button>` : ''}
+                    </div>`).join('')}
+                    <button class="gym-add-set-btn" onclick="addGymSet('${muscle}',${vi})">+ Set</button>
+                </div>`).join('')}
+            <button class="gym-add-var-btn" onclick="addGymVariation('${muscle}')">+ Tambah Variasi Gerakan</button>
+        </div>`;
+    }).join('');
+}
+
+function updateGymVarName(muscle, vi, val) {
+    if (_gymSelectedMuscles[muscle] && _gymSelectedMuscles[muscle][vi]) _gymSelectedMuscles[muscle][vi].name = val;
+}
+function updateGymSetReps(muscle, vi, si, val) {
+    if (_gymSelectedMuscles[muscle]?.[vi]?.sets?.[si]) _gymSelectedMuscles[muscle][vi].sets[si].reps = parseInt(val) || 0;
+}
+function addGymVariation(muscle) {
+    if (!_gymSelectedMuscles[muscle]) return;
+    _gymSelectedMuscles[muscle].push({ name: '', sets: [{ set: 1, reps: 0 }] });
+    renderGymMuscleInputs();
+}
+function removeGymVariation(muscle, vi) {
+    if (_gymSelectedMuscles[muscle]) _gymSelectedMuscles[muscle].splice(vi, 1);
+    if (_gymSelectedMuscles[muscle] && _gymSelectedMuscles[muscle].length === 0) {
+        delete _gymSelectedMuscles[muscle];
+        document.querySelector(`.muscle-chip[data-muscle="${muscle}"]`)?.classList.remove('active');
+    }
+    renderGymMuscleInputs();
+    document.getElementById('btnSaveGym').style.display = Object.keys(_gymSelectedMuscles).length > 0 ? 'block' : 'none';
+}
+function addGymSet(muscle, vi) {
+    if (!_gymSelectedMuscles[muscle]?.[vi]) return;
+    const setNum = _gymSelectedMuscles[muscle][vi].sets.length + 1;
+    _gymSelectedMuscles[muscle][vi].sets.push({ set: setNum, reps: 0 });
+    renderGymMuscleInputs();
+}
+function removeGymSet(muscle, vi, si) {
+    if (!_gymSelectedMuscles[muscle]?.[vi]) return;
+    _gymSelectedMuscles[muscle][vi].sets.splice(si, 1);
+    // Re-number sets
+    _gymSelectedMuscles[muscle][vi].sets.forEach((s, i) => s.set = i + 1);
+    renderGymMuscleInputs();
+}
+
+function saveGymSession() {
+    const muscles = Object.keys(_gymSelectedMuscles);
+    if (muscles.length === 0) { showToast('Pilih minimal 1 otot', 'error'); return; }
+    const muscleData = muscles.map(muscle => ({
+        muscle,
+        variations: _gymSelectedMuscles[muscle].map(v => ({
+            name: v.name || '(tanpa nama)',
+            sets: v.sets
+        }))
+    }));
+    const item = { id: uid(), date: todayKey(), type: 'gym', muscles: muscleData, createdAt: Date.now() };
+    saveActivity(item);
+    // Reset gym state
+    _gymSelectedMuscles = {};
+    document.querySelectorAll('.muscle-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('gymMuscleInputs').innerHTML = '';
+    document.getElementById('btnSaveGym').style.display = 'none';
+    renderTodayActivities();
+    showToast('Sesi gym berhasil disimpan! 🏋️', 'success');
+}
+
+// --- Sleep Functions ---
+let _sleepType = 'malam';
+let _sleepQuality = 'lelap';
+let _sleepHours = 0;
+
+function calcSleepDuration() {
+    const start = document.getElementById('sleepStart').value;
+    const end = document.getElementById('sleepEnd').value;
+    if (!start || !end) return;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let diff = (eh * 60 + em) - (sh * 60 + sm);
+    if (diff < 0) diff += 24 * 60;
+    const hours = diff / 60;
+    _sleepHours = hours;
+    document.getElementById('sleepDurationDisplay').textContent = `⏱ Durasi: ${Math.floor(hours)}j ${Math.round((hours % 1) * 60)}m`;
+    document.getElementById('sleepHoursManual').value = hours.toFixed(1);
+}
+
+function updateSleepDurationFromManual() {
+    const val = parseFloat(document.getElementById('sleepHoursManual').value) || 0;
+    _sleepHours = val;
+    document.getElementById('sleepDurationDisplay').textContent = val > 0 ? `⏱ Durasi: ${Math.floor(val)}j ${Math.round((val % 1) * 60)}m` : '';
+}
+
+function selectSleepType(type) {
+    _sleepType = type;
+    document.querySelectorAll('.sleep-type-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === type);
+    });
+}
+
+function selectSleepQuality(quality) {
+    _sleepQuality = quality;
+    document.querySelectorAll('.sleep-quality-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.quality === quality);
+    });
+}
+
+function saveSleepLog() {
+    const hours = _sleepHours || parseFloat(document.getElementById('sleepHoursManual').value) || 0;
+    if (!hours || hours <= 0) { showToast('Isi durasi tidur dulu', 'error'); return; }
+    const item = {
+        id: uid(), date: todayKey(), type: 'sleep',
+        hours, sleepType: _sleepType, quality: _sleepQuality,
+        startTime: document.getElementById('sleepStart').value || '',
+        endTime: document.getElementById('sleepEnd').value || '',
+        createdAt: Date.now()
+    };
+    saveActivity(item);
+    // Reset
+    document.getElementById('sleepStart').value = '';
+    document.getElementById('sleepEnd').value = '';
+    document.getElementById('sleepHoursManual').value = '';
+    document.getElementById('sleepDurationDisplay').textContent = '';
+    _sleepHours = 0;
+    renderTodayActivities();
+    showToast('Data tidur berhasil disimpan! 😴', 'success');
+}
+
+// --- Render Today Activities ---
+function renderTodayActivities() {
+    const activities = getTodayActivities();
+    const container = document.getElementById('todayActivitiesList');
+    if (!container) return;
+    if (activities.length === 0) {
+        container.innerHTML = `<p style="color:var(--text2);font-size:0.9rem;">Belum ada kegiatan tercatat hari ini.</p>`;
+        return;
+    }
+    container.innerHTML = activities.map(act => {
+        let detail = '';
+        let typeLabel = act.type;
+        if (act.type === 'workout') {
+            detail = act.exercises.map(ex =>
+                `<b>${ex.name}</b> — ${ex.sets.map(s => `Set ${s.set}: ${s.reps} reps`).join(', ')}`
+            ).join('<br>');
+            typeLabel = 'Workout';
+        } else if (act.type === 'gym') {
+            detail = act.muscles.map(m =>
+                `<b>${MUSCLE_LABELS[m.muscle] || m.muscle}:</b> ${m.variations.map(v => v.name || '(tanpa nama)').join(', ')}`
+            ).join('<br>');
+            typeLabel = 'Gym';
+        } else if (act.type === 'sleep') {
+            const sleepTypeLabel = { malam: '🌙 Tidur Malam', siang: '☀️ Tidur Siang', sebentar: '⚡ Tidur Sebentar' };
+            const qualityLabel = { lelap: '😴 Lelap', biasa: '💤 Biasa', kurang: '😵 Kurang Nyenyak' };
+            detail = `<b>${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m</b> — ${sleepTypeLabel[act.sleepType] || act.sleepType} · ${qualityLabel[act.quality] || act.quality}`;
+            typeLabel = 'Tidur';
+        }
+        return `<div class="activity-log-item">
+            <div class="activity-log-header">
+                <span class="activity-log-type ${act.type}">${typeLabel}</span>
+                <button class="activity-log-delete" onclick="deleteActivity('${act.id}');renderTodayActivities();" title="Hapus">
+                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                </button>
+            </div>
+            <div class="activity-log-detail">${detail}</div>
+        </div>`;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+// --- Render Activity History ---
+function renderActivityHistory() {
+    const fromEl = document.getElementById('dateFrom');
+    const toEl = document.getElementById('dateTo');
+    if (!fromEl || !toEl) return;
+    const from = new Date(fromEl.value);
+    const to = new Date(toEl.value);
+    const allActs = getActivitiesRange(from, to);
+    const summaryEl = document.getElementById('activityHistorySummary');
+    const listEl = document.getElementById('activityHistoryList');
+    if (!summaryEl || !listEl) return;
+    // Compute summary stats
+    let totalWorkoutSessions = 0, totalGymSessions = 0, totalSleepEntries = 0, totalSleepHours = 0;
+    const allDates = Object.keys(allActs).sort().reverse();
+    allDates.forEach(date => {
+        allActs[date].forEach(a => {
+            if (a.type === 'workout') totalWorkoutSessions++;
+            if (a.type === 'gym') totalGymSessions++;
+            if (a.type === 'sleep') { totalSleepEntries++; totalSleepHours += a.hours || 0; }
+        });
+    });
+    const avgSleep = totalSleepEntries > 0 ? (totalSleepHours / totalSleepEntries).toFixed(1) : '--';
+    summaryEl.innerHTML = `
+        <div class="act-stat-card"><div class="act-stat-value">${totalWorkoutSessions}</div><div class="act-stat-label">Sesi Workout</div></div>
+        <div class="act-stat-card"><div class="act-stat-value">${totalGymSessions}</div><div class="act-stat-label">Sesi Gym</div></div>
+        <div class="act-stat-card"><div class="act-stat-value">${totalSleepHours.toFixed(1)}j</div><div class="act-stat-label">Total Tidur</div></div>
+        <div class="act-stat-card"><div class="act-stat-value">${avgSleep}j</div><div class="act-stat-label">Rata-rata Tidur/Hari</div></div>`;
+    // Build list by date
+    const datesWithActs = allDates.filter(d => allActs[d].length > 0);
+    if (datesWithActs.length === 0) {
+        listEl.innerHTML = `<p style="color:var(--text2);font-size:0.9rem;padding:16px 0;">Tidak ada kegiatan di periode ini.</p>`;
+        return;
+    }
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    listEl.innerHTML = datesWithActs.map(date => {
+        const [y, m, d] = date.split('-');
+        const acts = allActs[date];
+        const actHtml = acts.map(act => {
+            let detail = '';
+            let badge = act.type;
+            if (act.type === 'workout') {
+                detail = act.exercises.map(ex => `${ex.name} (${ex.sets.length} set)`).join(' · ');
+                badge = '💪 Workout';
+            } else if (act.type === 'gym') {
+                detail = act.muscles.map(m => `${MUSCLE_LABELS[m.muscle] || m.muscle}: ${m.variations.map(v=>v.name||'?').join(', ')}`).join(' | ');
+                badge = '🏋️ Gym';
+            } else if (act.type === 'sleep') {
+                detail = `${Math.floor(act.hours)}j ${Math.round((act.hours%1)*60)}m — ${act.sleepType} — ${act.quality}`;
+                badge = '😴 Tidur';
+            }
+            return `<div style="padding:6px 10px;background:var(--bg);border-radius:6px;margin-top:6px;font-size:0.82rem;">
+                <span style="font-size:0.7rem;font-weight:700;color:var(--accent2);text-transform:uppercase;">${badge}</span><br>
+                <span style="color:var(--text2);">${detail}</span>
+            </div>`;
+        }).join('');
+        return `<div class="history-item" style="padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-weight:700;font-size:0.9rem;">${parseInt(d)} ${months[parseInt(m)-1]} ${y}</div>
+            ${actHtml}
+        </div>`;
+    }).join('');
+}
+
+// --- History Comprehensive AI Analysis (food + activity + sleep) ---
+async function updateHistoryAIAnalysis(foodStats, fromDate, toDate) {
+    const el = document.getElementById('historyAiContent');
+    if (!el) return;
+    const apiKey = localStorage.getItem('lf_apikey');
+    if (!apiKey) {
+        el.innerHTML = `<p style="color:var(--text2);font-size:0.85rem;">⚡ Set API Key di Settings untuk analisis AI komprehensif.</p>`;
+        return;
+    }
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+        ✨ Menganalisis data komprehensif dengan Groq AI...
+    </div>`;
+
+    // Gather activity data for the period
+    const allActs = getActivitiesRange(new Date(fromDate), new Date(toDate));
+    let workoutCount = 0, gymCount = 0, sleepData = [], musclesTrained = {};
+    Object.values(allActs).forEach(dayActs => {
+        dayActs.forEach(a => {
+            if (a.type === 'workout') { workoutCount++; }
+            if (a.type === 'gym') {
+                gymCount++;
+                a.muscles?.forEach(m => { musclesTrained[m.muscle] = (musclesTrained[m.muscle] || 0) + 1; });
+            }
+            if (a.type === 'sleep') sleepData.push({ hours: a.hours, quality: a.quality, type: a.sleepType });
+        });
+    });
+    const avgSleepHours = sleepData.length > 0 ? (sleepData.reduce((s,x) => s+x.hours, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+    const profile = getProfile() || {};
+    const totalDays = Math.round((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24)) + 1;
+    const prompt = `Kamu adalah ahli gizi, fisioterapi, dan pelatih fitness profesional. Analisis data komprehensif berikut dan berikan evaluasi yang sangat personal, mendalam, dan actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):
+
+== PROFIL USER ==
+Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'}kg, TB: ${profile.tb||'?'}cm, Usia: ${profile.usia||'?'}th
+Goal: ${profile.target || 'maintenance'}, Aktivitas: ${profile.aktivitas || '?'}
+
+== DATA NUTRISI (${totalDays} hari) ==
+Rata-rata kalori: ${Math.round(foodStats.avgCal)} kcal/hari (target: ${foodStats.calTarget} kcal)
+Protein: ${foodStats.avgProtein.toFixed(1)}g/hari (target: ${foodStats.targetProtein}g)
+Karbo: ${foodStats.avgCarbs.toFixed(1)}g/hari, Lemak: ${foodStats.avgFat.toFixed(1)}g/hari
+Serat: ${foodStats.avgFiber.toFixed(1)}g/hari, Gula: ${foodStats.avgSugar.toFixed(1)}g/hari
+
+== DATA KEGIATAN (${totalDays} hari) ==
+Sesi workout: ${workoutCount} kali
+Sesi gym: ${gymCount} kali
+Otot yang dilatih: ${Object.keys(musclesTrained).map(m => `${MUSCLE_LABELS[m]||m} (${musclesTrained[m]}x)`).join(', ') || 'tidak tercatat'}
+
+== DATA TIDUR ==
+Rata-rata tidur: ${avgSleepHours} jam/malam
+Jumlah catatan tidur: ${sleepData.length} entri
+
+== INSTRUKSI ==
+Buat analisis komprehensif dalam HTML VALID (tanpa markdown/code block). Wajib ada:
+1. Status nutrisi dan dampaknya ke goal dan latihan
+2. Analisis kegiatan olahraga: apakah frekuensi & volume cukup untuk body recomposition? Progressive overload sudah ada?
+3. Keterkaitan antara nutrisi dan performa latihan (apakah protein cukup untuk recovery? kalori mendukung latihan?)
+4. Analisis kualitas dan durasi tidur — dampaknya ke recovery otot dan metabolisme
+5. Saran spesifik untuk perbaikan komposisi tubuh (body recomposition)
+6. Top 3 prioritas yang harus diubah minggu ini
+
+Gunakan div dengan border-left berwarna sesuai status. JAWAB HANYA HTML VALID.`;
+    try {
+        const raw = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
+        let cleanHtml = (raw || '').trim().replace(/```html\n?/gi,'').replace(/```\n?/gi,'').trim();
+        el.innerHTML = `
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <b>Analisis AI Groq</b> · Makanan + Olahraga + Tidur · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
+            </div>${cleanHtml}`;
+    } catch(e) {
+        el.innerHTML = `<p style="color:var(--text2);font-size:0.85rem;">Gagal memuat analisis AI: ${e.message}</p>`;
     }
 }
 
@@ -417,9 +893,41 @@ function renderDashboard() {
         else                 { lbl.textContent = 'Obesitas';     lbl.classList.add('obese'); }
     }
     
-    // Call daily AI Analysis
+    // Render today's activity card on dashboard
+    renderDashboardActivityCard();
+
+    // Call daily AI Analysis (pass today's activities for enriched prompt)
     updateDailyAIAnalysis(logs, profile, authUser ? authUser.email : null);
 }
+
+function renderDashboardActivityCard() {
+    const el = document.getElementById('dashActivityContent');
+    if (!el) return;
+    const activities = getTodayActivities();
+    if (activities.length === 0) {
+        el.innerHTML = `<p style="color:var(--text2);font-size:0.88rem;">Belum ada kegiatan tercatat. <span style="color:var(--accent);cursor:pointer;" onclick="showPage('activity')">Catat sekarang →</span></p>`;
+        return;
+    }
+    el.innerHTML = `<div class="dash-activity-grid">` +
+        activities.map(act => {
+            let badge = '', detail = '';
+            if (act.type === 'workout') {
+                badge = '💪 Workout';
+                detail = act.exercises.map(e => `${e.name} (${e.sets.length}s)`).join(' · ');
+            } else if (act.type === 'gym') {
+                badge = '🏋️ Gym';
+                detail = act.muscles.map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+            } else if (act.type === 'sleep') {
+                badge = '😴 Tidur';
+                detail = `${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m · ${act.quality === 'lelap' ? '🌙 Lelap' : act.quality === 'biasa' ? '💤 Biasa' : '😵 Kurang'}`;
+            }
+            return `<div class="dash-activity-item">
+                <div class="type-badge">${badge}</div>
+                <div class="act-detail">${detail}</div>
+            </div>`;
+        }).join('') + `</div>`;
+}
+
 
 async function updateDailyAIAnalysis(logs, profile, email) {
     const aiCard = document.getElementById('aiAnalysisCard');
@@ -434,13 +942,15 @@ async function updateDailyAIAnalysis(logs, profile, email) {
     aiCard.style.display = 'block';
 
     const today = new Date().toISOString().slice(0, 10);
-    const cacheKey = `ai_daily_v2_${email}_${today}`;
+    const todayActs = getTodayActivities();
+    const activityCount = todayActs.length;
+    const cacheKey = `ai_daily_v3_${email}_${today}`;
     const cached = localStorage.getItem(cacheKey);
     let cacheData = null;
     try { if (cached) cacheData = JSON.parse(cached); } catch(e){}
 
-    // Use cache only if food count matches
-    if (cacheData && cacheData.logCount === logs.length && cacheData.html) {
+    // Use cache only if food count AND activity count match
+    if (cacheData && cacheData.logCount === logs.length && cacheData.activityCount === activityCount && cacheData.html) {
         aiContent.innerHTML = cacheData.html;
         return;
     }
@@ -451,7 +961,7 @@ async function updateDailyAIAnalysis(logs, profile, email) {
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:lfSpin 1s linear infinite;flex-shrink:0;">
                 <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
             </svg>
-            <span style="font-size:0.9rem;">✨ AI Groq menganalisis gizi harian lu...</span>
+            <span style="font-size:0.9rem;">✨ AI Groq menganalisis gizi + kegiatan harian lu...</span>
         </div>`;
 
     // Add spin keyframe once
@@ -478,40 +988,33 @@ async function updateDailyAIAnalysis(logs, profile, email) {
 
         const foodList = logs.map(l => `- ${l.name} (${l.portion || '1 porsi'}): ${Math.round(l.cal||0)} kcal | P:${(l.protein||0).toFixed(1)}g K:${(l.carbs||0).toFixed(1)}g L:${(l.fat||0).toFixed(1)}g`).join('\n');
 
-        const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):
+        // Build activity context
+        let activityContext = 'Tidak ada kegiatan tercatat hari ini.';
+        if (todayActs.length > 0) {
+            const workouts = todayActs.filter(a => a.type === 'workout');
+            const gyms = todayActs.filter(a => a.type === 'gym');
+            const sleeps = todayActs.filter(a => a.type === 'sleep');
+            const lines = [];
+            if (workouts.length > 0) {
+                workouts.forEach(w => {
+                    lines.push(`Workout: ${w.exercises.map(e => `${e.name} (${e.sets.length} set, ${e.sets.map(s=>`${s.reps}reps`).join('/')})`).join(', ')}`);
+                });
+            }
+            if (gyms.length > 0) {
+                gyms.forEach(g => {
+                    const muscleList = g.muscles.map(m => `${MUSCLE_LABELS[m.muscle]||m.muscle}: ${m.variations.map(v=>`${v.name}(${v.sets.length}set)`).join(', ')}`).join(' | ');
+                    lines.push(`Gym: ${muscleList}`);
+                });
+            }
+            if (sleeps.length > 0) {
+                sleeps.forEach(s => {
+                    lines.push(`Tidur: ${Math.floor(s.hours)}j${Math.round((s.hours%1)*60)}m · ${s.sleepType} · ${s.quality}`);
+                });
+            }
+            activityContext = lines.join('\n');
+        }
 
-== DATA HARI INI ==
-Profil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}
-
-Makanan tercatat (${logs.length} item):
-${foodList}
-
-Total aktual vs Target harian:
-- Kalori: ${Math.round(totals.cal)} kcal vs ${calTarget} kcal → ${calStatus}
-- Protein: ${totals.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((totals.protein/targetProtein)*100)}%)
-- Karbohidrat: ${totals.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((totals.carbs/targetCarbs)*100)}%)
-- Lemak: ${totals.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((totals.fat/targetFat)*100)}%)
-- Serat: ${totals.fiber.toFixed(1)}g (ideal ≥25g)
-- Gula: ${totals.sugar.toFixed(1)}g (batas <50g)
-- Sodium: ${Math.round(totals.sodium)}mg (batas <2300mg)
-
-== FORMAT RESPONS ==
-Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:
-
-1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok
-
-2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:
-   - Status (KURANG/OK/BERLEBIH)
-   - Dampak spesifik ke tubuh/performa latihan  
-   - Saran makanan konkret untuk melengkapi hari ini / besok
-
-3. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div
-
-4. Saran Aktivitas → berdasarkan sisa kalori dan goal user, sarankan latihan/aktivitas yang tepat hari ini
-
-5. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)
-
-Gunakan warna: hijau (bg:rgba(50,215,75,0.08) border:#32d74b) = OK/cukup, merah (bg:rgba(255,59,48,0.08) border:#ff3b30) = kurang/berlebih bahaya, kuning (bg:rgba(255,214,10,0.08) border:#ffd60a) = perlu perhatian, biru (bg:rgba(0,122,255,0.08) border:#007AFF) = cutting/defisit. Gunakan emoji relevan. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
+        const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(totals.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${totals.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((totals.protein/targetProtein)*100)}%)\n- Karbohidrat: ${totals.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((totals.carbs/targetCarbs)*100)}%)\n- Lemak: ${totals.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((totals.fat/targetFat)*100)}%)\n- Serat: ${totals.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${totals.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(totals.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Gunakan emoji relevan. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
 
         const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
 
@@ -529,7 +1032,7 @@ Gunakan warna: hijau (bg:rgba(50,215,75,0.08) border:#32d74b) = OK/cukup, merah 
             aiContent.innerHTML = aiHtml;
 
             // Cache the result
-            const newCache = { html: aiHtml, logCount: logs.length, timestamp: Date.now() };
+            const newCache = { html: aiHtml, logCount: logs.length, activityCount, timestamp: Date.now() };
             localStorage.setItem(cacheKey, JSON.stringify(newCache));
             syncToFirebase('lf_analysis_' + today, { text: 'AI HTML analysis', logCount: logs.length, timestamp: Date.now() });
         } else {
@@ -923,6 +1426,27 @@ function loadHistoryData(from, to) {
     renderHistoryChart(data);
     renderHistoryStats(data);
     renderHistoryList(data);
+
+    // Trigger comprehensive AI analysis (food + activity + sleep)
+    const profile = getProfile() || {};
+    const calTarget = (profile.targets && profile.targets.cal) || 2000;
+    const targetProtein = (profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
+    const dataLen = data.length || 1;
+    const foodStats = {
+        avgCal: data.reduce((s, d) => s + (d.totals.cal || 0), 0) / dataLen,
+        avgProtein: data.reduce((s, d) => s + (d.totals.protein || 0), 0) / dataLen,
+        avgCarbs: data.reduce((s, d) => s + (d.totals.carbs || 0), 0) / dataLen,
+        avgFat: data.reduce((s, d) => s + (d.totals.fat || 0), 0) / dataLen,
+        avgFiber: data.reduce((s, d) => s + (d.totals.fiber || 0), 0) / dataLen,
+        avgSugar: data.reduce((s, d) => s + (d.totals.sugar || 0), 0) / dataLen,
+        calTarget,
+        targetProtein
+    };
+    updateHistoryAIAnalysis(foodStats, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
+    // Also refresh activity history if that tab is active
+    if (document.getElementById('histPanelActivity') && document.getElementById('histPanelActivity').style.display !== 'none') {
+        renderActivityHistory();
+    }
 }
 
 function loadHistory() {

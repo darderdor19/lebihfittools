@@ -136,6 +136,9 @@
         <button class="nav-btn" data-page="log" onclick="showPage('log')">
           <span class="nav-icon"><i data-lucide="plus-circle"></i></span><span class="nav-label">Log Makanan</span>
         </button>
+        <button class="nav-btn" data-page="activity" onclick="showPage('activity')">
+          <span class="nav-icon"><i data-lucide="dumbbell"></i></span><span class="nav-label">Kegiatan Harian</span>
+        </button>
         <button class="nav-btn" data-page="history" onclick="showPage('history')">
           <span class="nav-icon"><i data-lucide="line-chart"></i></span><span class="nav-label">History</span>
         </button>
@@ -317,6 +320,17 @@
           </div>
         </div>
 
+        <!-- Today's Activity Card -->
+        <div class="section-card" id="dashboardActivityCard">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 class="section-title" style="margin-bottom:0;"><i data-lucide="dumbbell" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Kegiatan Hari Ini</h3>
+            <button class="btn-secondary" style="padding:6px 12px;font-size:0.75rem;" onclick="showPage('activity')">+ Tambah</button>
+          </div>
+          <div id="dashActivityContent">
+            <p style="color:var(--text2);font-size:0.88rem;">Belum ada kegiatan tercatat. <span style="color:var(--accent);cursor:pointer;" onclick="showPage('activity')">Catat sekarang →</span></p>
+          </div>
+        </div>
+
         <!-- Micronutrients -->
         <div class="section-card">
           <h3 class="section-title"><i data-lucide="flask-conical" style="display:inline-block;vertical-align:text-bottom;"></i> Mikronutrisi Hari Ini</h3>
@@ -477,9 +491,20 @@
         <div class="page-header">
           <div>
             <h2>History</h2>
-            <p class="page-subtitle">Pantau progress nutrisi kamu</p>
+            <p class="page-subtitle">Pantau progress nutrisi & kegiatan kamu</p>
           </div>
         </div>
+        <!-- History Tab Selector -->
+        <div class="history-main-tabs">
+          <button class="history-main-tab active" id="histTabFood" onclick="switchHistoryMainTab('food')">
+            <i data-lucide="utensils" style="width:15px;height:15px;display:inline-block;vertical-align:text-bottom;"></i> Makanan & Gizi
+          </button>
+          <button class="history-main-tab" id="histTabActivity" onclick="switchHistoryMainTab('activity')">
+            <i data-lucide="dumbbell" style="width:15px;height:15px;display:inline-block;vertical-align:text-bottom;"></i> Kegiatan & Tidur
+          </button>
+        </div>
+
+        <!-- Period Tabs (shared) -->
         <div class="period-tabs">
           <button class="period-tab active" onclick="setPeriod('7')" id="p7">7 Hari</button>
           <button class="period-tab" onclick="setPeriod('14')" id="p14">14 Hari</button>
@@ -495,28 +520,214 @@
           <span>sampai</span>
           <input type="date" id="dateTo" onchange="loadHistory()">
         </div>
-        <div class="section-card">
-          <h3 class="section-title"><i data-lucide="bar-chart-2" style="display:inline-block;vertical-align:text-bottom;"></i> Tren Kalori</h3>
-          <div class="chart-container">
-            <canvas id="historyChart"></canvas>
-          </div>
-        </div>
-        <div class="section-card">
-          <h3 class="section-title"><i data-lucide="pie-chart" style="display:inline-block;vertical-align:text-bottom;"></i> Proporsi Makronutrisi</h3>
-          <div class="macro-chart-layout">
-            <div class="chart-container-doughnut">
-              <canvas id="macroChart"></canvas>
+
+        <!-- FOOD HISTORY TAB -->
+        <div id="histPanelFood">
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="bar-chart-2" style="display:inline-block;vertical-align:text-bottom;"></i> Tren Kalori</h3>
+            <div class="chart-container">
+              <canvas id="historyChart"></canvas>
             </div>
-            <div class="macro-legend" id="macroLegend"></div>
+          </div>
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="pie-chart" style="display:inline-block;vertical-align:text-bottom;"></i> Proporsi Makronutrisi</h3>
+            <div class="macro-chart-layout">
+              <div class="chart-container-doughnut">
+                <canvas id="macroChart"></canvas>
+              </div>
+              <div class="macro-legend" id="macroLegend"></div>
+            </div>
+          </div>
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="clipboard-list" style="display:inline-block;vertical-align:text-bottom;"></i> Rata-rata Harian</h3>
+            <div class="history-avg-grid" id="historyAvgGrid"></div>
+          </div>
+          <!-- AI Analysis combined (food + activity + sleep) -->
+          <div class="section-card ai-analysis-card">
+            <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Analisis AI Komprehensif</h3>
+            <p style="font-size:0.82rem;color:var(--text2);margin-bottom:12px;">Mencakup makanan, kegiatan olahraga, dan tidur selama periode yang dipilih.</p>
+            <div id="historyAiContent">
+              <div class="loading-dots">Memuat analisis AI...</div>
+            </div>
+          </div>
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="calendar" style="display:inline-block;vertical-align:text-bottom;"></i> Riwayat Per Hari</h3>
+            <div id="historyList" class="history-list"></div>
           </div>
         </div>
-        <div class="section-card">
-          <h3 class="section-title"><i data-lucide="clipboard-list" style="display:inline-block;vertical-align:text-bottom;"></i> Rata-rata Harian</h3>
-          <div class="history-avg-grid" id="historyAvgGrid"></div>
+
+        <!-- ACTIVITY HISTORY TAB -->
+        <div id="histPanelActivity" style="display:none;">
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="activity" style="display:inline-block;vertical-align:text-bottom;"></i> Ringkasan Kegiatan</h3>
+            <div id="activityHistorySummary" class="activity-summary-stats"></div>
+          </div>
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="calendar" style="display:inline-block;vertical-align:text-bottom;"></i> Riwayat Kegiatan Per Hari</h3>
+            <div id="activityHistoryList" class="history-list"></div>
+          </div>
         </div>
-        <div class="section-card">
-          <h3 class="section-title"><i data-lucide="calendar" style="display:inline-block;vertical-align:text-bottom;"></i> Riwayat Per Hari</h3>
-          <div id="historyList" class="history-list"></div>
+      </div>
+
+      <!-- ===== ACTIVITY PAGE ===== -->
+      <div id="page-activity" class="page">
+        <div class="page-header">
+          <div>
+            <h2><i data-lucide="dumbbell" style="display:inline-block;vertical-align:text-bottom;"></i> Kegiatan Harian</h2>
+            <p class="page-subtitle">Catat olahraga dan tidur kamu hari ini</p>
+          </div>
+        </div>
+
+        <!-- Main Tabs: Olahraga / Tidur -->
+        <div class="activity-main-tabs">
+          <button class="act-tab active" id="actTabSport" onclick="switchActivityTab('sport')">
+            <i data-lucide="dumbbell" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Olahraga
+          </button>
+          <button class="act-tab" id="actTabSleep" onclick="switchActivityTab('sleep')">
+            <i data-lucide="moon" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Tidur
+          </button>
+        </div>
+
+        <!-- ===== OLAHRAGA PANEL ===== -->
+        <div id="actPanelSport">
+          <!-- Sub-tabs Workout / Gym -->
+          <div class="workout-sub-tabs">
+            <button class="workout-sub-tab active" id="wTabWorkout" onclick="switchWorkoutTab('workout')">
+              💪 Workout
+            </button>
+            <button class="workout-sub-tab" id="wTabGym" onclick="switchWorkoutTab('gym')">
+              🏟️ Gym
+            </button>
+          </div>
+
+          <!-- WORKOUT PANEL -->
+          <div id="wPanelWorkout" class="section-card">
+            <h3 class="section-title">💪 Tambah Gerakan Workout</h3>
+            <!-- Preset gerakan quick-add -->
+            <div class="preset-label">Preset Populer:</div>
+            <div class="preset-chips" id="workoutPresetChips">
+              <button class="preset-chip" onclick="selectWorkoutPreset('Push Up')">Push Up</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Pull Up')">Pull Up</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Squat')">Squat</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Lunges')">Lunges</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Plank')">Plank</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Burpee')">Burpee</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Mountain Climber')">Mountain Climber</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Jump Rope')">Jump Rope</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Jumping Jack')">Jumping Jack</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Sit Up')">Sit Up</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Crunch')">Crunch</button>
+              <button class="preset-chip" onclick="selectWorkoutPreset('Russian Twist')">Russian Twist</button>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label>Nama Gerakan</label>
+              <input type="text" id="workoutExName" placeholder="Nama gerakan (atau ketik custom)" class="form-input">
+            </div>
+            <div class="workout-sets-container" id="workoutSetsContainer">
+              <div class="workout-set-row" id="workoutSet_1">
+                <div class="set-label">Set 1</div>
+                <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_1">
+                <button class="set-remove-btn" onclick="removeWorkoutSet(1)" style="opacity:0;pointer-events:none;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+              </div>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="addWorkoutSet()" style="margin-top:8px;">
+              <i data-lucide="plus" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> Tambah Set
+            </button>
+            <button class="btn-primary" style="margin-top:16px;width:100%;" onclick="addWorkoutExercise()">
+              <i data-lucide="plus-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Tambah ke Sesi
+            </button>
+
+            <!-- Workout session list -->
+            <div id="workoutSessionList" style="margin-top:16px;"></div>
+
+            <button class="btn-primary btn-full" id="btnSaveWorkout" onclick="saveWorkoutSession()" style="display:none;margin-top:12px;background:var(--success);">
+              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Workout
+            </button>
+          </div>
+
+          <!-- GYM PANEL -->
+          <div id="wPanelGym" class="section-card" style="display:none;">
+            <h3 class="section-title">🏟️ Pilih Otot yang Dilatih</h3>
+            <div class="muscle-chips" id="muscleChips">
+              <button class="muscle-chip" data-muscle="chest" onclick="toggleGymMuscle('chest')">💪 Chest</button>
+              <button class="muscle-chip" data-muscle="back" onclick="toggleGymMuscle('back')">🔙 Back</button>
+              <button class="muscle-chip" data-muscle="shoulder" onclick="toggleGymMuscle('shoulder')">🤷 Shoulder</button>
+              <button class="muscle-chip" data-muscle="bicep" onclick="toggleGymMuscle('bicep')">💪 Bicep</button>
+              <button class="muscle-chip" data-muscle="tricep" onclick="toggleGymMuscle('tricep')">💪 Tricep</button>
+              <button class="muscle-chip" data-muscle="forearm" onclick="toggleGymMuscle('forearm')">🦾 Forearm</button>
+              <button class="muscle-chip" data-muscle="abs" onclick="toggleGymMuscle('abs')">🔥 Abs</button>
+              <button class="muscle-chip" data-muscle="traps" onclick="toggleGymMuscle('traps')">🏔️ Traps</button>
+              <button class="muscle-chip" data-muscle="leg" onclick="toggleGymMuscle('leg')">🦵 Leg</button>
+            </div>
+
+            <!-- Dynamic muscle variation inputs -->
+            <div id="gymMuscleInputs" style="margin-top:16px;"></div>
+
+            <button class="btn-primary btn-full" id="btnSaveGym" onclick="saveGymSession()" style="display:none;margin-top:12px;background:var(--success);">
+              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Gym
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== TIDUR PANEL ===== -->
+        <div id="actPanelSleep" style="display:none;">
+          <div class="section-card">
+            <h3 class="section-title">😴 Catat Tidur</h3>
+            <div class="sleep-time-inputs">
+              <div class="form-group">
+                <label>Jam Mulai Tidur</label>
+                <input type="time" id="sleepStart" class="form-input" onchange="calcSleepDuration()">
+              </div>
+              <div class="form-group">
+                <label>Jam Bangun</label>
+                <input type="time" id="sleepEnd" class="form-input" onchange="calcSleepDuration()">
+              </div>
+            </div>
+            <div id="sleepDurationDisplay" style="margin:10px 0;font-size:0.95rem;color:var(--text1);font-weight:600;"></div>
+            <div class="form-group">
+              <label>Atau isi durasi langsung (jam)</label>
+              <input type="number" id="sleepHoursManual" placeholder="Contoh: 7.5" min="0" max="24" step="0.5" class="form-input" oninput="updateSleepDurationFromManual()">
+            </div>
+            <div class="form-group">
+              <label>Tipe Tidur</label>
+              <div class="sleep-type-btns">
+                <button class="sleep-type-btn active" data-type="malam" onclick="selectSleepType('malam')">
+                  🌙 Tidur Malam
+                </button>
+                <button class="sleep-type-btn" data-type="siang" onclick="selectSleepType('siang')">
+                  ☀️ Tidur Siang
+                </button>
+                <button class="sleep-type-btn" data-type="sebentar" onclick="selectSleepType('sebentar')">
+                  ⚡ Tidur Sebentar
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Kualitas Tidur</label>
+              <div class="sleep-type-btns">
+                <button class="sleep-quality-btn active" data-quality="lelap" onclick="selectSleepQuality('lelap')">
+                  🌙 Lelap
+                </button>
+                <button class="sleep-quality-btn" data-quality="biasa" onclick="selectSleepQuality('biasa')">
+                  💤 Biasa
+                </button>
+                <button class="sleep-quality-btn" data-quality="kurang" onclick="selectSleepQuality('kurang')">
+                  😵 Kurang Nyenyak
+                </button>
+              </div>
+            </div>
+            <button class="btn-primary btn-full" onclick="saveSleepLog()" style="margin-top:16px;">
+              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Data Tidur
+            </button>
+          </div>
+        </div>
+
+        <!-- Riwayat kegiatan hari ini -->
+        <div class="section-card" id="todayActivitiesCard">
+          <h3 class="section-title"><i data-lucide="calendar-check" style="display:inline-block;vertical-align:text-bottom;"></i> Kegiatan Hari Ini</h3>
+          <div id="todayActivitiesList">
+            <p style="color:var(--text2);font-size:0.9rem;">Belum ada kegiatan tercatat hari ini.</p>
+          </div>
         </div>
       </div>
 
