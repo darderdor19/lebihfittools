@@ -603,6 +603,70 @@ module.exports = async function handler(req, res) {
         border-top: 1px solid #cbd5e1;
       }
     }
+    
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .report-container {
+        padding: 20px 15px;
+        border-radius: 12px;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+      }
+      .header-left h1 {
+        font-size: 1.5rem;
+      }
+      .header-right {
+        align-self: flex-start;
+      }
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .summary-card {
+        padding: 12px 8px;
+        border-radius: 10px;
+      }
+      .summary-card .label {
+        font-size: 0.65rem;
+        margin-bottom: 4px;
+        letter-spacing: 0.8px;
+      }
+      .summary-card .value {
+        font-size: 1.15rem;
+      }
+      .control-bar {
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 16px;
+        width: 100%;
+      }
+      .btn {
+        flex: 1;
+        justify-content: center;
+        font-size: 0.8rem;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+      .chart-container {
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+      .evaluation-card {
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      .evaluation-card p {
+        font-size: 1.35rem;
+      }
+    }
   </style>
 </head>
 <body>
