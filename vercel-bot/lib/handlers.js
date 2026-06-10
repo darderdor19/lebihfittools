@@ -10,7 +10,12 @@ const { analyzeFood, sumNutrients } = require('./groq');
 // ====================================================
 function escapeMarkdown(text) {
   if (!text) return '';
-  return text.toString().replace(/[*_`\[]/g, '\\$&');
+  let str = text.toString();
+  // Replace underscores with spaces for readability, except in emails/links
+  if (!str.includes('@') && !str.includes('http')) {
+    str = str.replace(/_/g, ' ');
+  }
+  return str.replace(/[*_`\[]/g, '\\$&');
 }
 
 function todayKey() {
@@ -337,7 +342,7 @@ async function showDashboard(chatId, email) {
       const aiAnalysis = await getFirebase(`users/${safe(email)}/lf_analysis_${today}`);
       if (aiAnalysis && aiAnalysis.text) {
         msg += '\n🤖 *Analisis AI & Saran Esok Hari:*\n';
-        msg += `_${escapeMarkdown(aiAnalysis.text)}_\n`;
+        msg += `${escapeMarkdown(aiAnalysis.text)}\n`;
       }
     } catch (e) { /* skip */ }
   }
@@ -885,7 +890,7 @@ async function onRecalcCatatanInput(chatId, userId, text) {
     msg += `• Karbo: *${aiResult.carbs}g*\n`;
     msg += `• Lemak: *${aiResult.fat}g*\n`;
     msg += `• Serat: *${aiResult.fiber || 0}g*\n\n`;
-    msg += `🤖 *Catatan AI:*\n_${escapeMarkdown(aiResult.notes || '-')}_\n\n`;
+    msg += `🤖 *Catatan AI:*\n${escapeMarkdown(aiResult.notes || '-')}\n\n`;
     msg += 'Simpan perubahan profil ini?';
 
     return sendMessage(chatId, msg, {
