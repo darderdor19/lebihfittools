@@ -3,24 +3,47 @@ const crypto = require('crypto');
 
 function getDatesForRange(range, logsData) {
   const dates = [];
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const wib = new Date(utc + (3600000 * 7)); // Today in WIB
+  const todayStr = wib.toISOString().slice(0, 10);
+
   if (range === 'all') {
-    const keys = Object.keys(logsData).sort();
-    dates.push(...keys);
-    if (dates.length === 0) {
-      const now = new Date();
-      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const wib = new Date(utc + (3600000 * 7));
-      dates.push(wib.toISOString().slice(0, 10));
+    const keys = Object.keys(logsData).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).sort();
+    if (keys.length === 0) {
+      dates.push(todayStr);
+    } else {
+      // Range goes from the first log date (keys[0]) to today (todayStr)
+      const start = new Date(keys[0]);
+      const end = new Date(todayStr);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      for (let i = 0; i <= diffDays; i++) {
+        const d = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+        dates.push(d.toISOString().slice(0, 10));
+      }
     }
   } else {
-    const numDays = parseInt(range) || 7;
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const wib = new Date(utc + (3600000 * 7));
+    let startDate = new Date(wib);
+    if (range === '7') {
+      startDate.setDate(wib.getDate() - 6);
+    } else if (range === '30') {
+      startDate.setMonth(wib.getMonth() - 1);
+      if (startDate.getDate() !== wib.getDate()) startDate.setDate(0);
+    } else if (range === '90') {
+      startDate.setMonth(wib.getMonth() - 3);
+      if (startDate.getDate() !== wib.getDate()) startDate.setDate(0);
+    } else if (range === '180') {
+      startDate.setMonth(wib.getMonth() - 6);
+      if (startDate.getDate() !== wib.getDate()) startDate.setDate(0);
+    } else if (range === '365') {
+      startDate.setFullYear(wib.getFullYear() - 1);
+    }
     
-    for (let i = numDays - 1; i >= 0; i--) {
-      const d = new Date(wib);
-      d.setDate(wib.getDate() - i);
+    const diffTime = Math.abs(wib - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    for (let i = 0; i <= diffDays; i++) {
+      const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       dates.push(d.toISOString().slice(0, 10));
     }
   }
