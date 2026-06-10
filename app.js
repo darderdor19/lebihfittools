@@ -1231,6 +1231,21 @@ function confirmClearAll() {
     }, true);
 }
 
+function confirmDeleteAccount() {
+    showCustomConfirm('PERINGATAN BAHAYA SANGAT TINGGI!<br><br>Apakah kamu YAKIN ingin menghapus AKUN LebihFit kamu secara PERMANEN?<br><br>Tindakan ini akan menghapus seluruh profil, riwayat gizi, dan unlink bot Telegram Anda. Tindakan ini TIDAK BISA DIBATALKAN!', async () => {
+        try {
+            showToast('Menghapus akun dari database...', 'info');
+            await deleteUserAccount();
+            localStorage.clear();
+            showToast('Akun telah dihapus secara permanen. Redirecting...', 'error');
+            setTimeout(() => location.reload(), 1500);
+        } catch (err) {
+            console.error("Gagal menghapus akun:", err);
+            showToast('Gagal menghapus akun: ' + err.message, 'error');
+        }
+    }, true);
+}
+
 function logout() {
     showCustomConfirm("Yakin ingin log out bro?", () => {
         clearAuthUser();

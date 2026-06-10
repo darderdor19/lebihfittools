@@ -292,3 +292,23 @@ function showToast(msg, type = 'info') {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.add('hidden'), 3500);
 }
+
+async function deleteUserAccount() {
+  if (!fbDb) return;
+  const email = localStorage.getItem('lf_user_email');
+  if (!email) return;
+  const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+  
+  try {
+    const snapshot = await fbDb.ref(`users/${safeEmail}/telegram_chat_id`).once('value');
+    const telegramChatId = snapshot.val();
+    if (telegramChatId) {
+      await fbDb.ref(`telegram_links/${telegramChatId}`).remove();
+      await fbDb.ref(`telegram_states/${telegramChatId}`).remove();
+    }
+    await fbDb.ref(`users/${safeEmail}`).remove();
+  } catch (e) {
+    console.error("Error deleting user account from Firebase:", e);
+    throw e;
+  }
+}

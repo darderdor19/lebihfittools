@@ -170,6 +170,20 @@ async function handleCallback(cb) {
   }
   if (data === 'skip_edit_desc') return onEditDescInput(chatId, userId, null);
   if (data === 'confirm_edit_yes') return saveEditedLog(chatId, userId, email);
+  if (data === 'delete_account_confirm') {
+    return sendMessage(chatId,
+      '⚠️ *PERINGATAN SANGAT PENTING*\n\nApakah lu YAKIN ingin menghapus AKUN LebihFit lu secara permanen?\n\nSemua data profil, riwayat gizi, dan info bot Telegram lu akan dihapus secara permanen dari database. Tindakan ini *TIDAK BISA DIBATALKAN*.\n\nKlik "🗑️ Ya, Hapus Akun" di bawah untuk konfirmasi:',
+      {
+        inline_keyboard: [
+          [
+            { text: '🗑️ Ya, Hapus Akun', callback_data: 'confirm_delete_account_yes' },
+            { text: '❌ Batal', callback_data: 'settings' }
+          ]
+        ]
+      }
+    );
+  }
+  if (data === 'confirm_delete_account_yes') return doDeleteAccount(chatId, userId);
   if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
   if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
   if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
@@ -748,7 +762,10 @@ async function showSettings(chatId, userId, email) {
     return sendMessage(chatId, msg, {
       inline_keyboard: [
         [{ text: '⚙️ Kalkulator Fitness', callback_data: 'recalc_profile' }],
-        [{ text: '🚪 Logout', callback_data: 'logout' }],
+        [
+          { text: '🚪 Logout', callback_data: 'logout' },
+          { text: '⚠️ Hapus Akun', callback_data: 'delete_account_confirm' }
+        ],
         [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
       ]
     });
@@ -768,6 +785,21 @@ async function doLogout(chatId, userId) {
   }
   await setState(userId, null);
   return sendMessage(chatId, 'Logout berhasil! Ketik /start untuk login lagi.', null);
+}
+
+async function doDeleteAccount(chatId, userId) {
+  const email = await getLinkedEmail(userId);
+  if (email) {
+    // 1. Unlink Telegram mapping
+    await setFirebase(`telegram_links/${userId}`, null);
+    // 2. Clear state and cache
+    await setState(userId, null);
+    await deleteEditCache(userId);
+    await deleteRecalcCache(userId);
+    // 3. Clear database node for user
+    await setFirebase(`users/${safe(email)}`, null);
+  }
+  return sendMessage(chatId, '✅ Akun LebihFit lu beserta seluruh data di dalamnya telah berhasil dihapus secara permanen. Bot Telegram lu sekarang sudah ter-unlink.', null);
 }
 
 async function startRecalcWizard(chatId, userId) {
