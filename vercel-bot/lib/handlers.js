@@ -8,6 +8,11 @@ const { analyzeFood, sumNutrients } = require('./groq');
 // ====================================================
 // UTILITIES
 // ====================================================
+function escapeMarkdown(text) {
+  if (!text) return '';
+  return text.toString().replace(/[*_`\[]/g, '\\$&');
+}
+
 function todayKey() {
   // Use WIB (UTC+7)
   const now = new Date();
@@ -155,7 +160,7 @@ async function onStart(chatId, userId) {
     const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
     const userName = profile ? (profile.name || 'Bro') : 'Bro';
     return sendMessage(chatId,
-      `*Selamat datang kembali, ${userName}!*\n\nPilih menu di bawah:`,
+      `*Selamat datang kembali, ${escapeMarkdown(userName)}!*\n\nPilih menu di bawah:`,
       mainMenuKeyboard()
     );
   }
@@ -286,7 +291,7 @@ async function showMainMenu(chatId, userId) {
   const userName = profile ? (profile.name || 'Bro') : 'Bro';
 
   return sendMessage(chatId,
-    `Halo, *${userName}*! Mau ngapain hari ini?`,
+    `Halo, *${escapeMarkdown(userName)}*! Mau ngapain hari ini?`,
     mainMenuKeyboard()
   );
 }
@@ -324,7 +329,7 @@ async function showDashboard(chatId, email) {
     msg += '\n*Log Makanan:*\n';
     const shown = logs.slice(-5);
     shown.forEach((item, i) => {
-      msg += `${i + 1}. ${item.name} - ${Math.round(item.cal)} kcal\n`;
+      msg += `${i + 1}. ${escapeMarkdown(item.name)} - ${Math.round(item.cal)} kcal\n`;
     });
     if (logs.length > 5) msg += `_...dan ${logs.length - 5} lainnya_\n`;
 
@@ -332,7 +337,7 @@ async function showDashboard(chatId, email) {
       const aiAnalysis = await getFirebase(`users/${safe(email)}/lf_analysis_${today}`);
       if (aiAnalysis && aiAnalysis.text) {
         msg += '\n🤖 *Analisis AI & Saran Esok Hari:*\n';
-        msg += `_${aiAnalysis.text}_\n`;
+        msg += `_${escapeMarkdown(aiAnalysis.text)}_\n`;
       }
     } catch (e) { /* skip */ }
   }
@@ -366,7 +371,7 @@ async function onFoodNameInput(chatId, userId, text) {
   await setCache(`${userId}_food_name`, text);
   await setState(userId, 'AWAIT_FOOD_PORTION');
   return sendMessage(chatId,
-    `*Log Makanan - Langkah 2 dari 3* ⚖️\n\nBerapa banyak *${text}* yang lu makan?\n_Contoh: 1 piring, 200g, 2 butir, secukupnya_`,
+    `*Log Makanan - Langkah 2 dari 3* ⚖️\n\nBerapa banyak *${escapeMarkdown(text)}* yang lu makan?\n_Contoh: 1 piring, 200g, 2 butir, secukupnya_`,
     { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
   );
 }
@@ -379,7 +384,7 @@ async function onFoodPortionInput(chatId, userId, text) {
   await setCache(`${userId}_food_portion`, text);
   await setState(userId, 'AWAIT_FOOD_DESC');
   return sendMessage(chatId,
-    `*Log Makanan - Langkah 3 dari 3* 📝\n\nAda deskripsi lainnya untuk *${foodName}* (porsi: ${text})? (Opsional)\n_Contoh: digoreng pake minyak dikit, pake bumbu kacang, kecap manis_`,
+    `*Log Makanan - Langkah 3 dari 3* 📝\n\nAda deskripsi lainnya untuk *${escapeMarkdown(foodName)}* (porsi: ${escapeMarkdown(text)})? (Opsional)\n_Contoh: digoreng pake minyak dikit, pake bumbu kacang, kecap manis_`,
     {
       inline_keyboard: [
         [{ text: '⏭️ Lewati & Analisis AI', callback_data: 'skip_food_desc' }],
@@ -413,15 +418,15 @@ async function onFoodDescInput(chatId, userId, text) {
     descString += `, deskripsi: ${foodDesc}`;
   }
   const query = `${foodName}, ${descString}`;
-  await sendMessage(chatId, `Menganalisis: _${query}_...`, null);
+  await sendMessage(chatId, `Menganalisis: _${escapeMarkdown(query)}_...`, null);
 
   try {
     const nutrition = await analyzeFood(query);
     await setCache(userId + '_pending', JSON.stringify(nutrition));
 
     let msg = '🤖 *Hasil Analisis AI:*\n\n';
-    msg += `*${nutrition.name}*\n`;
-    msg += `Porsi: ${nutrition.portion || foodPortion}\n\n`;
+    msg += `*${escapeMarkdown(nutrition.name)}*\n`;
+    msg += `Porsi: ${escapeMarkdown(nutrition.portion || foodPortion)}\n\n`;
     msg += `• Kalori: *${Math.round(nutrition.cal || 0)} kcal*\n`;
     msg += `• Protein: *${Number(nutrition.protein || 0).toFixed(1)}g*\n`;
     msg += `• Karbo: *${Number(nutrition.carbs || 0).toFixed(1)}g*\n`;
@@ -495,7 +500,7 @@ async function confirmSaveFood(chatId, userId) {
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
 
-  let msg = `*${newItem.name}* tersimpan!\n\n`;
+  let msg = `*${escapeMarkdown(newItem.name)}* tersimpan!\n\n`;
   msg += `Total hari ini: *${Math.round(total.cal)} / ${calTarget} kcal*\n\n`;
   msg += 'Log lagi atau lihat dashboard?';
 
@@ -707,7 +712,7 @@ async function showSettings(chatId, userId, email) {
   let msg = '*Settings*\n\n';
   if (email) {
     const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
-    msg += `Akun: *${email}*\n`;
+    msg += `Akun: *${escapeMarkdown(email)}*\n`;
     if (profile) {
       msg += `Target: *${Math.round((profile.targets && profile.targets.cal) ? profile.targets.cal : 0)} kcal/hari*\n`;
       msg += `Tujuan: *${(profile.target || '-').replace(/_/g, ' ').toUpperCase()}*\n`;
@@ -880,7 +885,7 @@ async function onRecalcCatatanInput(chatId, userId, text) {
     msg += `• Karbo: *${aiResult.carbs}g*\n`;
     msg += `• Lemak: *${aiResult.fat}g*\n`;
     msg += `• Serat: *${aiResult.fiber || 0}g*\n\n`;
-    msg += `🤖 *Catatan AI:*\n_${aiResult.notes || '-'}_\n\n`;
+    msg += `🤖 *Catatan AI:*\n_${escapeMarkdown(aiResult.notes || '-')}_\n\n`;
     msg += 'Simpan perubahan profil ini?';
 
     return sendMessage(chatId, msg, {
