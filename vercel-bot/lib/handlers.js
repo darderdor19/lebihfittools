@@ -106,6 +106,9 @@ async function handleMessage(msg) {
   if (state === 'AWAIT_RECALC_BB') return onRecalcBb(chatId, userId, text);
   if (state === 'AWAIT_RECALC_USIA') return onRecalcUsia(chatId, userId, text);
   if (state === 'AWAIT_RECALC_CATATAN') return onRecalcCatatanInput(chatId, userId, text);
+  if (state === 'AWAIT_EDIT_NAME') return onEditNameInput(chatId, userId, text);
+  if (state === 'AWAIT_EDIT_PORTION') return onEditPortionInput(chatId, userId, text);
+  if (state === 'AWAIT_EDIT_DESC') return onEditDescInput(chatId, userId, text);
 
   // Default: if logged in, treat as food name input (shortcut)
   const email = await getLinkedEmail(userId);
@@ -151,6 +154,22 @@ async function handleCallback(cb) {
   }
   if (data === 'skip_recalc_catatan') return onRecalcCatatanInput(chatId, userId, null);
   if (data === 'save_profile_yes') return saveProfile(chatId, userId);
+  if (data === 'manage_logs') return email ? showManageLogs(chatId, email) : promptLogin(chatId, userId);
+  if (data.startsWith('show_details_')) return; // do nothing
+  if (data.startsWith('del_log_')) {
+    const logId = data.replace('del_log_', '');
+    return confirmDeleteLog(chatId, userId, email, logId);
+  }
+  if (data.startsWith('confirm_del_')) {
+    const logId = data.replace('confirm_del_', '');
+    return deleteLogItem(chatId, userId, email, logId);
+  }
+  if (data.startsWith('edit_log_')) {
+    const logId = data.replace('edit_log_', '');
+    return startEditLogWizard(chatId, userId, email, logId);
+  }
+  if (data === 'skip_edit_desc') return onEditDescInput(chatId, userId, null);
+  if (data === 'confirm_edit_yes') return saveEditedLog(chatId, userId, email);
   if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
   if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
   if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
@@ -350,6 +369,7 @@ async function showDashboard(chatId, email) {
   return sendMessage(chatId, msg, {
     inline_keyboard: [
       [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
+      [{ text: '✏️ Kelola Log Hari Ini', callback_data: 'manage_logs' }],
       [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
     ]
   });
@@ -526,6 +546,7 @@ async function cancelFood(chatId, userId) {
   await deleteCache(userId + '_food_portion');
   await deleteCache(userId + '_pending');
   await deleteRecalcCache(userId);
+  await deleteEditCache(userId);
   return sendMessage(chatId, 'Dibatalkan.', mainMenuKeyboard());
 }
 
@@ -953,6 +974,273 @@ async function sendHelp(chatId) {
     'Bot otomatis analisis dan minta konfirmasi sebelum disimpan!',
     { inline_keyboard: [[{ text: 'Menu Utama', callback_data: 'menu' }]] }
   );
+}
+
+// ====================================================
+// FOOD LOGS MANAGEMENT (EDIT & DELETE)
+// ====================================================
+async function showManageLogs(chatId, email) {
+  const today = todayKey();
+  const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`);
+  const logs = toArray(rawLogs);
+
+  if (logs.length === 0) {
+    return sendMessage(chatId,
+      '✏️ *Kelola Log Makanan*\n\nBelum ada makanan tercatat hari ini.',
+      {
+        inline_keyboard: [
+          [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
+          [{ text: '📊 Dashboard', callback_data: 'dashboard' }]
+        ]
+      }
+    );
+  }
+
+  let msg = '✏️ *Kelola Log Makanan Hari Ini*\n\nPilih makanan di bawah yang ingin lu ubah atau hapus:\n';
+  const inline_keyboard = [];
+
+  logs.forEach((item, index) => {
+    msg += `\n*${index + 1}. ${escapeMarkdown(item.name)}*\n`;
+    msg += `Porsi: ${escapeMarkdown(item.portion || '1 porsi')} | Kalori: *${Math.round(item.cal)} kcal*\n`;
+
+    inline_keyboard.push([
+      { text: `${index + 1}. ${escapeMarkdown(item.name)} (${Math.round(item.cal)} kcal)`, callback_data: `show_details_${item.id}` }
+    ]);
+    inline_keyboard.push([
+      { text: `✏️ Edit`, callback_data: `edit_log_${item.id}` },
+      { text: `🗑️ Hapus`, callback_data: `del_log_${item.id}` }
+    ]);
+  });
+
+  inline_keyboard.push([
+    { text: '📊 Kembali ke Dashboard', callback_data: 'dashboard' }
+  ]);
+
+  return sendMessage(chatId, msg, { inline_keyboard });
+}
+
+async function confirmDeleteLog(chatId, userId, email, logId) {
+  const today = todayKey();
+  const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`);
+  const logs = toArray(rawLogs);
+  const item = logs.find(l => l.id === logId);
+
+  if (!item) {
+    return sendMessage(chatId, 'Makanan tidak ditemukan atau sudah dihapus.', {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+    });
+  }
+
+  return sendMessage(chatId,
+    `Apakah lu yakin ingin menghapus makanan *${escapeMarkdown(item.name)}* (${escapeMarkdown(item.portion)})?`,
+    {
+      inline_keyboard: [
+        [
+          { text: '🗑️ Ya, Hapus', callback_data: `confirm_del_${logId}` },
+          { text: '❌ Batal', callback_data: 'manage_logs' }
+        ]
+      ]
+    }
+  );
+}
+
+async function deleteLogItem(chatId, userId, email, logId) {
+  const today = todayKey();
+  const logsPath = `users/${safe(email)}/lf_logs/${today}`;
+  const rawLogs = await getFirebase(logsPath);
+  const logs = toArray(rawLogs);
+
+  const updatedLogs = logs.filter(l => l.id !== logId);
+  await setFirebase(logsPath, updatedLogs);
+
+  await sendMessage(chatId, '✅ Makanan berhasil dihapus!');
+  return showManageLogs(chatId, email);
+}
+
+async function startEditLogWizard(chatId, userId, email, logId) {
+  const today = todayKey();
+  const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`);
+  const logs = toArray(rawLogs);
+  const item = logs.find(l => l.id === logId);
+
+  if (!item) {
+    return sendMessage(chatId, 'Makanan tidak ditemukan.', {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+    });
+  }
+
+  await setCache(`${userId}_editing_log_id`, logId);
+  await setCache(`${userId}_editing_orig_name`, item.name);
+  await setCache(`${userId}_editing_orig_portion`, item.portion || '1 porsi');
+  await setCache(`${userId}_editing_orig_mealtime`, item.mealTime || 'sarapan');
+  await setCache(`${userId}_editing_orig_loggedat`, item.loggedAt);
+
+  await setState(userId, 'AWAIT_EDIT_NAME');
+  return sendMessage(chatId,
+    `✏️ *Edit Makanan - Langkah 1 dari 3*\n\nMakanan saat ini: *${escapeMarkdown(item.name)}*\n\nMasukkan nama makanan yang baru:\n_(Atau ketik /skip jika tidak ingin mengubah nama)_`,
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'manage_logs' }]] }
+  );
+}
+
+async function onEditNameInput(chatId, userId, text) {
+  const input = text.trim();
+  if (input !== '/skip') {
+    if (input.length < 2) {
+      return sendMessage(chatId, 'Nama makanan terlalu pendek. Coba lagi atau ketik /skip:');
+    }
+    await setCache(`${userId}_editing_name`, input);
+  }
+
+  const origPortion = await getCache(`${userId}_editing_orig_portion`) || '1 porsi';
+
+  await setState(userId, 'AWAIT_EDIT_PORTION');
+  return sendMessage(chatId,
+    `✏️ *Edit Makanan - Langkah 2 dari 3*\n\nPorsi saat ini: *${escapeMarkdown(origPortion)}*\n\nMasukkan porsi makanan yang baru:\n_(Atau ketik /skip jika tidak ingin mengubah porsi)_`,
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'manage_logs' }]] }
+  );
+}
+
+async function onEditPortionInput(chatId, userId, text) {
+  const input = text.trim();
+  if (input !== '/skip') {
+    if (input.length < 1) {
+      return sendMessage(chatId, 'Porsi makanan tidak valid. Coba lagi atau ketik /skip:');
+    }
+    await setCache(`${userId}_editing_portion`, input);
+  }
+
+  await setState(userId, 'AWAIT_EDIT_DESC');
+  return sendMessage(chatId,
+    `✏️ *Edit Makanan - Langkah 3 dari 3*\n\nMasukkan deskripsi tambahan yang baru jika ada (opsional):\n_(Atau klik Lewati / ketik /skip jika tidak ada)_`,
+    {
+      inline_keyboard: [
+        [{ text: '⏭️ Lewati & Analisis Ulang', callback_data: 'skip_edit_desc' }],
+        [{ text: '❌ Batal', callback_data: 'manage_logs' }]
+      ]
+    }
+  );
+}
+
+async function onEditDescInput(chatId, userId, text) {
+  const logId = await getCache(`${userId}_editing_log_id`);
+  const origName = await getCache(`${userId}_editing_orig_name`);
+  const origPortion = await getCache(`${userId}_editing_orig_portion`);
+
+  if (!logId) {
+    await setState(userId, null);
+    await deleteEditCache(userId);
+    return sendMessage(chatId, 'Sesi expired. Silakan coba lagi.', mainMenuKeyboard());
+  }
+
+  const newName = await getCache(`${userId}_editing_name`) || origName;
+  const newPortion = await getCache(`${userId}_editing_portion`) || origPortion;
+  const newDesc = (text && text.trim() !== '/skip') ? text.trim() : '';
+
+  await setState(userId, null);
+
+  await sendChatAction(chatId, 'typing');
+
+  let descString = `porsi: ${newPortion}`;
+  if (newDesc) {
+    descString += `, deskripsi: ${newDesc}`;
+  }
+  const query = `${newName}, ${descString}`;
+  await sendMessage(chatId, `Menganalisis ulang: _${escapeMarkdown(query)}_...`, null);
+
+  try {
+    const nutrition = await analyzeFood(query);
+    await setCache(`${userId}_editing_result`, JSON.stringify({
+      id: logId,
+      name: nutrition.name || newName,
+      portion: nutrition.portion || newPortion,
+      cal: nutrition.cal || 0,
+      protein: nutrition.protein || 0,
+      carbs: nutrition.carbs || 0,
+      fat: nutrition.fat || 0,
+      fiber: nutrition.fiber || 0,
+      sugar: nutrition.sugar || 0,
+      sodium: nutrition.sodium || 0,
+      calcium: nutrition.calcium || 0,
+      iron: nutrition.iron || 0,
+      vitC: nutrition.vitC || 0,
+      vitD: nutrition.vitD || 0,
+      zinc: nutrition.zinc || 0
+    }));
+
+    let msg = '🤖 *Hasil Analisis Ulang AI:*\n\n';
+    msg += `*${escapeMarkdown(nutrition.name)}*\n`;
+    msg += `Porsi: ${escapeMarkdown(nutrition.portion || newPortion)}\n\n`;
+    msg += `• Kalori: *${Math.round(nutrition.cal || 0)} kcal*\n`;
+    msg += `• Protein: *${Number(nutrition.protein || 0).toFixed(1)}g*\n`;
+    msg += `• Karbo: *${Number(nutrition.carbs || 0).toFixed(1)}g*\n`;
+    msg += `• Lemak: *${Number(nutrition.fat || 0).toFixed(1)}g*\n`;
+    msg += `• Serat: *${Number(nutrition.fiber || 0).toFixed(1)}g*\n\n`;
+    msg += 'Update log makanan dengan gizi baru ini?';
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [
+          { text: '✅ Ya, Update', callback_data: 'confirm_edit_yes' },
+          { text: '❌ Batal', callback_data: 'manage_logs' }
+        ]
+      ]
+    });
+
+  } catch (err) {
+    console.error('onEditDescInput error:', err);
+    await deleteEditCache(userId);
+    return sendMessage(chatId, 'Gagal analisis AI: ' + err.message, {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+    });
+  }
+}
+
+async function saveEditedLog(chatId, userId, email) {
+  const rawResult = await getCache(`${userId}_editing_result`);
+  if (!rawResult) {
+    await deleteEditCache(userId);
+    return sendMessage(chatId, 'Data expired. Silakan edit ulang.', {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+    });
+  }
+
+  const updatedItem = JSON.parse(rawResult);
+  const origMealtime = await getCache(`${userId}_editing_orig_mealtime`) || 'sarapan';
+  const origLoggedat = await getCache(`${userId}_editing_orig_loggedat`) || new Date().toISOString();
+
+  await deleteEditCache(userId);
+
+  const today = todayKey();
+  const logsPath = `users/${safe(email)}/lf_logs/${today}`;
+  const rawLogs = await getFirebase(logsPath);
+  const logs = toArray(rawLogs);
+
+  const updatedLogs = logs.map(item => {
+    if (item.id === updatedItem.id) {
+      return {
+        ...updatedItem,
+        mealTime: origMealtime,
+        loggedAt: origLoggedat,
+        source: 'telegram_edit'
+      };
+    }
+    return item;
+  });
+
+  await setFirebase(logsPath, updatedLogs);
+  await sendMessage(chatId, '✅ Log makanan berhasil diperbarui!');
+  return showManageLogs(chatId, email);
+}
+
+async function deleteEditCache(userId) {
+  await deleteCache(`${userId}_editing_log_id`);
+  await deleteCache(`${userId}_editing_orig_name`);
+  await deleteCache(`${userId}_editing_orig_portion`);
+  await deleteCache(`${userId}_editing_orig_mealtime`);
+  await deleteCache(`${userId}_editing_orig_loggedat`);
+  await deleteCache(`${userId}_editing_name`);
+  await deleteCache(`${userId}_editing_portion`);
+  await deleteCache(`${userId}_editing_result`);
 }
 
 module.exports = { handleMessage, handleCallback };
