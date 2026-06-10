@@ -214,9 +214,8 @@ async function handleCallback(cb) {
   }
   if (data.startsWith('pdf_range_')) {
     const range = data.replace('pdf_range_', '');
-    const token = getReportToken(userId);
-    const host = process.env.VERCEL_URL || 'lebihfit-bot.vercel.app';
-    const reportUrl = `https://${host}/api/report?id=${userId}&token=${token}&range=${range}`;
+    if (!email) return promptLogin(chatId, userId);
+    const reportUrl = `https://darderdor19.github.io/lebihfittools/report.html?email=${encodeURIComponent(email)}&range=${range}`;
     
     const rangeText = {
       '7': 'Mingguan (7 Hari)',

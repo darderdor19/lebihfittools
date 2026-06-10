@@ -394,27 +394,54 @@
       renderReport();
     });
 
-    function renderReport() {
-      const email = localStorage.getItem('lf_user_email');
-      if (!email) {
-        document.getElementById('reportContent').innerHTML = `
-          <div class="error-container">
-            <h2>Sesi Expired</h2>
-            <p>Silakan login terlebih dahulu untuk mengakses laporan gizi kamu.</p>
-            <a href="index.html" class="btn" style="margin-top:20px;">Ke Halaman Login</a>
-          </div>
-        `;
-        return;
+    async function renderReport() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let email = urlParams.get('email');
+      let logs = {};
+      let profile = {};
+
+      if (email) {
+        try {
+          const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+          const profileUrl = `https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app/users/${safeEmail}/lf_profile.json`;
+          const logsUrl = `https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app/users/${safeEmail}/lf_logs.json`;
+
+          const [profileRes, logsRes] = await Promise.all([
+            fetch(profileUrl).then(r => r.json()),
+            fetch(logsUrl).then(r => r.json())
+          ]);
+          profile = profileRes || {};
+          logs = logsRes || {};
+        } catch (err) {
+          console.error("Failed to fetch data from Firebase:", err);
+          document.getElementById('reportContent').innerHTML = `
+            <div class="error-container">
+              <h2>Gagal Memuat Laporan</h2>
+              <p>Terjadi kesalahan koneksi saat mengambil data dari database LebihFit.</p>
+            </div>
+          `;
+          return;
+        }
+      } else {
+        const localEmail = localStorage.getItem('lf_user_email');
+        if (!localEmail) {
+          document.getElementById('reportContent').innerHTML = `
+            <div class="error-container">
+              <h2>Sesi Expired</h2>
+              <p>Silakan login terlebih dahulu untuk mengakses laporan gizi kamu.</p>
+              <a href="index.html" class="btn" style="margin-top:20px;">Ke Halaman Login</a>
+            </div>
+          `;
+          return;
+        }
+        email = localEmail;
+        const rawLogs = localStorage.getItem('lf_logs');
+        const rawProfile = localStorage.getItem('lf_profile');
+        logs = rawLogs ? JSON.parse(rawLogs) : {};
+        profile = rawProfile ? JSON.parse(rawProfile) : {};
       }
 
-      const rawLogs = localStorage.getItem('lf_logs');
-      const rawProfile = localStorage.getItem('lf_profile');
-      
-      const logs = rawLogs ? JSON.parse(rawLogs) : {};
-      const profile = rawProfile ? JSON.parse(rawProfile) : {};
-
       // Parse range parameter
-      const urlParams = new URLSearchParams(window.location.search);
       const range = urlParams.get('range') || '7'; // default is weekly
 
       // 1. Calculate Date List
