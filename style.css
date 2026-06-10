@@ -1288,3 +1288,96 @@ a{color:var(--accent);text-decoration:none}
   .history-main-tab { font-size: 0.8rem; padding: 9px 6px; }
   .activity-summary-stats { grid-template-columns: 1fr 1fr; }
 }
+
+/* ===== CALORIE BURN PREVIEW ===== */
+.calburn-input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.calburn-preview {
+  background: linear-gradient(135deg, rgba(0,240,255,0.06), rgba(0,204,136,0.06));
+  border: 1px solid var(--accent3);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-top: 8px;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.calburn-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.calburn-kcal {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--accent);
+  font-family: monospace;
+  text-shadow: 0 0 15px rgba(0,240,255,0.4);
+}
+.calburn-unit {
+  font-size: 0.85rem;
+  color: var(--text2);
+  font-weight: 600;
+}
+.calburn-label {
+  font-size: 0.72rem;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.calburn-macros {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.calburn-macro-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.calburn-macro-badge.fat {
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  color: #ffab40;
+}
+.calburn-macro-badge.carb {
+  background: rgba(255, 214, 10, 0.08);
+  border: 1px solid rgba(255, 214, 10, 0.2);
+  color: #ffd60a;
+}
+.calburn-macro-badge.protein {
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  color: var(--accent2);
+}
+.calburn-note {
+  font-size: 0.7rem;
+  color: var(--text3);
+  margin-top: 8px;
+  font-style: italic;
+}
+.calburn-saved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: rgba(0,255,204,0.1);
+  border: 1px solid var(--success);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--success);
+  margin-top: 4px;
+}
+@media (max-width: 600px) {
+  .calburn-input-row { flex-direction: column; gap: 8px; }
+  .calburn-kcal { font-size: 1.6rem; }
+}

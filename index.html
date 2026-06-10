@@ -640,6 +640,25 @@
             <!-- Workout session list -->
             <div id="workoutSessionList" style="margin-top:16px;"></div>
 
+            <!-- Duration + Calorie Burn -->
+            <div id="workoutBurnSection" style="display:none;margin-top:14px;">
+              <div class="calburn-input-row">
+                <div class="form-group" style="flex:1;">
+                  <label>⏱ Durasi Sesi (menit)</label>
+                  <input type="number" id="workoutDuration" class="form-input" placeholder="Contoh: 30" min="1" max="240" oninput="previewWorkoutBurn()">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label>💥 Intensitas</label>
+                  <select id="workoutIntensity" class="form-input" onchange="previewWorkoutBurn()">
+                    <option value="low">🟢 Ringan (low impact)</option>
+                    <option value="medium" selected>🟡 Sedang (moderate)</option>
+                    <option value="high">🔴 Tinggi (high intensity)</option>
+                  </select>
+                </div>
+              </div>
+              <div id="workoutBurnPreview" class="calburn-preview"></div>
+            </div>
+
             <button class="btn-primary btn-full" id="btnSaveWorkout" onclick="saveWorkoutSession()" style="display:none;margin-top:12px;background:var(--success);">
               <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Workout
             </button>
@@ -662,6 +681,25 @@
 
             <!-- Dynamic muscle variation inputs -->
             <div id="gymMuscleInputs" style="margin-top:16px;"></div>
+
+            <!-- Duration + Calorie Burn for Gym -->
+            <div id="gymBurnSection" style="display:none;margin-top:14px;">
+              <div class="calburn-input-row">
+                <div class="form-group" style="flex:1;">
+                  <label>⏱ Durasi Sesi (menit)</label>
+                  <input type="number" id="gymDuration" class="form-input" placeholder="Contoh: 60" min="1" max="240" oninput="previewGymBurn()">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label>💥 Intensitas</label>
+                  <select id="gymIntensity" class="form-input" onchange="previewGymBurn()">
+                    <option value="low">🟢 Ringan</option>
+                    <option value="medium" selected>🟡 Sedang</option>
+                    <option value="high">🔴 Tinggi</option>
+                  </select>
+                </div>
+              </div>
+              <div id="gymBurnPreview" class="calburn-preview"></div>
+            </div>
 
             <button class="btn-primary btn-full" id="btnSaveGym" onclick="saveGymSession()" style="display:none;margin-top:12px;background:var(--success);">
               <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Gym

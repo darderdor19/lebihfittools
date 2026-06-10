@@ -298,15 +298,71 @@ function addWorkoutExercise() {
     document.querySelectorAll('.set-input').forEach(el => el.value = '');
 }
 
+// ===== CALORIE BURN CALCULATION =====
+// Formula: kcal = MET × weightKg × durationHours
+// MET values per intensity
+const MET_WORKOUT = { low: 3.5, medium: 5.5, high: 8.0 };
+const MET_GYM     = { low: 3.0, medium: 5.0, high: 6.5 };
+// Ratio of energy from fat/carb/protein during exercise
+const BURN_RATIO  = { fat: 0.30, carb: 0.60, protein: 0.10 }; // kcal proportion
+// Fat: 9 kcal/g, Carb: 4 kcal/g, Protein: 4 kcal/g
+
+function calcBurnedCalories(met, durationMin) {
+    const profile = getProfile() || {};
+    const weight = parseFloat(profile.bb) || 70;
+    const kcal = met * weight * (durationMin / 60);
+    const fatG    = (kcal * BURN_RATIO.fat) / 9;
+    const carbG   = (kcal * BURN_RATIO.carb) / 4;
+    const proteinG= (kcal * BURN_RATIO.protein) / 4;
+    return { kcal: Math.round(kcal), fatG: fatG.toFixed(1), carbG: carbG.toFixed(1), proteinG: proteinG.toFixed(1) };
+}
+
+function renderBurnPreview(containerId, burn, durationMin, intensity) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!burn || !durationMin) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <div class="calburn-main">
+            <span class="calburn-kcal">${burn.kcal}</span>
+            <span class="calburn-unit">kcal terbakar</span>
+        </div>
+        <div class="calburn-label">🔥 Estimasi ${durationMin} menit · intensitas ${intensity === 'low' ? 'ringan' : intensity === 'medium' ? 'sedang' : 'tinggi'}</div>
+        <div class="calburn-macros">
+            <span class="calburn-macro-badge fat">🧴 Lemak ${burn.fatG}g</span>
+            <span class="calburn-macro-badge carb">⚡ Karbo ${burn.carbG}g</span>
+            <span class="calburn-macro-badge protein">💪 Protein ${burn.proteinG}g</span>
+        </div>
+        <div class="calburn-note">*Estimasi berdasarkan berat badan ${(getProfile()||{}).bb||70}kg. Nilai aktual bervariasi tergantung kondisi tubuh.</div>`;
+}
+
+function previewWorkoutBurn() {
+    const dur = parseFloat(document.getElementById('workoutDuration').value) || 0;
+    const intensity = document.getElementById('workoutIntensity').value;
+    if (!dur) { document.getElementById('workoutBurnPreview').innerHTML = ''; return; }
+    const burn = calcBurnedCalories(MET_WORKOUT[intensity], dur);
+    renderBurnPreview('workoutBurnPreview', burn, dur, intensity);
+}
+
+function previewGymBurn() {
+    const dur = parseFloat(document.getElementById('gymDuration').value) || 0;
+    const intensity = document.getElementById('gymIntensity').value;
+    if (!dur) { document.getElementById('gymBurnPreview').innerHTML = ''; return; }
+    const burn = calcBurnedCalories(MET_GYM[intensity], dur);
+    renderBurnPreview('gymBurnPreview', burn, dur, intensity);
+}
+
 function renderWorkoutSessionList() {
     const list = document.getElementById('workoutSessionList');
     const saveBtn = document.getElementById('btnSaveWorkout');
+    const burnSection = document.getElementById('workoutBurnSection');
     if (_workoutSession.length === 0) {
         list.innerHTML = '';
         saveBtn.style.display = 'none';
+        if (burnSection) burnSection.style.display = 'none';
         return;
     }
     saveBtn.style.display = 'block';
+    if (burnSection) burnSection.style.display = 'block';
     list.innerHTML = `<div style="font-size:0.8rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Sesi Workout (${_workoutSession.length} gerakan)</div>` +
         _workoutSession.map((ex, idx) => `
             <div class="workout-exercise-item">
@@ -319,6 +375,8 @@ function renderWorkoutSessionList() {
                 <button class="exercise-remove-btn" onclick="removeWorkoutExercise(${idx})"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
             </div>`).join('');
     if (window.lucide) lucide.createIcons();
+    // Refresh burn preview
+    previewWorkoutBurn();
 }
 
 function removeWorkoutExercise(idx) {
@@ -328,13 +386,26 @@ function removeWorkoutExercise(idx) {
 
 function saveWorkoutSession() {
     if (_workoutSession.length === 0) { showToast('Tambah minimal 1 gerakan', 'error'); return; }
-    const item = { id: uid(), date: todayKey(), type: 'workout', exercises: [..._workoutSession], createdAt: Date.now() };
+    const durationMin = parseFloat(document.getElementById('workoutDuration').value) || 0;
+    const intensity = document.getElementById('workoutIntensity')?.value || 'medium';
+    const burn = durationMin > 0 ? calcBurnedCalories(MET_WORKOUT[intensity], durationMin) : null;
+    const item = {
+        id: uid(), date: todayKey(), type: 'workout',
+        exercises: [..._workoutSession],
+        durationMin: durationMin || null,
+        intensity: durationMin ? intensity : null,
+        burn: burn,
+        createdAt: Date.now()
+    };
     saveActivity(item);
     _workoutSession = [];
     _workoutSetCount = 1;
     // Reset UI
     document.getElementById('workoutSessionList').innerHTML = '';
     document.getElementById('btnSaveWorkout').style.display = 'none';
+    document.getElementById('workoutBurnSection').style.display = 'none';
+    document.getElementById('workoutDuration').value = '';
+    document.getElementById('workoutBurnPreview').innerHTML = '';
     document.getElementById('workoutSetsContainer').innerHTML = `
         <div class="workout-set-row" id="workoutSet_1">
             <div class="set-label">Set 1</div>
@@ -343,7 +414,9 @@ function saveWorkoutSession() {
         </div>`;
     if (window.lucide) lucide.createIcons();
     renderTodayActivities();
-    showToast('Sesi workout berhasil disimpan! 💪', 'success');
+    renderDashboardActivityCard();
+    const burnMsg = burn ? ` Estimasi ${burn.kcal} kcal terbakar 🔥` : '';
+    showToast(`Sesi workout disimpan! 💪${burnMsg}`, 'success');
 }
 
 // --- Gym Functions ---
@@ -361,6 +434,8 @@ function toggleGymMuscle(muscle) {
     renderGymMuscleInputs();
     const hasMuscles = Object.keys(_gymSelectedMuscles).length > 0;
     document.getElementById('btnSaveGym').style.display = hasMuscles ? 'block' : 'none';
+    const burnSection = document.getElementById('gymBurnSection');
+    if (burnSection) burnSection.style.display = hasMuscles ? 'block' : 'none';
 }
 
 const MUSCLE_LABELS = { chest:'Chest', back:'Back', shoulder:'Shoulder', bicep:'Bicep', tricep:'Tricep', forearm:'Forearm', abs:'Abs', traps:'Traps', leg:'Leg' };
@@ -436,15 +511,30 @@ function saveGymSession() {
             sets: v.sets
         }))
     }));
-    const item = { id: uid(), date: todayKey(), type: 'gym', muscles: muscleData, createdAt: Date.now() };
+    const durationMin = parseFloat(document.getElementById('gymDuration').value) || 0;
+    const intensity = document.getElementById('gymIntensity')?.value || 'medium';
+    const burn = durationMin > 0 ? calcBurnedCalories(MET_GYM[intensity], durationMin) : null;
+    const item = {
+        id: uid(), date: todayKey(), type: 'gym',
+        muscles: muscleData,
+        durationMin: durationMin || null,
+        intensity: durationMin ? intensity : null,
+        burn: burn,
+        createdAt: Date.now()
+    };
     saveActivity(item);
     // Reset gym state
     _gymSelectedMuscles = {};
     document.querySelectorAll('.muscle-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('gymMuscleInputs').innerHTML = '';
     document.getElementById('btnSaveGym').style.display = 'none';
+    document.getElementById('gymBurnSection').style.display = 'none';
+    document.getElementById('gymDuration').value = '';
+    document.getElementById('gymBurnPreview').innerHTML = '';
     renderTodayActivities();
-    showToast('Sesi gym berhasil disimpan! 🏋️', 'success');
+    renderDashboardActivityCard();
+    const burnMsg = burn ? ` Estimasi ${burn.kcal} kcal terbakar 🔥` : '';
+    showToast(`Sesi gym disimpan! 🏋️${burnMsg}`, 'success');
 }
 
 // --- Sleep Functions ---
@@ -519,6 +609,20 @@ function renderTodayActivities() {
     container.innerHTML = activities.map(act => {
         let detail = '';
         let typeLabel = act.type;
+        let burnBadge = '';
+
+        if (act.burn && (act.type === 'workout' || act.type === 'gym')) {
+            burnBadge = `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.3);border-radius:12px;font-size:0.75rem;font-weight:700;color:var(--success);">
+                    🔥 ${act.burn.kcal} kcal terbakar
+                </span>
+                <span style="font-size:0.72rem;color:#ffab40;">🧴 Lemak ${act.burn.fatG}g</span>
+                <span style="font-size:0.72rem;color:#ffd60a;">⚡ Karbo ${act.burn.carbG}g</span>
+                <span style="font-size:0.72rem;color:var(--accent2);">💪 Protein ${act.burn.proteinG}g</span>
+                ${act.durationMin ? `<span style="font-size:0.7rem;color:var(--text3);">⏱ ${act.durationMin} menit</span>` : ''}
+            </div>`;
+        }
+
         if (act.type === 'workout') {
             detail = act.exercises.map(ex =>
                 `<b>${ex.name}</b> — ${ex.sets.map(s => `Set ${s.set}: ${s.reps} reps`).join(', ')}`
@@ -538,11 +642,11 @@ function renderTodayActivities() {
         return `<div class="activity-log-item">
             <div class="activity-log-header">
                 <span class="activity-log-type ${act.type}">${typeLabel}</span>
-                <button class="activity-log-delete" onclick="deleteActivity('${act.id}');renderTodayActivities();" title="Hapus">
+                <button class="activity-log-delete" onclick="deleteActivity('${act.id}');renderTodayActivities();renderDashboardActivityCard();" title="Hapus">
                     <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                 </button>
             </div>
-            <div class="activity-log-detail">${detail}</div>
+            <div class="activity-log-detail">${detail}${burnBadge}</div>
         </div>`;
     }).join('');
     if (window.lucide) lucide.createIcons();
