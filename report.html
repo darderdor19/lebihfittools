@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laporan Kalori & Gizi LebihFit</title>
+  <link rel="icon" type="image/png" href="favicon.png" sizes="any">
+  <link rel="apple-touch-icon" href="favicon.png">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Caveat:wght@700&display=swap');
     
@@ -443,8 +445,8 @@
       </div>
 
       <div class="evaluation-card">
-        <h4>Catatan Evaluasi AI / Gizi</h4>
-        <p id="evalNotes">Loading evaluasi...</p>
+        <h4>📊 Catatan Evaluasi AI / Gizi</h4>
+        <div id="evalNotes">Loading evaluasi...</div>
       </div>
 
       <div class="footer-text" id="footerText">
@@ -590,6 +592,9 @@
       let totalProtein = 0;
       let totalCarbs = 0;
       let totalFat = 0;
+      let totalFiber = 0;
+      let totalSugar = 0;
+      let totalSodium = 0;
 
       dates.forEach(date => {
         const dayLogs = logs[date] || [];
@@ -612,6 +617,9 @@
         totalProtein += dayProtein;
         totalCarbs += dayCarbs;
         totalFat += dayFat;
+        totalFiber += (logs[date] || []).reduce((s,i) => s+(i.fiber||0), 0);
+        totalSugar += (logs[date] || []).reduce((s,i) => s+(i.sugar||0), 0);
+        totalSodium += (logs[date] || []).reduce((s,i) => s+(i.sodium||0), 0);
 
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -791,24 +799,186 @@
       `;
       document.getElementById('chartSvgWrapper').innerHTML = svgHtml;
 
-      // 5. Smart Evaluation Notes
+      // 5. Smart Evaluation Notes (Rich HTML)
       const loggedDays = dates.filter(d => (logs[d] || []).length > 0).length;
-      let evalNotes = '';
+      const avgProtein = totalProtein / dates.length;
+      const avgCarbs = totalCarbs / dates.length;
+      const avgFat = totalFat / dates.length;
+      const avgFiber = totalFiber / dates.length;
+      const avgSugar = totalSugar / dates.length;
+      const avgSodium = totalSodium / dates.length;
+
+      // Target makro defaults
+      const targetProtein = (profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((targetCal * 0.25) / 4);
+      const targetCarbs   = (profile.targets && profile.targets.carbs)   ? profile.targets.carbs   : Math.round((targetCal * 0.50) / 4);
+      const targetFat     = (profile.targets && profile.targets.fat)     ? profile.targets.fat     : Math.round((targetCal * 0.25) / 9);
+      const userTarget    = (profile && profile.target) ? profile.target : 'maintenance';
+
+      const evalEl = document.getElementById('evalNotes');
+
       if (loggedDays === 0) {
-        evalNotes = 'Belum ada makanan tercatat untuk periode ini. Catat makanan harian lu secara konsisten di LebihFit agar AI dapat memantau gizi harian lu!';
-      } else if (loggedDays < Math.min(4, dates.length)) {
-        evalNotes = 'Pencatatan masih kurang konsisten. Usahakan untuk mencatat makanan lebih sering agar analisis tren mingguan/bulanan lu menjadi lebih akurat.';
+        evalEl.innerHTML = `
+          <div style="padding:14px;background:rgba(255,59,48,0.08);border-left:4px solid var(--accent);border-radius:8px;">
+            <b>⚠️ Belum Ada Data</b><br>
+            Belum ada makanan tercatat untuk periode ini. Catat makanan harian lu secara konsisten di LebihFit agar AI dapat memantau perkembangan gizi lu!
+          </div>`;
+      } else if (loggedDays < Math.min(4, dates.length) && dates.length >= 4) {
+        evalEl.innerHTML = `
+          <div style="padding:14px;background:rgba(255,204,0,0.08);border-left:4px solid #ffd60a;border-radius:8px;margin-bottom:10px;">
+            <b>📋 Konsistensi Rendah</b><br>
+            Hanya ${loggedDays} dari ${dates.length} hari yang tercatat. Usahakan mencatat makanan setiap hari agar analisis tren menjadi lebih akurat.
+          </div>`;
       } else {
         const ratio = avgCal / targetCal;
-        if (ratio <= 0.9) {
-          evalNotes = `Secara rata-rata, asupan kalori lu berada di bawah target (${Math.round(avgCal)} vs ${targetCal} kcal). Ini sangat efektif untuk program fat-loss atau cutting. Jaga asupan protein agar massa otot lu tetap terjaga.`;
+        
+        // Kalori assessment
+        let calBlock = '';
+        let calIcon = '🟢';
+        let calStatus = 'ON TRACK';
+        let calColor = 'rgba(50,215,75,0.08)';
+        let calBorder = 'var(--success)';
+        let calImpact = '';
+        let calSaran = '';
+
+        if (ratio <= 0.85) {
+          calIcon = '🔵'; calStatus = 'DEFISIT SIGNIFIKAN';
+          calColor = 'rgba(0,122,255,0.08)'; calBorder = '#007AFF';
+          calImpact = 'Defisit kalori besar ini efektif untuk fat-loss, namun berisiko menyebabkan kehilangan massa otot, kelelahan, dan penurunan performa latihan jika protein tidak mencukupi.';
+          calSaran = 'Pastikan protein harian minimal ' + targetProtein + 'g untuk menjaga otot. Pertimbangkan menambah 200-300 kcal dari sumber kompleks seperti nasi merah, oat, atau ubi.';
+        } else if (ratio <= 0.95) {
+          calIcon = '🔵'; calStatus = 'CUTTING / DEFISIT';
+          calColor = 'rgba(0,122,255,0.08)'; calBorder = '#007AFF';
+          calImpact = 'Defisit kalori terkontrol. Bagus untuk program fat-loss secara bertahap tanpa risiko kehilangan otot yang signifikan.';
+          calSaran = 'Pertahankan defisit ini. Fokus pada latihan kekuatan untuk mempertahankan massa otot, dan konsumsi protein yang cukup.';
         } else if (ratio <= 1.05) {
-          evalNotes = `Luar biasa konsisten! Asupan harian rata-rata lu berada tepat di sekitar target kalori. Keseimbangan energi dan gizi makro dalam kondisi sangat stabil untuk jangka panjang.`;
+          calIcon = '🟢'; calStatus = 'MAINTENANCE / ON TRACK';
+          calColor = 'rgba(50,215,75,0.08)'; calBorder = 'var(--success)';
+          calImpact = 'Asupan kalori seimbang dengan pengeluaran energi. Kondisi ideal untuk mempertahankan berat badan dan mendukung performa olahraga.';
+          calSaran = 'Pertahankan pola makan ini. Variasikan sumber makanan untuk memastikan kecukupan semua mikronutrisi.';
+        } else if (ratio <= 1.15) {
+          calIcon = '🟡'; calStatus = 'BULKING / SURPLUS RINGAN';
+          calColor = 'rgba(255,214,10,0.08)'; calBorder = '#ffd60a';
+          calImpact = 'Surplus kalori ringan. Cocok untuk fase bulking bersih. Kelebihan energi mendukung pertumbuhan otot jika disertai latihan resistance.';
+          calSaran = 'Pastikan surplus ini didukung latihan beban intensif. Kurangi lemak jenuh dan gula sederhana, pilih karbo kompleks dan protein lean.';
         } else {
-          evalNotes = `Rata-rata asupan kalori berada di atas target (Surplus). Cocok jika lu sedang dalam fase bulking. Jika ingin memotong lemak (cutting), coba kurangi porsi lemak dan karbohidrat sederhana untuk periode berikutnya.`;
+          calIcon = '🔴'; calStatus = 'SURPLUS BERLEBIH';
+          calColor = 'rgba(255,59,48,0.08)'; calBorder = 'var(--accent)';
+          calImpact = 'Kelebihan kalori signifikan. Berisiko meningkatkan persentase lemak tubuh, terutama lemak visceral yang berbahaya bagi kesehatan jantung dan metabolisme.';
+          calSaran = 'Kurangi porsi lemak jenuh dan karbohidrat sederhana. Perbanyak sayuran, protein lean, dan perbanyak aktivitas kardio 3-4x seminggu.';
         }
+
+        calBlock = `
+          <div style="padding:12px 14px;background:${calColor};border-left:4px solid ${calBorder};border-radius:8px;margin-bottom:10px;">
+            <b>${calIcon} Kalori: ${calStatus}</b> — Rata-rata ${Math.round(avgCal)} kcal/hari (Target: ${targetCal} kcal)<br>
+            <span style="font-size:0.88em;opacity:0.85;"><b>Dampak:</b> ${calImpact}</span><br>
+            <span style="font-size:0.88em;opacity:0.85;"><b>Saran:</b> ${calSaran}</span>
+          </div>`;
+
+        // Protein assessment
+        const proteinRatio = avgProtein / targetProtein;
+        let proteinBlock = '';
+        if (proteinRatio < 0.8) {
+          proteinBlock = `<div style="padding:10px 14px;background:rgba(255,59,48,0.06);border-left:3px solid #ff3b30;border-radius:8px;margin-bottom:8px;">
+            <b>🥩 Protein: KURANG</b> — ${avgProtein.toFixed(1)}g/hari (Target: ${targetProtein}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;"><b>Dampak:</b> Kekurangan protein memperlambat recovery otot, menurunkan metabolisme basal, dan membuat massa otot sulit berkembang atau mudah susut.<br>
+            <b>Saran:</b> Tambahkan sumber protein seperti ayam tanpa kulit, telur, tahu, tempe, ikan, atau greek yogurt di setiap makan utama.</span>
+          </div>`;
+        } else if (proteinRatio > 1.3) {
+          proteinBlock = `<div style="padding:10px 14px;background:rgba(255,214,10,0.06);border-left:3px solid #ffd60a;border-radius:8px;margin-bottom:8px;">
+            <b>🥩 Protein: BERLEBIH</b> — ${avgProtein.toFixed(1)}g/hari (Target: ${targetProtein}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;"><b>Dampak:</b> Protein berlebih diubah menjadi energi atau disimpan sebagai lemak, dan dapat meningkatkan beban kerja ginjal jangka panjang.<br>
+            <b>Saran:</b> Batasi protein sekitar ${targetProtein}-${Math.round(targetProtein*1.2)}g/hari. Tidak perlu berlebihan kecuali aktivitas sangat intens.</span>
+          </div>`;
+        } else {
+          proteinBlock = `<div style="padding:10px 14px;background:rgba(50,215,75,0.06);border-left:3px solid var(--success);border-radius:8px;margin-bottom:8px;">
+            <b>🥩 Protein: OPTIMAL</b> — ${avgProtein.toFixed(1)}g/hari ✓ (Target: ${targetProtein}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;">Asupan protein lu sudah bagus untuk mendukung recovery, pertumbuhan otot, dan menjaga rasa kenyang.</span>
+          </div>`;
+        }
+
+        // Karbohidrat assessment
+        const carbRatio = avgCarbs / targetCarbs;
+        let carbBlock = '';
+        if (carbRatio < 0.7) {
+          carbBlock = `<div style="padding:10px 14px;background:rgba(255,59,48,0.06);border-left:3px solid #ff3b30;border-radius:8px;margin-bottom:8px;">
+            <b>🍚 Karbohidrat: KURANG</b> — ${avgCarbs.toFixed(1)}g/hari (Target: ${targetCarbs}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;"><b>Dampak:</b> Rendah karbohidrat dapat menyebabkan kelelahan, penurunan performa olahraga, dan sulit fokus karena otak membutuhkan glukosa.<br>
+            <b>Saran:</b> Tambahkan karbo kompleks seperti nasi merah, oat, singkong, kentang, atau roti gandum untuk energi yang stabil.</span>
+          </div>`;
+        } else if (carbRatio > 1.3) {
+          carbBlock = `<div style="padding:10px 14px;background:rgba(255,214,10,0.06);border-left:3px solid #ffd60a;border-radius:8px;margin-bottom:8px;">
+            <b>🍚 Karbohidrat: BERLEBIH</b> — ${avgCarbs.toFixed(1)}g/hari (Target: ${targetCarbs}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;"><b>Dampak:</b> Kelebihan karbohidrat, terutama dari gula sederhana, meningkatkan insulin, mendorong penyimpanan lemak, dan dapat menyebabkan energy crash.<br>
+            <b>Saran:</b> Kurangi karbohidrat sederhana (nasi putih berlebih, minuman manis, kue) dan ganti dengan sumber serat tinggi.</span>
+          </div>`;
+        } else {
+          carbBlock = `<div style="padding:10px 14px;background:rgba(50,215,75,0.06);border-left:3px solid var(--success);border-radius:8px;margin-bottom:8px;">
+            <b>🍚 Karbohidrat: SEIMBANG</b> — ${avgCarbs.toFixed(1)}g/hari ✓ (Target: ${targetCarbs}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;">Asupan karbohidrat lu sudah proporsional untuk mendukung energi harian dan performa latihan.</span>
+          </div>`;
+        }
+
+        // Lemak assessment
+        const fatRatio = avgFat / targetFat;
+        let fatBlock = '';
+        if (fatRatio < 0.7) {
+          fatBlock = `<div style="padding:10px 14px;background:rgba(255,204,0,0.06);border-left:3px solid #ffd60a;border-radius:8px;margin-bottom:8px;">
+            <b>🥑 Lemak: KURANG</b> — ${avgFat.toFixed(1)}g/hari (Target: ${targetFat}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;"><b>Dampak:</b> Kekurangan lemak mengganggu penyerapan vitamin larut lemak (A, D, E, K), produksi hormon, dan dapat menyebabkan kulit kering.<br>
+            <b>Saran:</b> Tambahkan lemak sehat dari alpukat, kacang-kacangan, minyak zaitun, ikan salmon, atau biji-bijian.</span>
+          </div>`;
+        } else if (fatRatio > 1.4) {
+          fatBlock = `<div style="padding:10px 14px;background:rgba(255,59,48,0.06);border-left:3px solid #ff3b30;border-radius:8px;margin-bottom:8px;">
+            <b>🥑 Lemak: BERLEBIH</b> — ${avgFat.toFixed(1)}g/hari (Target: ${targetFat}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;"><b>Dampak:</b> Kelebihan lemak, terutama lemak jenuh, meningkatkan risiko kolesterol tinggi, penyakit jantung, dan mendorong penumpukan lemak tubuh.<br>
+            <b>Saran:</b> Kurangi gorengan, santan, dan daging berlemak. Pilih metode memasak yang lebih sehat (kukus, bakar, tumis sedikit minyak).</span>
+          </div>`;
+        } else {
+          fatBlock = `<div style="padding:10px 14px;background:rgba(50,215,75,0.06);border-left:3px solid var(--success);border-radius:8px;margin-bottom:8px;">
+            <b>🥑 Lemak: SEHAT</b> — ${avgFat.toFixed(1)}g/hari ✓ (Target: ${targetFat}g)<br>
+            <span style="font-size:0.86em;opacity:0.85;">Proporsi lemak dalam batas sehat untuk mendukung fungsi hormonal dan penyerapan vitamin.</span>
+          </div>`;
+        }
+
+        // Mikro: Serat
+        let microBlock = '';
+        if (avgFiber > 0) {
+          const fiberStatus = avgFiber >= 25 ? '✅ Cukup' : '⚠️ Kurang';
+          const fiberTip = avgFiber < 25 ? ' Tambahkan sayuran, buah, dan biji-bijian untuk meningkatkan serat.' : '';
+          microBlock += `<span style="font-size:0.84em;">🌾 <b>Serat:</b> ${avgFiber.toFixed(1)}g/hari — ${fiberStatus}${fiberTip}</span><br>`;
+        }
+        if (avgSugar > 0 && avgSugar > 50) {
+          microBlock += `<span style="font-size:0.84em;">🍬 <b>Gula:</b> ${avgSugar.toFixed(1)}g/hari — ⚠️ Tinggi! Batasi gula tambahan maks 25-50g/hari untuk mengurangi risiko resistensi insulin.</span><br>`;
+        }
+        if (avgSodium > 0 && avgSodium > 2300) {
+          microBlock += `<span style="font-size:0.84em;">🧂 <b>Sodium:</b> ${Math.round(avgSodium)}mg/hari — ⚠️ Tinggi! Batasi sodium maks 2300mg/hari untuk menjaga tekanan darah.</span><br>`;
+        }
+
+        // Saran aktivitas berdasarkan goal
+        let activityBlock = '';
+        if (ratio > 1.1) {
+          activityBlock = '🏃 <b>Aktivitas:</b> Tambahkan kardio sedang (jalan cepat, sepeda, renang) 3-4x seminggu selama 30-45 menit untuk membantu membakar surplus kalori.';
+        } else if (ratio < 0.9) {
+          activityBlock = '💪 <b>Aktivitas:</b> Fokus pada latihan kekuatan (resistance training) 3-4x seminggu untuk mempertahankan massa otot di fase defisit kalori ini.';
+        } else {
+          activityBlock = '⚡ <b>Aktivitas:</b> Kombinasikan latihan kekuatan dan kardio untuk memaksimalkan komposisi tubuh. Istirahat cukup 7-8 jam untuk recovery optimal.';
+        }
+
+        evalEl.innerHTML = `
+          ${calBlock}
+          <div style="margin-bottom:10px;">
+            <div style="font-weight:700;font-size:0.9rem;margin-bottom:6px;color:var(--text1);">📈 Analisis Makronutrisi</div>
+            ${proteinBlock}
+            ${carbBlock}
+            ${fatBlock}
+          </div>
+          ${microBlock ? `<div style="padding:10px 14px;background:var(--bg2);border-radius:8px;margin-bottom:10px;">
+            <b style="font-size:0.88rem;">🔬 Mikronutrisi</b><br>${microBlock}
+          </div>` : ''}
+          <div style="padding:10px 14px;background:rgba(100,100,255,0.06);border-left:3px solid #5e5ce6;border-radius:8px;font-size:0.88em;">
+            ${activityBlock}
+          </div>`;
       }
-      document.getElementById('evalNotes').textContent = evalNotes;
     }
   </script>
 </body>

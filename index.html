@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LebihFit — Smart Nutrition Tracker</title>
+<link rel="icon" type="image/png" href="favicon.png" sizes="any">
+<link rel="apple-touch-icon" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=8">
@@ -679,39 +681,72 @@
       </div>
       <form id="editFoodForm" class="food-form">
         <input type="hidden" id="editFoodId">
+        <!-- Hidden fields for nutrisi (diisi oleh AI atau data lama) -->
+        <input type="hidden" id="editCal">
+        <input type="hidden" id="editProtein">
+        <input type="hidden" id="editCarbs">
+        <input type="hidden" id="editFat">
+        <input type="hidden" id="editFiber">
+        <input type="hidden" id="editSugar">
+        <input type="hidden" id="editSodium">
+        <input type="hidden" id="editCalcium">
+        <input type="hidden" id="editIron">
+        <input type="hidden" id="editVitC">
+        <input type="hidden" id="editVitD">
+        <input type="hidden" id="editZinc">
+        <input type="hidden" id="editMealTime" value="sarapan">
         <div class="form-group">
           <label>Nama Makanan</label>
-          <input type="text" id="editFoodName" required>
+          <input type="text" id="editFoodName" required placeholder="Nama makanan...">
         </div>
         <div class="form-group">
-          <label>Porsi</label>
-          <input type="text" id="editFoodPortion">
+          <label>Gram / Porsi</label>
+          <input type="text" id="editFoodPortion" placeholder="Contoh: 200g, 1 piring, 2 sendok">
         </div>
         <div class="form-group">
-          <label>Waktu Makan</label>
-          <input type="hidden" id="editMealTime" value="sarapan">
-          <div class="custom-select-trigger" onclick="openCustomSelect('editMealTime')">
-            <span id="editMealTime_label">Sarapan</span>
-            <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+          <label>Deskripsi Tambahan <span style="font-size:0.8em;color:var(--text2);font-weight:400;">(opsional, pengaruhi kalkulasi AI)</span></label>
+          <textarea id="editFoodDesc" rows="2" style="width:100%;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text1);font-size:0.95rem;resize:vertical;font-family:inherit;" placeholder="Misal: digoreng minyak banyak, pakai santan kental, tanpa gula..."></textarea>
+        </div>
+
+        <!-- AI Analysis Status -->
+        <div id="editAiStatus" style="display:none;padding:10px 14px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--border);font-size:0.88rem;color:var(--text2);margin-bottom:4px;">
+          <i data-lucide="sparkles" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>
+          <span id="editAiStatusText">Menganalisis dengan AI...</span>
+        </div>
+
+        <!-- Nutrition Preview (setelah dianalisis AI) -->
+        <div id="editNutrPreview" style="display:none;">
+          <div style="font-size:0.82rem;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="sparkles" style="width:12px;height:12px;color:var(--accent);"></i>
+            Estimasi Nutrisi dari AI:
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+            <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text2);">Kalori</div>
+              <div id="editPreviewCal" style="font-weight:700;font-size:0.95rem;color:var(--accent);">-</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text2);">Protein</div>
+              <div id="editPreviewProtein" style="font-weight:700;font-size:0.95rem;">-</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text2);">Karbo</div>
+              <div id="editPreviewCarbs" style="font-weight:700;font-size:0.95rem;">-</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text2);">Lemak</div>
+              <div id="editPreviewFat" style="font-weight:700;font-size:0.95rem;">-</div>
+            </div>
           </div>
         </div>
-        <div class="form-grid">
-          <div class="form-group"><label>Kalori</label><input type="number" id="editCal" min="0"></div>
-          <div class="form-group"><label>Protein (g)</label><input type="number" id="editProtein" min="0" step="0.1"></div>
-          <div class="form-group"><label>Karbo (g)</label><input type="number" id="editCarbs" min="0" step="0.1"></div>
-          <div class="form-group"><label>Lemak (g)</label><input type="number" id="editFat" min="0" step="0.1"></div>
-          <div class="form-group"><label>Serat (g)</label><input type="number" id="editFiber" min="0" step="0.1"></div>
-          <div class="form-group"><label>Gula (g)</label><input type="number" id="editSugar" min="0" step="0.1"></div>
-          <div class="form-group"><label>Sodium (mg)</label><input type="number" id="editSodium" min="0"></div>
-          <div class="form-group"><label>Kalsium (mg)</label><input type="number" id="editCalcium" min="0"></div>
-          <div class="form-group"><label>Zat Besi (mg)</label><input type="number" id="editIron" min="0" step="0.1"></div>
-          <div class="form-group"><label>Vit C (mg)</label><input type="number" id="editVitC" min="0" step="0.1"></div>
-          <div class="form-group"><label>Vit D (mcg)</label><input type="number" id="editVitD" min="0" step="0.1"></div>
-          <div class="form-group"><label>Zinc (mg)</label><input type="number" id="editZinc" min="0" step="0.1"></div>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="closeEditModal()">Batal</button>
-          <button type="submit" class="btn-primary"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Perubahan</button>
+
+        <div class="form-actions" style="gap:10px;margin-top:16px;">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()" style="flex:1;">Batalkan</button>
+          <button type="button" class="btn-primary" id="editAnalyzeBtn" onclick="analyzeEditFood()" style="flex:1;background:var(--bg3);border:1.5px solid var(--accent);color:var(--accent);">
+            <i data-lucide="sparkles" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i>
+            Analisis AI
+          </button>
+          <button type="submit" class="btn-primary" style="flex:1;">Simpan Update</button>
         </div>
       </form>
     </div>

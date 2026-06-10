@@ -384,7 +384,7 @@ function renderDashboard() {
                 </div>
                 <div class="food-item-cal">${item.cal || 0} kcal</div>
                 <div class="food-item-actions">
-                    <button class="food-action-btn" onclick="openEditModal('${item.id}')" title="Edit"><i data-lucide="edit" style="width:16px;height:16px;"></i></button>
+                    <button class="food-action-btn" onclick="openEditModal('${item.id}')" title="Edit"><i data-lucide="edit" style="width:16px;height:16px;color:#fff;"></i></button>
                     <button class="food-action-btn" onclick="confirmDeleteFood('${item.id}')" title="Hapus"><i data-lucide="trash-2" style="width:16px;height:16px;color:var(--danger)"></i></button>
                 </div>
             </div>
@@ -681,7 +681,10 @@ function openEditModal(id) {
     document.getElementById('editFoodId').value = id;
     document.getElementById('editFoodName').value = item.name;
     document.getElementById('editFoodPortion').value = item.portion || '';
+    document.getElementById('editFoodDesc').value = item.desc || '';
     document.getElementById('editMealTime').value = item.mealTime || 'makan_siang';
+    
+    // Store current nutrisi in hidden fields
     document.getElementById('editCal').value = item.cal || 0;
     document.getElementById('editProtein').value = item.protein || 0;
     document.getElementById('editCarbs').value = item.carbs || 0;
@@ -695,7 +698,84 @@ function openEditModal(id) {
     document.getElementById('editVitD').value = item.vitD || 0;
     document.getElementById('editZinc').value = item.zinc || 0;
     
+    // Reset AI status
+    document.getElementById('editAiStatus').style.display = 'none';
+    document.getElementById('editNutrPreview').style.display = 'none';
+    
+    // Show current values in preview if they exist
+    if (item.cal) {
+        document.getElementById('editPreviewCal').textContent = `${Math.round(item.cal)} kcal`;
+        document.getElementById('editPreviewProtein').textContent = `${(item.protein||0).toFixed(1)}g`;
+        document.getElementById('editPreviewCarbs').textContent = `${(item.carbs||0).toFixed(1)}g`;
+        document.getElementById('editPreviewFat').textContent = `${(item.fat||0).toFixed(1)}g`;
+        document.getElementById('editNutrPreview').style.display = 'block';
+    }
+    
     document.getElementById('editModal').classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function analyzeEditFood() {
+    const name = document.getElementById('editFoodName').value.trim();
+    const portion = document.getElementById('editFoodPortion').value.trim();
+    const desc = document.getElementById('editFoodDesc').value.trim();
+    
+    if (!name) {
+        showToast('Masukkan nama makanan terlebih dahulu', 'error');
+        return;
+    }
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        showToast('API Key belum diset. Buka Settings untuk mengisi API Key.', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('editAnalyzeBtn');
+    const statusDiv = document.getElementById('editAiStatus');
+    const statusText = document.getElementById('editAiStatusText');
+    
+    btn.disabled = true;
+    statusDiv.style.display = 'block';
+    statusText.textContent = 'Menganalisis nutrisi dengan AI...';
+    document.getElementById('editNutrPreview').style.display = 'none';
+    
+    try {
+        const result = await analyzeTextAI(name, portion || '1 porsi', desc);
+        
+        // Store in hidden fields
+        document.getElementById('editCal').value = result.cal || 0;
+        document.getElementById('editProtein').value = result.protein || 0;
+        document.getElementById('editCarbs').value = result.carbs || 0;
+        document.getElementById('editFat').value = result.fat || 0;
+        document.getElementById('editFiber').value = result.fiber || 0;
+        document.getElementById('editSugar').value = result.sugar || 0;
+        document.getElementById('editSodium').value = result.sodium || 0;
+        document.getElementById('editCalcium').value = result.calcium || 0;
+        document.getElementById('editIron').value = result.iron || 0;
+        document.getElementById('editVitC').value = result.vitC || 0;
+        document.getElementById('editVitD').value = result.vitD || 0;
+        document.getElementById('editZinc').value = result.zinc || 0;
+        
+        // Show preview
+        document.getElementById('editPreviewCal').textContent = `${Math.round(result.cal || 0)} kcal`;
+        document.getElementById('editPreviewProtein').textContent = `${(result.protein||0).toFixed(1)}g`;
+        document.getElementById('editPreviewCarbs').textContent = `${(result.carbs||0).toFixed(1)}g`;
+        document.getElementById('editPreviewFat').textContent = `${(result.fat||0).toFixed(1)}g`;
+        
+        statusText.textContent = 'Analisis selesai! Klik Simpan Update untuk menyimpan.';
+        statusDiv.style.borderColor = 'var(--success)';
+        document.getElementById('editNutrPreview').style.display = 'block';
+        
+        if (window.lucide) lucide.createIcons();
+        showToast('Analisis AI selesai!', 'success');
+    } catch (e) {
+        statusText.textContent = 'Analisis gagal: ' + e.message;
+        statusDiv.style.borderColor = 'var(--danger)';
+        showToast('Analisis AI gagal: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 function closeEditModal() {
@@ -710,6 +790,7 @@ document.getElementById('editFoodForm').addEventListener('submit', (e) => {
     const updated = {
         name: document.getElementById('editFoodName').value,
         portion: document.getElementById('editFoodPortion').value,
+        desc: document.getElementById('editFoodDesc').value,
         mealTime: document.getElementById('editMealTime').value,
         cal: parseFloat(document.getElementById('editCal').value) || 0,
         protein: parseFloat(document.getElementById('editProtein').value) || 0,
@@ -728,7 +809,7 @@ document.getElementById('editFoodForm').addEventListener('submit', (e) => {
     updateFoodItem(currentEditId, updated);
     closeEditModal();
     renderDashboard();
-    showToast('Makanan berhasil diupdate', 'success');
+    showToast('Makanan berhasil diupdate!', 'success');
 });
 
 function confirmDeleteFood(id) {
