@@ -12,7 +12,13 @@ async function getFirebase(path) {
   try {
     const res = await fetch(`${FB_URL}/${path}.json`);
     const val = await res.json();
-    return val === null ? null : val;
+    if (val === null) return null;
+    // Firebase returns error objects on permission denied
+    if (val && typeof val === 'object' && val.error) {
+      console.error('Firebase permission error:', path, val.error);
+      return null;
+    }
+    return val;
   } catch (e) {
     console.error('Firebase GET error:', path, e.message);
     return null;
@@ -30,15 +36,31 @@ async function setFirebase(path, value) {
       headers: { 'Content-Type': 'application/json' }
     };
     if (value !== null) options.body = JSON.stringify(value);
-    await fetch(`${FB_URL}/${path}.json`, options);
+    const res = await fetch(`${FB_URL}/${path}.json`, options);
+    const json = await res.json();
+    if (json && json.error) {
+      console.error('Firebase SET permission error:', path, json.error);
+    }
   } catch (e) {
     console.error('Firebase SET error:', path, e.message);
   }
 }
 
 /**
+ * Convert Firebase response to array
+ * Firebase stores JS arrays as objects with numeric keys: { "0": {...}, "1": {...} }
+ * This converts them back to proper arrays
+ */
+function toArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data === 'object') return Object.values(data);
+  return [];
+}
+
+/**
  * Convert email to Firebase-safe key (same logic as GAS)
- * user@gmail.com → user@gmail_com
+ * user@gmail.com → user_at_gmail_com
  */
 function safe(email) {
   return email.replace(/[.#$[\]]/g, '_');
@@ -72,6 +94,7 @@ async function getLinkedEmail(userId) {
 module.exports = {
   getFirebase,
   setFirebase,
+  toArray,
   safe,
   getState,
   setState,

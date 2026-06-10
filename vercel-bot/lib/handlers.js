@@ -1,7 +1,7 @@
 // ====================================================
 // BOT HANDLERS — All logic ported from GAS
 // ====================================================
-const { getFirebase, setFirebase, safe, getState, setState, getCache, setCache, deleteCache, getLinkedEmail } = require('./firebase');
+const { getFirebase, setFirebase, toArray, safe, getState, setState, getCache, setCache, deleteCache, getLinkedEmail } = require('./firebase');
 const { sendMessage, sendChatAction, answerCallback } = require('./telegram');
 const { analyzeFood, sumNutrients } = require('./groq');
 
@@ -117,6 +117,7 @@ async function handleCallback(cb) {
   if (data === 'history') return email ? showHistory(chatId, email) : promptLogin(chatId, userId);
   if (data === 'settings') return showSettings(chatId, userId, email);
   if (data === 'logout') return doLogout(chatId, userId);
+  if (data === 'retry_login') return promptLogin(chatId, userId);
   if (data === 'confirm_yes') return confirmSaveFood(chatId, userId);
   if (data === 'confirm_no') return cancelFood(chatId, userId);
   if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
@@ -151,11 +152,70 @@ async function promptLogin(chatId, userId) {
 }
 
 async function onEmailInput(chatId, userId, email) {
+  email = email.trim().toLowerCase();
   if (!email.includes('@') || !email.includes('.')) {
     return sendMessage(chatId, 'Format email tidak valid. Coba lagi!');
   }
 
+  // Simpan email sementara, minta OTP via GAS
+  await setCache(`${userId}_pending_email`, email);
+  await setState(userId, 'AWAIT_OTP');
+
   try {
+    const GAS_URL = process.env.GAS_WEBAPP_URL;
+    if (GAS_URL) {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'requestOTP', email, name: 'Bro' })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        await setState(userId, null);
+        return sendMessage(chatId, `Gagal kirim OTP: ${json.error || 'Unknown error'}`);
+      }
+    } else {
+      console.warn('GAS_WEBAPP_URL not set, skipping OTP send');
+    }
+
+    return sendMessage(chatId,
+      `📧 Kode OTP sudah dikirim ke *${email}*\n\n` +
+      'Masukkan kode 6 digit yang ada di email:',
+      { inline_keyboard: [[{ text: 'Batal', callback_data: 'menu' }]] }
+    );
+  } catch (err) {
+    console.error('onEmailInput error:', err);
+    await setState(userId, null);
+    return sendMessage(chatId, 'Gagal kirim OTP: ' + err.message);
+  }
+}
+
+async function onOtpInput(chatId, userId, otpInput) {
+  try {
+    const email = await getCache(`${userId}_pending_email`);
+    if (!email) {
+      await setState(userId, null);
+      return sendMessage(chatId, 'Sesi expired. Ketik /start untuk coba lagi.');
+    }
+
+    const GAS_URL = process.env.GAS_WEBAPP_URL;
+    if (GAS_URL) {
+      // Verify OTP via GAS
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verifyOTP', email, otp: otpInput.trim() })
+      });
+      const json = await res.json();
+      if (!json.success) {
+        return sendMessage(chatId,
+          '❌ Kode OTP salah atau expired.\n\nCoba lagi atau /start untuk request OTP baru.',
+          { inline_keyboard: [[{ text: 'Request OTP Baru', callback_data: 'retry_login' }, { text: 'Batal', callback_data: 'menu' }]] }
+        );
+      }
+    }
+
+    // OTP valid — link account
     await setFirebase(`telegram_links/${userId}`, {
       email: email,
       chatId: chatId,
@@ -163,51 +223,17 @@ async function onEmailInput(chatId, userId, email) {
     });
     await setFirebase(`users/${safe(email)}/telegram_chat_id`, chatId.toString());
     await setState(userId, null);
+    await deleteCache(`${userId}_pending_email`);
 
     const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
-    const userName = profile ? (profile.name || 'Bro') : 'Bro';
-
+    const userName = (profile && (profile.name || profile.lf_user_name)) || 'Bro';
     return sendMessage(chatId,
-      `Login berhasil, *${userName}*!\n\nAkun LebihFit lu sudah terhubung secara instan. Pilih menu:`,
-      mainMenuKeyboard()
-    );
-  } catch (err) {
-    console.error('onEmailInput error:', err);
-    await setState(userId, null);
-    return sendMessage(chatId, 'Gagal menghubungkan akun: ' + err.message, null, '');
-  }
-}
-
-async function onOtpInput(chatId, userId, otpInput) {
-  try {
-    const storedOtp = await getCache(userId + '_otp');
-    const storedEmail = await getCache(userId + '_email');
-    if (!storedOtp || !storedEmail) {
-      await setState(userId, null);
-      return sendMessage(chatId, 'OTP expired. Ketik /start untuk coba lagi.');
-    }
-    if (otpInput.trim() !== storedOtp) {
-      return sendMessage(chatId, 'Kode OTP salah. Coba lagi!');
-    }
-    await setFirebase(`telegram_links/${userId}`, {
-      email: storedEmail,
-      chatId: chatId,
-      linkedAt: new Date().toISOString()
-    });
-    await setFirebase(`users/${safe(storedEmail)}/telegram_chat_id`, chatId.toString());
-    await setState(userId, null);
-    await deleteCache(userId + '_otp');
-    await deleteCache(userId + '_email');
-
-    const profile = await getFirebase(`users/${safe(storedEmail)}/lf_profile`);
-    const userName = profile ? (profile.name || 'Bro') : 'Bro';
-    return sendMessage(chatId,
-      `Login berhasil, *${userName}*!\n\nAkun LebihFit lu sudah terhubung. Pilih menu:`,
+      `✅ Login berhasil, *${userName}*!\n\nAkun LebihFit lu sudah terhubung. Pilih menu:`,
       mainMenuKeyboard()
     );
   } catch (err) {
     console.error('onOtpInput error:', err);
-    return sendMessage(chatId, 'Error verifikasi OTP: ' + err.message, null, '');
+    return sendMessage(chatId, 'Error verifikasi OTP: ' + err.message);
   }
 }
 
@@ -233,7 +259,9 @@ async function showMainMenu(chatId, userId) {
 async function showDashboard(chatId, email) {
   const today = todayKey();
   // Read from web app's unified path: lf_logs/{date}
-  const logs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`) || [];
+  // Use toArray() because Firebase stores arrays as {0:..., 1:...} objects
+  const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`);
+  const logs = toArray(rawLogs);
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const total = sumNutrients(logs);
   const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
@@ -418,7 +446,9 @@ async function showHistoryDays(chatId, email, days) {
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
     // Read from web app's unified path: lf_logs/{date}
-    const logs = await getFirebase(`users/${safe(email)}/lf_logs/${key}`) || [];
+    // Use toArray() because Firebase stores arrays as {0:..., 1:...} objects
+    const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${key}`);
+    const logs = toArray(rawLogs);
     if (logs.length > 0) {
       const t = sumNutrients(logs);
       results.push({ date: key, cal: Math.round(t.cal), count: logs.length });
