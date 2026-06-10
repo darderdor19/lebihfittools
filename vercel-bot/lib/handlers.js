@@ -232,7 +232,8 @@ async function showMainMenu(chatId, userId) {
 // ====================================================
 async function showDashboard(chatId, email) {
   const today = todayKey();
-  const logs = await getFirebase(`users/${safe(email)}/lf_logs_${today}`) || [];
+  // Read from web app's unified path: lf_logs/{date}
+  const logs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`) || [];
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const total = sumNutrients(logs);
   const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
@@ -342,8 +343,9 @@ async function confirmSaveFood(chatId, userId) {
   await deleteCache(userId + '_pending');
 
   const today = todayKey();
-  const logsKey = `lf_logs_${today}`;
-  const existing = await getFirebase(`users/${safe(email)}/${logsKey}`) || [];
+  // Use web app's unified path: lf_logs/{date}
+  const logsPath = `users/${safe(email)}/lf_logs/${today}`;
+  const existing = await getFirebase(logsPath) || [];
 
   const newItem = {
     id: generateId(),
@@ -367,7 +369,7 @@ async function confirmSaveFood(chatId, userId) {
   };
 
   existing.push(newItem);
-  await setFirebase(`users/${safe(email)}/${logsKey}`, existing);
+  await setFirebase(logsPath, existing);
 
   const total = sumNutrients(existing);
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
@@ -415,7 +417,8 @@ async function showHistoryDays(chatId, email, days) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
-    const logs = await getFirebase(`users/${safe(email)}/lf_logs_${key}`) || [];
+    // Read from web app's unified path: lf_logs/{date}
+    const logs = await getFirebase(`users/${safe(email)}/lf_logs/${key}`) || [];
     if (logs.length > 0) {
       const t = sumNutrients(logs);
       results.push({ date: key, cal: Math.round(t.cal), count: logs.length });
