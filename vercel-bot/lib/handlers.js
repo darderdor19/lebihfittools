@@ -68,11 +68,29 @@ function mainMenuKeyboard() {
         { text: '🍽️ Log Makanan', callback_data: 'log_food' }
       ],
       [
-        { text: '📈 History', callback_data: 'history' },
-        { text: '⚙️ Settings', callback_data: 'settings' }
+        { text: '🏃 Kegiatan Harian', callback_data: 'log_activity' },
+        { text: '📈 History', callback_data: 'history' }
       ],
       [
+        { text: '⚙️ Settings', callback_data: 'settings' },
         { text: '🌐 Buka Web App', url: 'https://darderdor19.github.io/lebihfittools/' }
+      ]
+    ]
+  };
+}
+
+function activityMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🏋️ Workout', callback_data: 'act_workout' },
+        { text: '💪 Gym', callback_data: 'act_gym' }
+      ],
+      [
+        { text: '😴 Tidur', callback_data: 'act_sleep' }
+      ],
+      [
+        { text: '🏠 Menu Utama', callback_data: 'menu' }
       ]
     ]
   };
@@ -116,6 +134,15 @@ async function handleMessage(msg) {
   if (state === 'AWAIT_EDIT_PORTION') return onEditPortionInput(chatId, userId, text);
   if (state === 'AWAIT_EDIT_DESC') return onEditDescInput(chatId, userId, text);
 
+  // Activity states
+  if (state === 'AWAIT_SLEEP_HOURS') return onSleepHoursInput(chatId, userId, text);
+  if (state === 'AWAIT_WO_EX_NAME') return onWorkoutExNameInput(chatId, userId, text);
+  if (state === 'AWAIT_WO_SETS_REPS') return onWorkoutSetsRepsInput(chatId, userId, text);
+  if (state === 'AWAIT_WO_DUR') return onWorkoutDurationInput(chatId, userId, text);
+  if (state === 'AWAIT_GYM_EX_NAME') return onGymExNameInput(chatId, userId, text);
+  if (state === 'AWAIT_GYM_SETS_REPS') return onGymSetsRepsInput(chatId, userId, text);
+  if (state === 'AWAIT_GYM_DUR') return onGymDurationInput(chatId, userId, text);
+
   // Default: if logged in, treat as food name input (shortcut)
   const email = await getLinkedEmail(userId);
   if (!email) return promptLogin(chatId, userId);
@@ -138,7 +165,43 @@ async function handleCallback(cb) {
   if (data === 'menu') return showMainMenu(chatId, userId);
   if (data === 'dashboard') return email ? showDashboard(chatId, email) : promptLogin(chatId, userId);
   if (data === 'log_food') return email ? promptFoodInput(chatId, userId) : promptLogin(chatId, userId);
+  
+  // Activities callbacks
+  if (data === 'log_activity') return email ? showLogActivityOptions(chatId) : promptLogin(chatId, userId);
+  if (data === 'act_sleep') return email ? startSleepWizard(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'act_workout') return email ? startWorkoutWizard(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'act_gym') return email ? startGymWizard(chatId, userId) : promptLogin(chatId, userId);
+  
+  // Sleep wizard callbacks
+  if (data.startsWith('sl_type_')) return saveSleepType(chatId, userId, data.replace('sl_type_', ''));
+  if (data.startsWith('sl_qual_')) return saveSleepQuality(chatId, userId, email, data.replace('sl_qual_', ''));
+
+  // Workout wizard callbacks
+  if (data === 'wo_add_more') return startWorkoutExName(chatId, userId);
+  if (data === 'wo_edit_dur') return startWorkoutDuration(chatId, userId);
+  if (data === 'wo_edit_int') return promptWorkoutIntensity(chatId);
+  if (data.startsWith('wo_int_')) return saveWorkoutIntensity(chatId, userId, data.replace('wo_int_', ''));
+  if (data === 'wo_save') return saveWorkoutSession(chatId, userId, email);
+
+  // Gym wizard callbacks
+  if (data === 'gym_add_more_var') return startGymExName(chatId, userId);
+  if (data === 'gym_add_more_muscle') return showGymMuscleSelector(chatId, 'Pilih otot berikutnya:');
+  if (data === 'gym_edit_dur') return startGymDuration(chatId, userId);
+  if (data === 'gym_edit_int') return promptGymIntensity(chatId);
+  if (data.startsWith('gym_int_')) return saveGymIntensity(chatId, userId, data.replace('gym_int_', ''));
+  if (data === 'gym_save') return saveGymSession(chatId, userId, email);
+  if (data.startsWith('gym_sel_')) return saveGymMuscleSelection(chatId, userId, data.replace('gym_sel_', ''));
+
+  // History callbacks
   if (data === 'history') return email ? showHistory(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'hist_panel_food') return showHistoryPanelOptions(chatId, 'food');
+  if (data === 'hist_panel_act') return showHistoryPanelOptions(chatId, 'activity');
+  if (data === 'hist_panel_ai') return showHistoryPanelOptions(chatId, 'ai');
+  
+  if (data.startsWith('hist_food_')) return showFoodHistoryDays(chatId, email, parseInt(data.replace('hist_food_', '')));
+  if (data.startsWith('hist_act_')) return showActivityHistoryDays(chatId, email, parseInt(data.replace('hist_act_', '')));
+  if (data.startsWith('hist_ai_')) return showAIHistoryDays(chatId, email, parseInt(data.replace('hist_ai_', '')));
+
   if (data === 'settings') return showSettings(chatId, userId, email);
   if (data === 'logout') return doLogout(chatId, userId);
   if (data === 'retry_login') return promptLogin(chatId, userId);
@@ -236,9 +299,9 @@ async function handleCallback(cb) {
       }
     );
   }
-  if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
-  if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
-  if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
+  if (data === 'hist_7') return showFoodHistoryDays(chatId, email, 7);
+  if (data === 'hist_14') return showFoodHistoryDays(chatId, email, 14);
+  if (data === 'hist_30') return showFoodHistoryDays(chatId, email, 30);
 }
 
 // ====================================================
@@ -391,19 +454,24 @@ async function showMainMenu(chatId, userId) {
 // ====================================================
 async function showDashboard(chatId, email) {
   const today = todayKey();
-  // Read from web app's unified path: lf_logs/{date}
-  // Use toArray() because Firebase stores arrays as {0:..., 1:...} objects
   const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`);
   const logs = toArray(rawLogs);
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const total = sumNutrients(logs);
   const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 0);
-  const remaining = calTarget - Math.round(total.cal);
+  
+  // Get today's activities
+  const rawActs = await getFirebase(`users/${safe(email)}/lf_activities/${today}`);
+  const todayActs = toArray(rawActs);
+  const totalBurned = todayActs.reduce((acc, act) => acc + ((act.burn && act.burn.kcal) ? parseFloat(act.burn.kcal) : 0), 0);
+  
+  const remaining = calTarget - Math.round(total.cal) + Math.round(totalBurned);
   const pct = calTarget > 0 ? Math.min(100, Math.round(total.cal / calTarget * 100)) : 0;
   const bar = progressBar(pct);
 
   let msg = `*Dashboard - ${formatDate(new Date())}*\n\n`;
   msg += `Kalori: *${Math.round(total.cal)} / ${calTarget} kcal*\n`;
+  msg += `Terbakar: *${Math.round(totalBurned)} kcal*\n`;
   msg += `${bar} ${pct}%\n`;
   msg += remaining > 0
     ? `Sisa: *${remaining} kcal*\n`
@@ -420,19 +488,95 @@ async function showDashboard(chatId, email) {
     logs.forEach((item, i) => {
       msg += `${i + 1}. ${escapeMarkdown(item.name)} - ${Math.round(item.cal)} kcal\n`;
     });
+  }
 
-    try {
-      const aiAnalysis = await getFirebase(`users/${safe(email)}/lf_analysis_${today}`);
-      if (aiAnalysis && aiAnalysis.text) {
-        msg += '\n🤖 *Analisis AI & Saran Esok Hari:*\n';
-        msg += `${escapeMarkdown(aiAnalysis.text)}\n`;
+  if (todayActs.length > 0) {
+    msg += '\n*Kegiatan Hari Ini:*\n';
+    todayActs.forEach((act, idx) => {
+      if (act.type === 'workout') {
+        const detail = act.exercises.map(e => `${e.name} (${e.sets.length}s)`).join(', ');
+        msg += `${idx + 1}. 🏋️ *Workout:* ${escapeMarkdown(detail)} (${act.burn ? act.burn.kcal : 0} kcal)\n`;
+      } else if (act.type === 'gym') {
+        const detail = act.muscles.map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+        msg += `${idx + 1}. 💪 *Gym:* ${escapeMarkdown(detail)} (${act.burn ? act.burn.kcal : 0} kcal)\n`;
+      } else if (act.type === 'sleep') {
+        msg += `${idx + 1}. 😴 *Tidur:* ${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m (${act.quality})\n`;
       }
-    } catch (e) { /* skip */ }
+    });
+  }
+
+  try {
+    const safeEmail = safe(email);
+    const signature = getDailyDataSignatureLocal(email, today, logs, todayActs, profile || {});
+    const cachePath = `users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`;
+    const cache = await getFirebase(cachePath);
+    let html = '';
+    
+    if (cache && cache.signature === signature && cache.html) {
+      html = cache.html;
+    } else {
+      // Generate daily AI analysis on the fly
+      const foodList = logs.map(item => `- ${item.name}: ${item.cal} kcal (P: ${item.protein}g, K: ${item.carbs}g, L: ${item.fat}g)`).join('\n') || 'Tidak ada makanan tercatat.';
+      
+      let activityContext = 'Tidak ada kegiatan tercatat hari ini.';
+      if (todayActs.length > 0) {
+        const workouts = todayActs.filter(a => a.type === 'workout');
+        const gyms = todayActs.filter(a => a.type === 'gym');
+        const sleeps = todayActs.filter(a => a.type === 'sleep');
+        const lines = [];
+        if (workouts.length > 0) {
+          workouts.forEach(w => {
+            lines.push(`Workout: ${w.exercises.map(e => `${e.name} (${e.sets.length} set)`).join(', ')}`);
+          });
+        }
+        if (gyms.length > 0) {
+          gyms.forEach(g => {
+            const muscleList = g.muscles.map(m => `${MUSCLE_LABELS[m.muscle]||m.muscle}: ${g.variations ? g.variations.map(v=>v.name).join(', ') : m.variations.map(v=>v.name).join(', ')}`).join(' | ');
+            lines.push(`Gym: ${muscleList}`);
+          });
+        }
+        if (sleeps.length > 0) {
+          sleeps.forEach(s => {
+            lines.push(`Tidur: ${Math.floor(s.hours)}j${Math.round((s.hours%1)*60)}m · ${s.sleepType} · ${s.quality}`);
+          });
+        }
+        activityContext = lines.join('\n');
+      }
+
+      const calStatus = remaining >= 0 ? 'Surplus' : 'Defisit';
+      
+      const targetProtein = (profile && profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
+      const targetCarbs = (profile && profile.targets && profile.targets.carbs) ? profile.targets.carbs : Math.round((calTarget * 0.50) / 4);
+      const targetFat = (profile && profile.targets && profile.targets.fat) ? profile.targets.fat : Math.round((calTarget * 0.25) / 9);
+
+      const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(total.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${total.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((total.protein/targetProtein)*100)}%)\n- Karbohidrat: ${total.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((total.carbs/targetCarbs)*100)}%)\n- Lemak: ${total.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((total.fat/targetFat)*100)}%)\n- Serat: ${total.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${total.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(total.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
+
+      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 800);
+      if (rawHtml) {
+        const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
+        html = `
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <b>Dianalisis AI Groq</b> · llama-3.3-70b · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
+          </div>
+          ${cleanHtml}`;
+        // Save cache to Firebase
+        await setFirebase(cachePath, { signature, html, timestamp: Date.now() });
+      }
+    }
+
+    if (html) {
+      msg += '\n🤖 *Analisis AI:* \n';
+      msg += cleanHtmlToMarkdown(html) + '\n';
+    }
+  } catch(e) {
+    console.error('Dashboard AI Analysis error:', e);
   }
 
   return sendMessage(chatId, msg, {
     inline_keyboard: [
       [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
+      [{ text: '🏃 Kegiatan Harian Baru', callback_data: 'log_activity' }],
       [{ text: '✏️ Kelola Log Hari Ini', callback_data: 'manage_logs' }],
       [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
     ]
@@ -653,7 +797,7 @@ async function showHistory(chatId, email) {
   });
 }
 
-async function showHistoryDays(chatId, email, days) {
+async function showFoodHistoryDays(chatId, email, days) {
   await sendChatAction(chatId, 'typing');
 
   const dates = getPastWibDates(days);
@@ -788,7 +932,7 @@ async function showHistoryDays(chatId, email, days) {
       ]
     });
   } catch (err) {
-    console.error('showHistoryDays error:', err);
+    console.error('showFoodHistoryDays error:', err);
     return sendMessage(chatId, 'Gagal memuat history: ' + err.message, {
       inline_keyboard: [[{ text: 'Menu Utama', callback_data: 'menu' }]]
     });
@@ -1324,6 +1468,843 @@ async function deleteEditCache(userId) {
   await deleteCache(`${userId}_editing_name`);
   await deleteCache(`${userId}_editing_portion`);
   await deleteCache(`${userId}_editing_result`);
+}
+
+// ====================================================
+// WIZARD PENCATATAN KEGIATAN HARIAN (OLAH RAGA & TIDUR)
+// ====================================================
+const MUSCLE_LABELS = {
+  chest: 'Chest (Dada)', back: 'Back (Punggung)', shoulder: 'Shoulder (Bahu)',
+  bicep: 'Bicep (Lengan)', tricep: 'Tricep (Lengan)', forearm: 'Forearm (Lengan Bawah)',
+  abs: 'Abs (Perut)', traps: 'Traps (Pundak)', leg: 'Leg (Kaki)'
+};
+
+const MET_WORKOUT = { low: 3.5, medium: 5.5, high: 8.0 };
+const MET_GYM     = { low: 3.0, medium: 5.0, high: 6.5 };
+const BURN_RATIO  = { fat: 0.30, carb: 0.60, protein: 0.10 };
+
+function calcBurnedCalories(met, durationMin, weight = 70) {
+  const kcal = met * weight * (durationMin / 60);
+  const fatG    = (kcal * BURN_RATIO.fat) / 9;
+  const carbG   = (kcal * BURN_RATIO.carb) / 4;
+  const proteinG= (kcal * BURN_RATIO.protein) / 4;
+  return { 
+    kcal: Math.round(kcal), 
+    fatG: parseFloat(fatG.toFixed(1)), 
+    carbG: parseFloat(carbG.toFixed(1)), 
+    proteinG: parseFloat(proteinG.toFixed(1)) 
+  };
+}
+
+function parseSetsReps(str) {
+  const sets = [];
+  const clean = str.trim().toLowerCase();
+  const matchX = clean.match(/^(\d+)\s*(?:set|x)\s*(\d+)/i);
+  if (matchX) {
+    const numSets = parseInt(matchX[1]);
+    const numReps = parseInt(matchX[2]);
+    for (let i = 1; i <= numSets; i++) {
+      sets.push({ set: i, reps: numReps });
+    }
+    return sets;
+  }
+  const parts = clean.split(/[\s,]+/);
+  if (parts.length > 0 && parts.every(p => /^\d+$/.test(p))) {
+    parts.forEach((p, idx) => {
+      sets.push({ set: idx + 1, reps: parseInt(p) });
+    });
+    return sets;
+  }
+  return null;
+}
+
+const GROQ_KEY = process.env.GROQ_API_KEY;
+async function callGroqAPI(messages, maxTokens = 800) {
+  if (!GROQ_KEY) throw new Error('GROQ_API_KEY env variable is not set');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GROQ_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages,
+      max_tokens: maxTokens
+    })
+  });
+  const data = await res.json();
+  if (!data.choices || !data.choices[0]) {
+    throw new Error('Groq API error: ' + JSON.stringify(data));
+  }
+  return data.choices[0].message.content;
+}
+
+// Clean HTML to Telegram Markdown
+function cleanHtmlToMarkdown(html) {
+  if (!html) return '';
+  let str = html;
+  str = str.replace(/<div style="display:flex;[^>]*>[\s\S]*?<\/div>/gi, '');
+  str = str.replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '\n\n*$1*\n');
+  str = str.replace(/<li>(.*?)<\/li>/gi, '• $1\n');
+  str = str.replace(/<ul>/gi, '').replace(/<\/ul>/gi, '\n');
+  str = str.replace(/<div style="padding:12px 14px;border-left:4px solid[^>]*>(.*?)<\/div>/gi, '\n$1\n');
+  str = str.replace(/<div[^>]*>(.*?)<\/div>/gi, '\n$1\n');
+  str = str.replace(/<b>(.*?)<\/b>/gi, '*$1*');
+  str = str.replace(/<strong>(.*?)<\/strong>/gi, '*$1*');
+  str = str.replace(/<i>(.*?)<\/i>/gi, '_$1_');
+  str = str.replace(/<em>(.*?)<\/em>/gi, '_$1_');
+  str = str.replace(/<br\s*\/?>/gi, '\n');
+  str = str.replace(/<[^>]*>/g, '');
+  str = str.replace(/\n\s*\n+/g, '\n\n');
+  return str.trim();
+}
+
+// Signature builders
+function getDailyDataSignatureLocal(email, dateStr, logs, acts, profile) {
+  const foodSignature = logs.map(l => `${l.id}-${l.cal}-${l.protein}-${l.carbs}-${l.fat}`).join('|');
+  const actSignature = acts.map(a => {
+    if (a.type === 'sleep') return `${a.id}-${a.hours}-${a.quality}-${a.sleepType}`;
+    if (a.type === 'workout') return `${a.id}-${a.exercises.map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
+    if (a.type === 'gym') return `${a.id}-${(a.muscles || []).map(m => `${m.muscle}-${(m.variations || []).map(v => `${v.name}-${(v.sets || []).map(s=>s.reps).join('/')}`).join(',')}`).join(',')}`;
+    return a.id;
+  }).join('|');
+  const profileSig = `${profile.bb || ''}-${profile.tb || ''}-${profile.target || ''}`;
+  return `${email}_${dateStr}_[${foodSignature}]_[${actSignature}]_[${profileSig}]`;
+}
+
+function getRangeDataSignatureLocal(email, fromDate, toDate, logs, acts, profile) {
+  const foodParts = [];
+  logs.forEach(day => {
+    if (day.logs && day.logs.length > 0) {
+      const itemSigs = day.logs.map(item => `${item.id}-${item.cal}-${item.protein}-${item.carbs}-${item.fat}`).join(',');
+      foodParts.push(`${day.date}:${itemSigs}`);
+    }
+  });
+
+  const actParts = [];
+  Object.keys(acts).sort().forEach(key => {
+    const dayActs = acts[key] || [];
+    if (dayActs.length > 0) {
+      const daySigs = dayActs.map(a => {
+        if (a.type === 'sleep') return `${a.id}-${a.hours}-${a.quality}-${a.sleepType}`;
+        if (a.type === 'workout') return `${a.id}-${a.exercises.map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
+        if (a.type === 'gym') return `${a.id}-${(a.muscles || []).map(m => `${m.muscle}-${(m.variations || []).map(v => `${v.name}-${(v.sets || []).map(s=>s.reps).join('/')}`).join(',')}`).join(',')}`;
+        return a.id;
+      }).join(',');
+      actParts.push(`${key}:${daySigs}`);
+    }
+  });
+
+  const profileSig = `${profile.bb || ''}-${profile.tb || ''}-${profile.target || ''}`;
+  return `${email}_${fromDate}_${toDate}_[${foodParts.join('|')}]_[${actParts.join('|')}]_[${profileSig}]`;
+}
+
+async function showLogActivityOptions(chatId) {
+  return sendMessage(chatId, '🏃 *Pilih Kegiatan Harian yang Ingin Dicatat:*', activityMenuKeyboard());
+}
+
+// SLEEP WIZARD
+async function startSleepWizard(chatId, userId) {
+  await setState(userId, 'AWAIT_SLEEP_HOURS');
+  await setCache(`${userId}_activity`, { type: 'sleep' });
+  return sendMessage(chatId, '😴 *Mencatat Kegiatan Tidur*\n\nBerapa jam total tidur lu hari ini? (Masukkan angka, contoh: 7.5 atau 8):');
+}
+
+async function onSleepHoursInput(chatId, userId, text) {
+  const hours = parseFloat(text.replace(',', '.'));
+  if (isNaN(hours) || hours <= 0 || hours > 24) {
+    return sendMessage(chatId, '⚠️ Jam tidur harus berupa angka desimal valid antara 0.1 s/d 24. Coba masukkan lagi:');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.hours = hours;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_SLEEP_TYPE');
+  return sendMessage(chatId, 'Pilih tipe tidur lu:', {
+    inline_keyboard: [
+      [
+        { text: '🌙 Tidur Malam', callback_data: 'sl_type_malam' },
+        { text: '☀️ Tidur Siang', callback_data: 'sl_type_siang' }
+      ],
+      [
+        { text: '⚡ Tidur Sebentar (Nap)', callback_data: 'sl_type_sebentar' }
+      ]
+    ]
+  });
+}
+
+async function saveSleepType(chatId, userId, val) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.sleepType = val;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_SLEEP_QUALITY');
+  return sendMessage(chatId, 'Bagaimana kualitas tidur lu?', {
+    inline_keyboard: [
+      [
+        { text: '😊 Lelap/Nyenyak', callback_data: 'sl_qual_lelap' },
+        { text: '😐 Biasa Saja', callback_data: 'sl_qual_biasa' }
+      ],
+      [
+        { text: '😞 Kurang Nyenyak', callback_data: 'sl_qual_kurang' }
+      ]
+    ]
+  });
+}
+
+async function saveSleepQuality(chatId, userId, email, val) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.quality = val;
+
+  await setState(userId, null);
+  await deleteCache(`${userId}_activity`);
+
+  const today = todayKey();
+  const actId = generateId();
+  const sleepActivity = {
+    id: actId,
+    type: 'sleep',
+    hours: draft.hours,
+    sleepType: draft.sleepType,
+    quality: draft.quality,
+    date: today,
+    timestamp: Date.now()
+  };
+
+  await setFirebase(`users/${safe(email)}/lf_activities/${today}/${actId}`, sleepActivity);
+  
+  // Invalidate AI cache for today
+  const safeEmail = safe(email);
+  await setFirebase(`users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`, null);
+
+  let msg = `✅ *Kegiatan Tidur Berhasil Disimpan!*\n\n`;
+  msg += `• Durasi: *${draft.hours} jam*\n`;
+  msg += `• Tipe: *Tidur ${draft.sleepType === 'malam' ? 'Malam' : draft.sleepType === 'siang' ? 'Siang' : 'Sebentar'}*\n`;
+  msg += `• Kualitas: *${draft.quality === 'lelap' ? 'Lelap' : draft.quality === 'biasa' ? 'Biasa' : 'Kurang Nyenyak'}*`;
+
+  return sendMessage(chatId, msg, mainMenuKeyboard());
+}
+
+// WORKOUT WIZARD
+async function startWorkoutWizard(chatId, userId) {
+  await setState(userId, 'AWAIT_WO_EX_NAME');
+  await setCache(`${userId}_activity`, { type: 'workout', exercises: [], intensity: 'medium', durationMin: 30 });
+  return sendMessage(chatId, '🏋️ *Mencatat Sesi Workout*\n\nMasukkan nama gerakan pertama (contoh: Push Up, Squat, Pull Up):');
+}
+
+async function startWorkoutExName(chatId, userId) {
+  await setState(userId, 'AWAIT_WO_EX_NAME');
+  return sendMessage(chatId, 'Masukkan nama gerakan berikutnya:');
+}
+
+async function onWorkoutExNameInput(chatId, userId, text) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.exercises.push({ name: text, sets: [] });
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_WO_SETS_REPS');
+  return sendMessage(chatId, `Berapa set & repetisi untuk *${escapeMarkdown(text)}*?\n\n_Contoh:_ \n• *3x12* (atau *3 set 12 reps*)\n• *10,12,12* (jumlah repetisi per set dipisah koma)`);
+}
+
+async function onWorkoutSetsRepsInput(chatId, userId, text) {
+  const sets = parseSetsReps(text);
+  if (!sets) {
+    return sendMessage(chatId, '⚠️ Format tidak dikenali. Coba masukkan lagi (contoh: 3x12 atau 10,12,12):');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  if (draft.exercises.length > 0) {
+    draft.exercises[draft.exercises.length - 1].sets = sets;
+  }
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_WO_MENU');
+  return showWorkoutDraftMenu(chatId, draft);
+}
+
+async function showWorkoutDraftMenu(chatId, draft) {
+  let msg = `🏋️ *Ringkasan Workout Harian*\n\n`;
+  draft.exercises.forEach((ex, idx) => {
+    const repsStr = ex.sets.map(s => s.reps).join('/');
+    msg += `${idx + 1}. *${escapeMarkdown(ex.name)}* — ${ex.sets.length} set (${repsStr} reps)\n`;
+  });
+  msg += `\n• Estimasi Durasi: *${draft.durationMin} menit*\n`;
+  const intLabel = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[draft.intensity];
+  msg += `• Intensitas: *${intLabel}*\n`;
+
+  return sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [
+        { text: '➕ Tambah Gerakan', callback_data: 'wo_add_more' },
+        { text: '⏱️ Ubah Durasi', callback_data: 'wo_edit_dur' }
+      ],
+      [
+        { text: '⚙️ Ubah Intensitas', callback_data: 'wo_edit_int' },
+        { text: '💾 Simpan Sesi', callback_data: 'wo_save' }
+      ],
+      [
+        { text: '❌ Batal', callback_data: 'menu' }
+      ]
+    ]
+  });
+}
+
+async function startWorkoutDuration(chatId, userId) {
+  await setState(userId, 'AWAIT_WO_DUR');
+  return sendMessage(chatId, 'Masukkan estimasi durasi latihan dalam menit (contoh: 45):');
+}
+
+async function onWorkoutDurationInput(chatId, userId, text) {
+  const dur = parseInt(text);
+  if (isNaN(dur) || dur <= 0) {
+    return sendMessage(chatId, '⚠️ Durasi harus berupa angka bulat positif. Coba masukkan lagi:');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.durationMin = dur;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_WO_MENU');
+  return showWorkoutDraftMenu(chatId, draft);
+}
+
+async function promptWorkoutIntensity(chatId) {
+  return sendMessage(chatId, 'Pilih intensitas latihan workout:', {
+    inline_keyboard: [
+      [
+        { text: '🟢 Ringan (MET 3.5)', callback_data: 'wo_int_low' },
+        { text: '🟡 Sedang (MET 5.5)', callback_data: 'wo_int_medium' }
+      ],
+      [
+        { text: '🔴 Tinggi (MET 8.0)', callback_data: 'wo_int_high' }
+      ]
+    ]
+  });
+}
+
+async function saveWorkoutIntensity(chatId, userId, val) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.intensity = val;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_WO_MENU');
+  return showWorkoutDraftMenu(chatId, draft);
+}
+
+async function saveWorkoutSession(chatId, userId, email) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  await setState(userId, null);
+  await deleteCache(`${userId}_activity`);
+
+  const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+  const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
+  const burn = calcBurnedCalories(MET_WORKOUT[draft.intensity], draft.durationMin, weight);
+
+  const today = todayKey();
+  const actId = generateId();
+  const workoutActivity = {
+    id: actId,
+    type: 'workout',
+    exercises: draft.exercises,
+    durationMin: draft.durationMin,
+    intensity: draft.intensity,
+    burn: burn,
+    date: today,
+    timestamp: Date.now()
+  };
+
+  await setFirebase(`users/${safe(email)}/lf_activities/${today}/${actId}`, workoutActivity);
+
+  // Invalidate AI cache for today
+  const safeEmail = safe(email);
+  await setFirebase(`users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`, null);
+
+  let msg = `✅ *Sesi Workout Berhasil Disimpan!*\n\n`;
+  msg += `• Total Gerakan: *${draft.exercises.length} gerakan*\n`;
+  msg += `• Durasi: *${draft.durationMin} menit*\n`;
+  msg += `• Estimasi Kalori Terbakar: *${burn.kcal} kcal*\n`;
+  msg += `  _(Lemak: ${burn.fatG}g, Karbo: ${burn.carbG}g, Protein: ${burn.proteinG}g)_`;
+
+  return sendMessage(chatId, msg, mainMenuKeyboard());
+}
+
+// GYM WIZARD
+async function startGymWizard(chatId, userId) {
+  await setState(userId, 'AWAIT_GYM_MUSCLE');
+  await setCache(`${userId}_activity`, { type: 'gym', muscles: [], intensity: 'medium', durationMin: 45 });
+  return showGymMuscleSelector(chatId);
+}
+
+async function showGymMuscleSelector(chatId, textMsg = '💪 *Mulai mencatat sesi Gym*\n\nPilih bagian otot yang ingin dilatih:') {
+  return sendMessage(chatId, textMsg, {
+    inline_keyboard: [
+      [
+        { text: 'Chest (Dada)', callback_data: 'gym_sel_chest' },
+        { text: 'Back (Punggung)', callback_data: 'gym_sel_back' }
+      ],
+      [
+        { text: 'Shoulder (Bahu)', callback_data: 'gym_sel_shoulder' },
+        { text: 'Bicep (Lengan)', callback_data: 'gym_sel_bicep' }
+      ],
+      [
+        { text: 'Tricep (Lengan)', callback_data: 'gym_sel_tricep' },
+        { text: 'Forearm (Lengan Bawah)', callback_data: 'gym_sel_forearm' }
+      ],
+      [
+        { text: 'Abs (Perut)', callback_data: 'gym_sel_abs' },
+        { text: 'Traps (Pundak)', callback_data: 'gym_sel_traps' }
+      ],
+      [
+        { text: 'Leg (Kaki)', callback_data: 'gym_sel_leg' }
+      ],
+      [
+        { text: '❌ Batal', callback_data: 'menu' }
+      ]
+    ]
+  });
+}
+
+async function saveGymMuscleSelection(chatId, userId, muscle) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.currentMuscle = muscle;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_GYM_EX_NAME');
+  const label = MUSCLE_LABELS[muscle] || muscle;
+  return sendMessage(chatId, `Masukkan nama gerakan untuk otot *${label}* (contoh: Bench Press, Lat Pulldown):`);
+}
+
+async function startGymExName(chatId, userId) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  await setState(userId, 'AWAIT_GYM_EX_NAME');
+  const label = MUSCLE_LABELS[draft.currentMuscle] || draft.currentMuscle;
+  return sendMessage(chatId, `Masukkan nama gerakan berikutnya untuk otot *${label}*:`);
+}
+
+async function onGymExNameInput(chatId, userId, text) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  let muscleEntry = draft.muscles.find(m => m.muscle === draft.currentMuscle);
+  if (!muscleEntry) {
+    muscleEntry = { muscle: draft.currentMuscle, variations: [] };
+    draft.muscles.push(muscleEntry);
+  }
+  muscleEntry.variations.push({ name: text, sets: [] });
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_GYM_SETS_REPS');
+  return sendMessage(chatId, `Berapa set & repetisi untuk *${escapeMarkdown(text)}*?\n\n_Contoh:_ 4x10 atau 10,10,8,8`);
+}
+
+async function onGymSetsRepsInput(chatId, userId, text) {
+  const sets = parseSetsReps(text);
+  if (!sets) {
+    return sendMessage(chatId, '⚠️ Format tidak dikenali. Coba masukkan lagi (contoh: 4x10 atau 10,10,8,8):');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  const muscleEntry = draft.muscles.find(m => m.muscle === draft.currentMuscle);
+  if (muscleEntry && muscleEntry.variations.length > 0) {
+    muscleEntry.variations[muscleEntry.variations.length - 1].sets = sets;
+  }
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_GYM_MENU');
+  return showGymDraftMenu(chatId, draft);
+}
+
+async function showGymDraftMenu(chatId, draft) {
+  let msg = `💪 *Ringkasan Sesi Gym*\n\n`;
+  draft.muscles.forEach((m) => {
+    msg += `• *${MUSCLE_LABELS[m.muscle] || m.muscle}:*\n`;
+    m.variations.forEach((v, idx) => {
+      const repsStr = v.sets.map(s => s.reps).join('/');
+      msg += `  ${idx + 1}. *${escapeMarkdown(v.name)}* — ${v.sets.length} set (${repsStr} reps)\n`;
+    });
+  });
+  msg += `\n• Estimasi Durasi: *${draft.durationMin} menit*\n`;
+  const intLabel = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[draft.intensity];
+  msg += `• Intensitas: *${intLabel}*\n`;
+
+  return sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [
+        { text: '➕ Tambah Gerakan di Otot Ini', callback_data: 'gym_add_more_var' },
+        { text: '💪 Pilih Otot Lain', callback_data: 'gym_add_more_muscle' }
+      ],
+      [
+        { text: '⏱️ Ubah Durasi', callback_data: 'gym_edit_dur' },
+        { text: '⚙️ Ubah Intensitas', callback_data: 'gym_edit_int' }
+      ],
+      [
+        { text: '💾 Simpan Sesi', callback_data: 'gym_save' },
+        { text: '❌ Batal', callback_data: 'menu' }
+      ]
+    ]
+  });
+}
+
+async function startGymDuration(chatId, userId) {
+  await setState(userId, 'AWAIT_GYM_DUR');
+  return sendMessage(chatId, 'Masukkan estimasi durasi sesi gym dalam menit (contoh: 60):');
+}
+
+async function onGymDurationInput(chatId, userId, text) {
+  const dur = parseInt(text);
+  if (isNaN(dur) || dur <= 0) {
+    return sendMessage(chatId, '⚠️ Durasi harus berupa angka bulat positif. Coba masukkan lagi:');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.durationMin = dur;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_GYM_MENU');
+  return showGymDraftMenu(chatId, draft);
+}
+
+async function promptGymIntensity(chatId) {
+  return sendMessage(chatId, 'Pilih intensitas latihan gym:', {
+    inline_keyboard: [
+      [
+        { text: '🟢 Ringan (MET 3.0)', callback_data: 'gym_int_low' },
+        { text: '🟡 Sedang (MET 5.0)', callback_data: 'gym_int_medium' }
+      ],
+      [
+        { text: '🔴 Tinggi (MET 6.5)', callback_data: 'gym_int_high' }
+      ]
+    ]
+  });
+}
+
+async function saveGymIntensity(chatId, userId, val) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.intensity = val;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_GYM_MENU');
+  return showGymDraftMenu(chatId, draft);
+}
+
+async function saveGymSession(chatId, userId, email) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  await setState(userId, null);
+  await deleteCache(`${userId}_activity`);
+
+  const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+  const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
+  const burn = calcBurnedCalories(MET_GYM[draft.intensity], draft.durationMin, weight);
+
+  const today = todayKey();
+  const actId = generateId();
+  const gymActivity = {
+    id: actId,
+    type: 'gym',
+    muscles: draft.muscles,
+    durationMin: draft.durationMin,
+    intensity: draft.intensity,
+    burn: burn,
+    date: today,
+    timestamp: Date.now()
+  };
+
+  await setFirebase(`users/${safe(email)}/lf_activities/${today}/${actId}`, gymActivity);
+
+  // Invalidate AI cache for today
+  const safeEmail = safe(email);
+  await setFirebase(`users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`, null);
+
+  let msg = `✅ *Sesi Gym Berhasil Disimpan!*\n\n`;
+  msg += `• Bagian Otot: *${draft.muscles.length} kelompok*\n`;
+  msg += `• Durasi: *${draft.durationMin} menit*\n`;
+  msg += `• Estimasi Kalori Terbakar: *${burn.kcal} kcal*\n`;
+  msg += `  _(Lemak: ${burn.fatG}g, Karbo: ${burn.carbG}g, Protein: ${burn.proteinG}g)_`;
+
+  return sendMessage(chatId, msg, mainMenuKeyboard());
+}
+
+// SPLIT HISTORY FUNCTIONS
+async function showHistoryPanelOptions(chatId, type) {
+  const label = { food: 'Riwayat Makanan', activity: 'Riwayat Kegiatan', ai: 'Analisis AI Komprehensif' }[type];
+  return sendMessage(chatId, `📈 *${label} LebihFit*\n\nPilih rentang waktu:`, {
+    inline_keyboard: [
+      [
+        { text: '7 Hari', callback_data: `hist_${type}_7` },
+        { text: '14 Hari', callback_data: `hist_${type}_14` },
+        { text: '30 Hari', callback_data: `hist_${type}_30` }
+      ],
+      [
+        { text: '🔙 Kembali ke Pilihan Riwayat', callback_data: 'history' }
+      ]
+    ]
+  });
+}
+
+async function showActivityHistoryDays(chatId, email, days) {
+  await sendChatAction(chatId, 'typing');
+  const dates = getPastWibDates(days);
+  const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+
+  try {
+    const promises = dates.map(async (key) => {
+      const rawActs = await getFirebase(`users/${safe(email)}/lf_activities/${key}`);
+      const acts = toArray(rawActs);
+      return { key, acts };
+    });
+
+    const results = await Promise.all(promises);
+
+    let totalWorkouts = 0;
+    let totalGyms = 0;
+    let totalSleeps = 0;
+    let totalSleepHours = 0;
+    let totalBurned = 0;
+    let sleepQualities = { lelap: 0, biasa: 0, kurang: 0 };
+    let muscles = {};
+
+    results.forEach(({ acts }) => {
+      acts.forEach(a => {
+        if (a.type === 'workout') {
+          totalWorkouts++;
+          if (a.burn) totalBurned += a.burn.kcal || 0;
+        } else if (a.type === 'gym') {
+          totalGyms++;
+          if (a.burn) totalBurned += a.burn.kcal || 0;
+          if (a.muscles) {
+            a.muscles.forEach(m => {
+              muscles[m.muscle] = (muscles[m.muscle] || 0) + 1;
+            });
+          }
+        } else if (a.type === 'sleep') {
+          totalSleeps++;
+          totalSleepHours += a.hours || 0;
+          if (a.quality) sleepQualities[a.quality] = (sleepQualities[a.quality] || 0) + 1;
+        }
+      });
+    });
+
+    if (totalWorkouts === 0 && totalGyms === 0 && totalSleeps === 0) {
+      return sendMessage(chatId, `Belum ada kegiatan olahraga atau tidur tercatat dalam ${days} hari terakhir.`, {
+        inline_keyboard: [
+          [{ text: '🏃 Catat Kegiatan Baru', callback_data: 'log_activity' }],
+          [{ text: '🏠 Menu Utama', callback_data: 'menu' }]
+        ]
+      });
+    }
+
+    const avgSleep = totalSleeps > 0 ? (totalSleepHours / totalSleeps).toFixed(1) : 0;
+    const avgBurn = totalWorkouts + totalGyms > 0 ? Math.round(totalBurned / (totalWorkouts + totalGyms)) : 0;
+
+    let msg = `🏃 *Riwayat Kegiatan ${days} Hari Terakhir*\n\n`;
+    msg += `📝 *Statistik Ringkas:*\n`;
+    msg += `• Total Workout: *${totalWorkouts}x sesi*\n`;
+    msg += `• Total Gym: *${totalGyms}x sesi*\n`;
+    msg += `• Total Tidur: *${totalSleepHours.toFixed(1)} jam* (${totalSleeps} entri, Rerata: *${avgSleep}j/hari*)\n`;
+    if (totalSleeps > 0) {
+      msg += `  _(Lelap: ${sleepQualities.lelap}x, Biasa: ${sleepQualities.biasa}x, Kurang: ${sleepQualities.kurang}x)_\n`;
+    }
+    msg += `• Total Kalori Terbakar: *${totalBurned} kcal* (Rerata: *${avgBurn} kcal/sesi*)\n`;
+
+    const sortedMuscles = Object.keys(muscles).sort((a,b) => muscles[b] - muscles[a]);
+    if (sortedMuscles.length > 0) {
+      msg += `• Otot Terlatih: *${sortedMuscles.map(m => `${MUSCLE_LABELS[m] || m} (${muscles[m]}x)`).join(', ')}*\n`;
+    }
+
+    msg += `\n📅 *Catatan Harian (Terbaru):*\n`;
+    let itemsCount = 0;
+    for (const { key, acts } of results) {
+      if (acts.length === 0) continue;
+      if (itemsCount >= 5) {
+        msg += `• ... dan beberapa hari lainnya\n`;
+        break;
+      }
+      const parts = key.split('-');
+      msg += `*${parts[2]}/${parts[1]}:*\n`;
+      acts.forEach(a => {
+        if (a.type === 'workout') {
+          const detail = a.exercises.map(e => `${e.name} (${e.sets.length}s)`).join(', ');
+          msg += `  - 🏋️ Workout: ${escapeMarkdown(detail)} (${a.burn ? a.burn.kcal : 0} kcal)\n`;
+        } else if (a.type === 'gym') {
+          const detail = a.muscles.map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+          msg += `  - 💪 Gym: ${escapeMarkdown(detail)} (${a.burn ? a.burn.kcal : 0} kcal)\n`;
+        } else if (a.type === 'sleep') {
+          msg += `  - 😴 Tidur: ${Math.floor(a.hours)}j ${Math.round((a.hours % 1) * 60)}m (${a.quality})\n`;
+        }
+      });
+      itemsCount++;
+    }
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [
+          { text: '🏃 Catat Kegiatan Baru', callback_data: 'log_activity' },
+          { text: '🔙 Kembali', callback_data: 'hist_panel_act' }
+        ],
+        [
+          { text: '🏠 Menu Utama', callback_data: 'menu' }
+        ]
+      ]
+    });
+
+  } catch(err) {
+    console.error('showActivityHistoryDays error:', err);
+    return sendMessage(chatId, 'Gagal memuat riwayat kegiatan: ' + err.message, {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'history' }]]
+    });
+  }
+}
+
+async function showAIHistoryDays(chatId, email, days) {
+  await sendChatAction(chatId, 'typing');
+  const dates = getPastWibDates(days);
+  const toDate = dates[0];
+  const fromDate = dates[dates.length - 1];
+  const safeEmail = safe(email);
+  const profile = await getFirebase(`users/${safeEmail}/lf_profile`);
+
+  try {
+    // Fetch logs and acts in parallel
+    const promises = dates.map(async (key) => {
+      const rawLogs = await getFirebase(`users/${safeEmail}/lf_logs/${key}`);
+      const rawActs = await getFirebase(`users/${safeEmail}/lf_activities/${key}`);
+      return {
+        date: key,
+        logs: toArray(rawLogs),
+        acts: toArray(rawActs)
+      };
+    });
+
+    const results = await Promise.all(promises);
+
+    // Calculate signature
+    const signature = getRangeDataSignatureLocal(email, fromDate, toDate, results, results.reduce((acc, d) => {
+      acc[d.date] = d.acts;
+      return acc;
+    }, {}), profile || {});
+
+    const cachePath = `users/${safeEmail}/ai_history_sig_${safeEmail}_${fromDate}_${toDate}`;
+    const cache = await getFirebase(cachePath);
+    let html = '';
+
+    if (cache && cache.signature === signature && cache.html) {
+      html = cache.html;
+    } else {
+      // Show intermediate loading message
+      await sendMessage(chatId, `🤖 *Menghubungi Groq AI...*\nMemproses data riwayat ${days} hari untuk membuat analisis komprehensif. Harap tunggu sebentar...`, null);
+      
+      // Calculate averages
+      const activeDays = results.filter(d => d.logs.length > 0).length || 1;
+      const totalCal = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.cal || 0), 0), 0);
+      const totalProtein = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.protein || 0), 0), 0);
+      const totalCarbs = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.carbs || 0), 0), 0);
+      const totalFat = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.fat || 0), 0), 0);
+      const totalFiber = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.fiber || 0), 0), 0);
+      const totalSugar = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.sugar || 0), 0), 0);
+      const totalSodium = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.sodium || 0), 0), 0);
+
+      const avgCal = totalCal / activeDays;
+      const avgProtein = totalProtein / activeDays;
+      const avgCarbs = totalCarbs / activeDays;
+      const avgFat = totalFat / activeDays;
+      const avgFiber = totalFiber / activeDays;
+      const avgSugar = totalSugar / activeDays;
+      const avgSodium = totalSodium / activeDays;
+
+      const foodListPrompt = dates.map(d => {
+        const day = results.find(r => r.date === d);
+        const dayLogs = day ? day.logs : [];
+        if (dayLogs.length === 0) return `- ${d}: Tidak ada catatan makanan.`;
+        const dayCal = dayLogs.reduce((s,i) => s+(i.cal||0), 0);
+        const dayProt = dayLogs.reduce((s,i) => s+(i.protein||0), 0);
+        return `- ${d}: ${Math.round(dayCal)} kcal | P:${dayProt.toFixed(1)}g | ${dayLogs.map(i => i.name).join(', ')}`;
+      }).join('\n');
+
+      const activityPrompt = dates.map(d => {
+        const day = results.find(r => r.date === d);
+        const dayActs = day ? day.acts : [];
+        if (dayActs.length === 0) return `- ${d}: Tidak ada aktivitas.`;
+        return `- ${d}: ${dayActs.map(a => {
+          if (a.type === 'sleep') return `Tidur ${a.hours.toFixed(1)}j (${a.quality})`;
+          if (a.type === 'workout') return `Workout: ${(a.exercises || []).map(e => e.name).join(', ')}`;
+          if (a.type === 'gym') return `Gym: ${(a.muscles || []).map(m => m.muscle).join(', ')}`;
+          return a.type;
+        }).join(' · ')}`;
+      }).join('\n');
+
+      const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+      const targetProtein = (profile && profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
+      const targetCarbs = (profile && profile.targets && profile.targets.carbs) ? profile.targets.carbs : Math.round((calTarget * 0.50) / 4);
+      const targetFat = (profile && profile.targets && profile.targets.fat) ? profile.targets.fat : Math.round((calTarget * 0.25) / 9);
+
+      const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Berikan evaluasi komprehensif berkala untuk user LebihFit berikut berdasarkan data asupan makanan, pola tidur, dan aktivitas olahraga mereka. Hubungkan ketiga aspek ini (makanan, tidur, olahraga) secara mendalam, kritis, dan actionable untuk mendukung program fitness mereka. Tulis dalam bahasa Indonesia gaul yang ramah (lu/kamu).
+
+== PROFIL USER ==
+Gender: ${profile.gender || '?'}, Berat: ${profile.bb || '?'}kg, Tinggi: ${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th
+Target Fitness: ${profile.target || 'maintenance'}, Level Aktivitas: ${profile.aktivitas || '?'}
+
+== DATA MAKANAN & NUTRISI RATA-RATA (Jangka Waktu Laporan: ${days} hari) ==
+- Kalori harian: ${Math.round(avgCal)} kcal vs Target: ${calTarget} kcal
+- Protein harian: ${avgProtein.toFixed(1)}g vs Target: ${targetProtein}g
+- Karbohidrat harian: ${avgCarbs.toFixed(1)}g vs Target: ${targetCarbs}g
+- Lemak harian: ${avgFat.toFixed(1)}g vs Target: ${targetFat}g
+- Serat harian: ${avgFiber.toFixed(1)}g
+- Gula harian: ${avgSugar.toFixed(1)}g
+- Sodium harian: ${Math.round(avgSodium)}mg
+
+== LOG MAKANAN HARIAN: ==
+${foodListPrompt}
+
+== LOG AKTIVITAS (TIDUR & OLAHRAGA) HARIAN: ==
+${activityPrompt}
+
+== FORMAT RESPONS ==
+Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Struktur wajib berisi:
+
+1. Ringkasan Evaluasi Kalori & Makro → dalam div dengan border-left tebal. Kaitkan dengan target utama user.
+2. Analisis Hubungan Nutrisi + Olahraga → Bagaimana asupan kalori dan protein mendukung pemulihan otot (recovery) dan progres latihan olahraga mereka?
+3. Analisis Hubungan Tidur + Nutrisi + Recovery → Bagaimana durasi dan kualitas tidur mereka mempengaruhi metabolisme tubuh, pembakaran lemak, dan pemulihan stamina?
+4. Mikronutrisi (Serat/Gula/Sodium) → Analisis singkat jika ada kelebihan/kekurangan berbahaya.
+5. Rekomendasi Action Plan → Berikan 3 poin konkret yang harus dilakukan minggu depan untuk meningkatkan hasil program fitness mereka (format <ul><li>).
+
+Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. Gunakan warna/gaya CSS yang cocok dengan format cetakan PDF putih/terang. HANYA respons HTML VALID tanpa teks pembuka/penutup.`;
+
+      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 800);
+      if (rawHtml) {
+        const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
+        html = `
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.08);border:1px solid rgba(94,92,230,0.2);border-radius:8px;font-size:0.75rem;color:#5e5ce6;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <b>Analisis AI Groq Komprehensif</b> · Hubungan Nutrisi + Tidur + Olahraga · ${new Date().toLocaleDateString('id-ID')}
+          </div>
+          ${cleanHtml}
+        `;
+        await setFirebase(cachePath, { signature, html, timestamp: Date.now() });
+      }
+    }
+
+    let msg = `🤖 *Analisis AI Komprehensif (${days} Hari)*\n\n`;
+    if (html) {
+      msg += cleanHtmlToMarkdown(html);
+    } else {
+      msg += `Gagal membuat analisis AI. Coba beberapa saat lagi.`;
+    }
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [
+          { text: '🔙 Kembali', callback_data: 'hist_panel_ai' },
+          { text: '🏠 Menu Utama', callback_data: 'menu' }
+        ]
+      ]
+    });
+
+  } catch(err) {
+    console.error('showAIHistoryDays error:', err);
+    return sendMessage(chatId, 'Gagal memuat analisis AI: ' + err.message, {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'history' }]]
+    });
+  }
 }
 
 module.exports = { handleMessage, handleCallback };
