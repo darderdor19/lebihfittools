@@ -1324,6 +1324,34 @@ function closeCustomSelect(e) {
     document.getElementById('customSheetOverlay').classList.remove('active');
 }
 
+function openReportRangeSelect() {
+    const title = 'Pilih Periode Laporan PDF';
+    const options = [
+        {val: '7', label: 'Mingguan (7 Hari)'},
+        {val: '30', label: 'Bulanan (30 Hari)'},
+        {val: '90', label: '3 Bulan (90 Hari)'},
+        {val: '180', label: '6 Bulan (180 Hari)'},
+        {val: '365', label: '1 Tahun (365 Hari)'},
+        {val: 'all', label: 'All Time (Semua Data)'}
+    ];
+    
+    document.getElementById('customSheetTitle').innerText = title;
+    
+    const optionsHtml = options.map(opt => `
+        <div class="custom-sheet-opt" onclick="downloadReportWithRange('${opt.val}')">
+            <span>${opt.label}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('customSheetOptions').innerHTML = optionsHtml;
+    document.getElementById('customSheetOverlay').classList.add('active');
+}
+
+function downloadReportWithRange(range) {
+    document.getElementById('customSheetOverlay').classList.remove('active');
+    window.open(`report.html?range=${range}`, '_blank');
+}
+
 // --- Custom Confirm (Modal) ---
 let confirmCallback = null;
 

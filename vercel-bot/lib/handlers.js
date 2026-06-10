@@ -191,14 +191,47 @@ async function handleCallback(cb) {
   }
   if (data === 'confirm_delete_account_yes') return doDeleteAccount(chatId, userId);
   if (data === 'pdf_report') {
-    const token = getReportToken(userId);
-    const host = process.env.VERCEL_URL || 'lebihfit-bot.vercel.app';
-    const reportUrl = `https://${host}/api/report?id=${userId}&token=${token}`;
     return sendMessage(chatId,
-      '📊 *Laporan Gizi Mingguan LebihFit*\n\nKlik link di bawah ini untuk membuka dan mengunduh laporan gizi mingguan lu yang berformat PDF cantik:',
+      '📊 *Laporan Gizi Berkala LebihFit*\n\nPilih periode laporan yang ingin lu unduh sebagai PDF:',
       {
         inline_keyboard: [
-          [{ text: '🌐 Buka Laporan PDF', url: reportUrl }],
+          [
+            { text: '📅 Mingguan', callback_data: 'pdf_range_7' },
+            { text: '📅 Bulanan', callback_data: 'pdf_range_30' }
+          ],
+          [
+            { text: '📅 3 Bulan', callback_data: 'pdf_range_90' },
+            { text: '📅 6 Bulan', callback_data: 'pdf_range_180' }
+          ],
+          [
+            { text: '📅 1 Tahun', callback_data: 'pdf_range_365' },
+            { text: '📅 All Time', callback_data: 'pdf_range_all' }
+          ],
+          [{ text: '❌ Batal', callback_data: 'settings' }]
+        ]
+      }
+    );
+  }
+  if (data.startsWith('pdf_range_')) {
+    const range = data.replace('pdf_range_', '');
+    const token = getReportToken(userId);
+    const host = process.env.VERCEL_URL || 'lebihfit-bot.vercel.app';
+    const reportUrl = `https://${host}/api/report?id=${userId}&token=${token}&range=${range}`;
+    
+    const rangeText = {
+      '7': 'Mingguan (7 Hari)',
+      '30': 'Bulanan (30 Hari)',
+      '90': '3 Bulan (90 Hari)',
+      '180': '6 Bulan (180 Hari)',
+      '365': '1 Tahun (365 Hari)',
+      'all': 'All Time (Semua Data)'
+    }[range] || `${range} Hari`;
+
+    return sendMessage(chatId,
+      `📊 *Laporan Gizi ${rangeText} LebihFit*\n\nLaporan lu sudah siap! Klik tombol di bawah ini untuk membuka dan menyimpan laporan tersebut sebagai PDF:`,
+      {
+        inline_keyboard: [
+          [{ text: `🌐 Buka Laporan ${range === 'all' ? 'All Time' : rangeText.split(' ')[0]}`, url: reportUrl }],
           [{ text: '⚙️ Settings', callback_data: 'settings' }]
         ]
       }

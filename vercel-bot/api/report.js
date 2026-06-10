@@ -1,23 +1,35 @@
 const { getFirebase, toArray, safe, getLinkedEmail } = require('../lib/firebase');
 const crypto = require('crypto');
 
-function getPast7DaysWib() {
+function getDatesForRange(range, logsData) {
   const dates = [];
-  const now = new Date();
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const wib = new Date(utc + (3600000 * 7));
-  
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(wib);
-    d.setDate(wib.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
+  if (range === 'all') {
+    const keys = Object.keys(logsData).sort();
+    dates.push(...keys);
+    if (dates.length === 0) {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const wib = new Date(utc + (3600000 * 7));
+      dates.push(wib.toISOString().slice(0, 10));
+    }
+  } else {
+    const numDays = parseInt(range) || 7;
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const wib = new Date(utc + (3600000 * 7));
+    
+    for (let i = numDays - 1; i >= 0; i--) {
+      const d = new Date(wib);
+      d.setDate(wib.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
   }
   return dates;
 }
 
 module.exports = async function handler(req, res) {
   try {
-    const { id, token } = req.query;
+    const { id, token, range = '7' } = req.query;
     if (!id || !token) {
       res.setHeader('Content-Type', 'text/html');
       return res.status(400).send('<h3>Error: Missing id or token</h3>');
@@ -43,7 +55,7 @@ module.exports = async function handler(req, res) {
     const profile = await getFirebase(`users/${safeEmail}/lf_profile`) || {};
     const logsData = await getFirebase(`users/${safeEmail}/lf_logs`) || {};
 
-    const dates = getPast7DaysWib();
+    const dates = getDatesForRange(range, logsData);
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -52,15 +64,26 @@ module.exports = async function handler(req, res) {
       return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
     };
 
-    const periodStr = `Periode: ${formatPeriodDate(dates[0])} – ${formatPeriodDate(dates[6])}`;
-    const generationDateStr = formatPeriodDate(dates[6]);
+    let periodStr = '';
+    if (range === 'all') {
+      periodStr = `Semua Riwayat Data (${dates.length} Hari)`;
+    } else {
+      const rangeText = {
+        '7': 'Mingguan',
+        '30': 'Bulanan',
+        '90': '3 Bulan',
+        '180': '6 Bulan',
+        '365': '1 Tahun'
+      };
+      periodStr = `Laporan ${rangeText[range] || range + ' Hari'} (${formatPeriodDate(dates[0])} – ${formatPeriodDate(dates[dates.length - 1])})`;
+    }
+    const generationDateStr = formatPeriodDate(dates[dates.length - 1]);
 
     // 4. Calculate stats and build table rows
     let totalCal = 0;
     let totalProtein = 0;
     let totalCarbs = 0;
     let totalFat = 0;
-    const calHistory = [];
     let tableRowsHtml = '';
 
     dates.forEach(date => {
@@ -85,7 +108,6 @@ module.exports = async function handler(req, res) {
       totalProtein += dayProtein;
       totalCarbs += dayCarbs;
       totalFat += dayFat;
-      calHistory.push(dayCal);
 
       const d = new Date(date);
       const dayName = daysIndo[d.getDay()];
@@ -118,16 +140,95 @@ module.exports = async function handler(req, res) {
     `;
 
     const targetCal = (profile.targets && profile.targets.cal) ? profile.targets.cal : 2000;
-    const weeklyTarget = targetCal * 7;
-    const avgCal = totalCal / 7;
-    const remaining = weeklyTarget - totalCal;
+    const periodTarget = targetCal * dates.length;
+    const avgCal = totalCal / dates.length;
+    const remaining = periodTarget - totalCal;
 
     const remainingStr = `${Math.abs(Math.round(remaining)).toLocaleString()} kcal ${remaining >= 0 ? 'sisa' : 'surplus'}`;
     const statusText = remaining >= 0 ? '🟢 ON TRACK' : '🔴 SURPLUS';
     const statusColor = remaining >= 0 ? '#10b981' : '#b83b3b';
 
-    // 5. SVG Chart calculation
-    const maxCal = Math.max(...calHistory, 2500);
+    let statusLabel = 'Status Mingguan';
+    if (range === '30') statusLabel = 'Status Bulanan';
+    else if (range === '90') statusLabel = 'Status 3 Bulan';
+    else if (range === '180') statusLabel = 'Status 6 Bulan';
+    else if (range === '365') statusLabel = 'Status 1 Tahun';
+    else if (range === 'all') statusLabel = 'Status All Time';
+
+    let chartTitle = 'Grafik Tren Kalori Mingguan';
+    if (range === '30') chartTitle = 'Grafik Tren Kalori Bulanan';
+    else if (range === '90') chartTitle = 'Grafik Tren Kalori 3 Bulan';
+    else if (range === '180') chartTitle = 'Grafik Tren Kalori 6 Bulan';
+    else if (range === '365') chartTitle = 'Grafik Tren Kalori 1 Tahun';
+    else if (range === 'all') chartTitle = 'Grafik Tren Kalori All Time';
+
+    // 5. SVG Chart calculation with grouping
+    let chartPoints = [];
+    if (dates.length <= 7) {
+      // Daily
+      dates.forEach((date) => {
+        const rawDayLogs = logsData[date] || [];
+        const dayLogs = toArray(rawDayLogs);
+        const dayCal = dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
+        
+        const d = new Date(date);
+        const dayName = daysIndo[d.getDay()].slice(0, 3);
+        chartPoints.push({
+          label: dayName,
+          val: dayCal
+        });
+      });
+    } else if (dates.length <= 31) {
+      // Group by 4 weeks
+      const chunkSize = Math.ceil(dates.length / 4);
+      for (let w = 0; w < 4; w++) {
+        const chunk = dates.slice(w * chunkSize, (w + 1) * chunkSize);
+        let sum = 0;
+        let count = 0;
+        chunk.forEach(date => {
+          const rawDayLogs = logsData[date] || [];
+          const dayLogs = toArray(rawDayLogs);
+          const dayCal = dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
+          sum += dayCal;
+          if (dayCal > 0) count++;
+        });
+        const avg = count > 0 ? sum / chunk.length : 0;
+        chartPoints.push({
+          label: `Mgg ${w + 1}`,
+          val: avg
+        });
+      }
+    } else {
+      // Group by Month
+      const monthsData = {};
+      dates.forEach(date => {
+        const monthKey = date.slice(0, 7); // 'YYYY-MM'
+        const rawDayLogs = logsData[date] || [];
+        const dayLogs = toArray(rawDayLogs);
+        const dayCal = dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
+        if (!monthsData[monthKey]) {
+          monthsData[monthKey] = { sum: 0, days: 0 };
+        }
+        monthsData[monthKey].sum += dayCal;
+        monthsData[monthKey].days += 1;
+      });
+      
+      const sortedMonths = Object.keys(monthsData).sort();
+      const activeMonths = sortedMonths.slice(-12); // Limit to last 12 months for chart
+      const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      
+      activeMonths.forEach(mKey => {
+        const [y, m] = mKey.split('-');
+        const label = `${monthNamesShort[parseInt(m) - 1]} ${y.slice(2)}`;
+        const avg = monthsData[mKey].days > 0 ? monthsData[mKey].sum / monthsData[mKey].days : 0;
+        chartPoints.push({
+          label: label,
+          val: avg
+        });
+      });
+    }
+
+    const maxChartVal = Math.max(...chartPoints.map(p => p.val), 2500);
     const points = [];
     const svgWidth = 700;
     const svgHeight = 160;
@@ -136,13 +237,10 @@ module.exports = async function handler(req, res) {
     const widthRange = svgWidth - paddingX * 2;
     const heightRange = svgHeight - paddingY * 2;
 
-    calHistory.forEach((val, index) => {
-      const x = paddingX + (index * (widthRange / 6));
-      const y = paddingY + (heightRange - (val / maxCal) * heightRange);
-      
-      const d = new Date(dates[index]);
-      const dayName = daysIndo[d.getDay()].slice(0,3);
-      points.push({ x, y, val, day: dayName });
+    chartPoints.forEach((pt, index) => {
+      const x = paddingX + (index * (widthRange / Math.max(chartPoints.length - 1, 1)));
+      const y = paddingY + (heightRange - (pt.val / maxChartVal) * heightRange);
+      points.push({ x, y, val: pt.val, label: pt.label });
     });
 
     let polylinePoints = points.map(p => `${p.x},${p.y}`).join(' ');
@@ -152,7 +250,7 @@ module.exports = async function handler(req, res) {
     const gridLevels = [0, 0.5, 1];
     gridLevels.forEach(lvl => {
       const y = paddingY + (heightRange - lvl * heightRange);
-      const label = Math.round(lvl * maxCal);
+      const label = Math.round(lvl * maxChartVal);
       gridLinesHtml += `
         <line x1="50" y1="${y}" x2="${svgWidth - paddingX}" y2="${y}" stroke="#1e293b" stroke-dasharray="4" />
         <text x="45" y="${y + 4}" text-anchor="end" fill="#8892b0" font-size="9px">${label}</text>
@@ -164,7 +262,7 @@ module.exports = async function handler(req, res) {
       chartPointsHtml += `
         <circle cx="${p.x}" cy="${p.y}" r="5" fill="#b83b3b" stroke="#fff" stroke-width="2" />
         <text x="${p.x}" y="${p.y - 12}" text-anchor="middle" fill="#fff" font-size="10px" font-weight="600">${Math.round(p.val)}</text>
-        <text x="${p.x}" y="${svgHeight - 10}" text-anchor="middle" fill="#8892b0" font-size="10px">${p.day}</text>
+        <text x="${p.x}" y="${svgHeight - 10}" text-anchor="middle" fill="#8892b0" font-size="10px">${p.label}</text>
       `;
     });
 
@@ -184,20 +282,25 @@ module.exports = async function handler(req, res) {
     `;
 
     // 6. Evaluation notes
-    const loggedDays = calHistory.filter(c => c > 0).length;
+    const loggedDays = dates.filter(d => {
+      const rawDayLogs = logsData[d] || [];
+      const dayLogs = toArray(rawDayLogs);
+      return dayLogs.length > 0;
+    }).length;
+    
     let evalNotes = '';
     if (loggedDays === 0) {
-      evalNotes = 'Belum ada makanan tercatat untuk minggu ini. Catat makanan harian lu secara konsisten di LebihFit agar AI dapat memantau gizi harian lu!';
-    } else if (loggedDays < 4) {
-      evalNotes = 'Pencatatan masih bolong-bolong minggu ini. Usahakan catat minimal 5-6 hari seminggu agar lu dapet gambaran performa target kalori harian yang akurat.';
+      evalNotes = 'Belum ada makanan tercatat untuk periode ini. Catat makanan harian lu secara konsisten di LebihFit agar AI dapat memantau gizi harian lu!';
+    } else if (loggedDays < Math.min(4, dates.length)) {
+      evalNotes = 'Pencatatan masih kurang konsisten. Usahakan untuk mencatat makanan lebih sering agar analisis tren mingguan/bulanan lu menjadi lebih akurat.';
     } else {
       const ratio = avgCal / targetCal;
       if (ratio <= 0.9) {
-        evalNotes = 'Asupan kalori rata-rata harian berada di bawah target (Defisit). Sangat bagus untuk program fat-loss atau cutting. Pertahankan asupan protein harian agar massa otot tetap terjaga!';
+        evalNotes = `Secara rata-rata, asupan kalori lu berada di bawah target (${Math.round(avgCal)} vs ${targetCal} kcal). Ini sangat efektif untuk program fat-loss atau cutting. Jaga asupan protein agar massa otot lu tetap terjaga.`;
       } else if (ratio <= 1.05) {
-        evalNotes = 'Luar biasa! Kalori rata-rata mingguan lu hampir persis di target harian. Kepatuhan nutrisi lu sangat stabil dan terkontrol dengan baik minggu ini.';
+        evalNotes = `Luar biasa konsisten! Asupan harian rata-rata lu berada tepat di sekitar target kalori. Keseimbangan energi dan gizi makro dalam kondisi sangat stabil untuk jangka panjang.`;
       } else {
-        evalNotes = 'Asupan kalori mingguan lu melebihi target (Surplus). Jika program lu bulking, pastikan surplus bersih dan didukung latihan beban. Jika program cutting, coba batasi porsi karbo/lemak minggu depan.';
+        evalNotes = `Rata-rata asupan kalori berada di atas target (Surplus). Cocok jika lu sedang dalam fase bulking. Jika ingin memotong lemak (cutting), coba kurangi porsi lemak dan karbohidrat sederhana untuk periode berikutnya.`;
       }
     }
 
@@ -534,8 +637,8 @@ module.exports = async function handler(req, res) {
           <div class="value">${remainingStr}</div>
         </div>
         <div class="summary-card">
-          <div class="label">Status Mingguan</div>
-          <div class="value" style="color: ${statusColor};">${statusText}</div>
+          <div class="label">\${statusLabel}</div>
+          <div class="value" style="color: \${statusColor};">\${statusText}</div>
         </div>
       </div>
 
@@ -559,9 +662,9 @@ module.exports = async function handler(req, res) {
       </div>
 
       <div class="chart-container">
-        <div class="chart-title">Grafik Tren Kalori Mingguan</div>
+        <div class="chart-title">\${chartTitle}</div>
         <div>
-          ${chartSvgHtml}
+          \${chartSvgHtml}
         </div>
       </div>
 
