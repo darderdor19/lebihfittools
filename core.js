@@ -118,9 +118,13 @@ function deleteActivity(id) {
 function getActivitiesRange(from, to) {
   const acts = getActivities();
   const result = {};
-  const cur = new Date(from);
-  while (cur <= to) {
-    const k = cur.toISOString().slice(0, 10);
+  const start = new Date(from);
+  const end = new Date(to);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  const cur = new Date(start);
+  while (cur <= end) {
+    const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     result[k] = acts[k] || [];
     cur.setDate(cur.getDate() + 1);
   }
@@ -167,10 +171,13 @@ function deleteFoodItem(id) {
 function getLogsRange(from, to) {
   const logs = getLogs();
   const result = [];
-  const cur = new Date(from);
+  const start = new Date(from);
   const end = new Date(to);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  const cur = new Date(start);
   while (cur <= end) {
-    const key = cur.toISOString().slice(0,10);
+    const key = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     if (logs[key] && logs[key].length) {
       const items = logs[key];
       const totals = sumNutrients(items);
@@ -350,4 +357,52 @@ async function deleteUserAccount() {
     console.error("Error deleting user account from Firebase:", e);
     throw e;
   }
+}
+
+// ===== DATA SIGNATURES FOR AI CACHING =====
+function getDailyDataSignature(email, dateStr) {
+  const logs = (getLogs() || {})[dateStr] || [];
+  const acts = (getActivities() || {})[dateStr] || [];
+  
+  const foodSignature = logs.map(l => `${l.id}-${l.cal}-${l.protein}-${l.carbs}-${l.fat}`).join('|');
+  const actSignature = acts.map(a => {
+    if (a.type === 'sleep') return `${a.id}-${a.hours}-${a.quality}-${a.sleepType}`;
+    if (a.type === 'workout') return `${a.id}-${a.exercises.map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
+    if (a.type === 'gym') return `${a.id}-${(a.muscles || []).map(m => `${m.muscle}-${(m.variations || []).map(v => `${v.name}-${(v.sets || []).map(s=>s.reps).join('/')}`).join(',')}`).join(',')}`;
+    return a.id;
+  }).join('|');
+  
+  const profile = getProfile() || {};
+  const profileSig = `${profile.bb || ''}-${profile.tb || ''}-${profile.target || ''}`;
+  
+  return `${email}_${dateStr}_[${foodSignature}]_[${actSignature}]_[${profileSig}]`;
+}
+
+function getRangeDataSignature(email, fromDate, toDate) {
+  const logs = getLogsRange(fromDate, toDate); // returns array of { date, items, totals }
+  const acts = getActivitiesRange(new Date(fromDate), new Date(toDate)); // returns object { date: items[] }
+  
+  const foodParts = logs.map(l => {
+    const itemSigs = (l.items || []).map(item => `${item.id}-${item.cal}-${item.protein}-${item.carbs}-${item.fat}`).join(',');
+    return `${l.date}:${itemSigs}`;
+  }).join('|');
+  
+  const actParts = [];
+  Object.keys(acts).sort().forEach(dateKey => {
+    const dayActs = acts[dateKey] || [];
+    if (dayActs.length > 0) {
+      const daySigs = dayActs.map(a => {
+        if (a.type === 'sleep') return `${a.id}-${a.hours}-${a.quality}-${a.sleepType}`;
+        if (a.type === 'workout') return `${a.id}-${(a.exercises || []).map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
+        if (a.type === 'gym') return `${a.id}-${(a.muscles || []).map(m => `${m.muscle}-${(m.variations || []).map(v => `${v.name}-${(v.sets || []).map(s=>s.reps).join('/')}`).join(',')}`).join(',')}`;
+        return a.id;
+      }).join(',');
+      actParts.push(`${dateKey}:${daySigs}`);
+    }
+  });
+  
+  const profile = getProfile() || {};
+  const profileSig = `${profile.bb || ''}-${profile.tb || ''}-${profile.target || ''}`;
+  
+  return `${email}_${fromDate}_${toDate}_[${foodParts}]_[${actParts.join('|')}]_[${profileSig}]`;
 }

@@ -114,7 +114,7 @@
 
         <button type="submit" class="btn-primary btn-full" id="calcBtn">
           <span id="calcBtnText"><i data-lucide="calculator" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Kalkulasi Target</span>
-          <span id="calcBtnLoader" class="hidden">⏳ Menganalisis...</span>
+          <span id="calcBtnLoader" class="hidden"><i data-lucide="loader" class="spin" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;margin-right:6px;"></i> Menganalisis...</span>
         </button>
       </form>
       <div id="calcResult" class="calc-result hidden"></div>
@@ -159,7 +159,7 @@
     <header class="mobile-topbar">
       <button class="hamburger" onclick="toggleSidebar()"><i data-lucide="menu" style="width:24px;height:24px;"></i></button>
       <span class="mobile-logo" onclick="showPage('dashboard')" style="cursor: pointer; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 6px;"><i data-lucide="flame" style="width:22px;height:22px;color:var(--accent);"></i> LebihFit</span>
-      <button class="mobile-add" onclick="showPage('log')"><i data-lucide="plus" style="width:24px;height:24px;"></i></button>
+      <button class="mobile-add" onclick="openMobileAddSelect()"><i data-lucide="plus" style="width:24px;height:24px;"></i></button>
     </header>
 
     <!-- OVERLAY for mobile sidebar -->
@@ -593,16 +593,16 @@
           <!-- Sub-tabs Workout / Gym -->
           <div class="workout-sub-tabs">
             <button class="workout-sub-tab active" id="wTabWorkout" onclick="switchWorkoutTab('workout')">
-              💪 Workout
+              <i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Workout
             </button>
             <button class="workout-sub-tab" id="wTabGym" onclick="switchWorkoutTab('gym')">
-              🏟️ Gym
+              <i data-lucide="dumbbell" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Gym
             </button>
           </div>
 
           <!-- WORKOUT PANEL -->
           <div id="wPanelWorkout" class="section-card">
-            <h3 class="section-title">💪 Tambah Gerakan Workout</h3>
+            <h3 class="section-title"><i data-lucide="zap" style="display:inline-block;vertical-align:text-bottom;margin-right:6px;color:var(--accent);"></i> Tambah Gerakan Workout</h3>
             <!-- Preset gerakan quick-add -->
             <div class="preset-label">Preset Populer:</div>
             <div class="preset-chips" id="workoutPresetChips">
@@ -644,15 +644,15 @@
             <div id="workoutBurnSection" style="display:none;margin-top:14px;">
               <div class="calburn-input-row">
                 <div class="form-group" style="flex:1;">
-                  <label>⏱ Durasi Sesi (menit)</label>
+                  <label><i data-lucide="clock" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Durasi Sesi (menit)</label>
                   <input type="number" id="workoutDuration" class="form-input" placeholder="Contoh: 30" min="1" max="240" oninput="previewWorkoutBurn()">
                 </div>
                 <div class="form-group" style="flex:1;">
-                  <label>💥 Intensitas</label>
+                  <label><i data-lucide="flame" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Intensitas</label>
                   <select id="workoutIntensity" class="form-input" onchange="previewWorkoutBurn()">
-                    <option value="low">🟢 Ringan (low impact)</option>
-                    <option value="medium" selected>🟡 Sedang (moderate)</option>
-                    <option value="high">🔴 Tinggi (high intensity)</option>
+                    <option value="low">Ringan (low impact)</option>
+                    <option value="medium" selected>Sedang (moderate)</option>
+                    <option value="high">Tinggi (high intensity)</option>
                   </select>
                 </div>
               </div>
@@ -666,17 +666,17 @@
 
           <!-- GYM PANEL -->
           <div id="wPanelGym" class="section-card" style="display:none;">
-            <h3 class="section-title">🏟️ Pilih Otot yang Dilatih</h3>
+            <h3 class="section-title"><i data-lucide="dumbbell" style="display:inline-block;vertical-align:text-bottom;margin-right:6px;color:var(--accent);"></i> Pilih Otot yang Dilatih</h3>
             <div class="muscle-chips" id="muscleChips">
-              <button class="muscle-chip" data-muscle="chest" onclick="toggleGymMuscle('chest')">💪 Chest</button>
-              <button class="muscle-chip" data-muscle="back" onclick="toggleGymMuscle('back')">🔙 Back</button>
-              <button class="muscle-chip" data-muscle="shoulder" onclick="toggleGymMuscle('shoulder')">🤷 Shoulder</button>
-              <button class="muscle-chip" data-muscle="bicep" onclick="toggleGymMuscle('bicep')">💪 Bicep</button>
-              <button class="muscle-chip" data-muscle="tricep" onclick="toggleGymMuscle('tricep')">💪 Tricep</button>
-              <button class="muscle-chip" data-muscle="forearm" onclick="toggleGymMuscle('forearm')">🦾 Forearm</button>
-              <button class="muscle-chip" data-muscle="abs" onclick="toggleGymMuscle('abs')">🔥 Abs</button>
-              <button class="muscle-chip" data-muscle="traps" onclick="toggleGymMuscle('traps')">🏔️ Traps</button>
-              <button class="muscle-chip" data-muscle="leg" onclick="toggleGymMuscle('leg')">🦵 Leg</button>
+              <button class="muscle-chip" data-muscle="chest" onclick="toggleGymMuscle('chest')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Chest</button>
+              <button class="muscle-chip" data-muscle="back" onclick="toggleGymMuscle('back')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Back</button>
+              <button class="muscle-chip" data-muscle="shoulder" onclick="toggleGymMuscle('shoulder')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Shoulder</button>
+              <button class="muscle-chip" data-muscle="bicep" onclick="toggleGymMuscle('bicep')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Bicep</button>
+              <button class="muscle-chip" data-muscle="tricep" onclick="toggleGymMuscle('tricep')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Tricep</button>
+              <button class="muscle-chip" data-muscle="forearm" onclick="toggleGymMuscle('forearm')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Forearm</button>
+              <button class="muscle-chip" data-muscle="abs" onclick="toggleGymMuscle('abs')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Abs</button>
+              <button class="muscle-chip" data-muscle="traps" onclick="toggleGymMuscle('traps')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Traps</button>
+              <button class="muscle-chip" data-muscle="leg" onclick="toggleGymMuscle('leg')"><i data-lucide="activity" style="width:12px;height:12px;margin-right:4px;"></i> Leg</button>
             </div>
 
             <!-- Dynamic muscle variation inputs -->
@@ -686,15 +686,15 @@
             <div id="gymBurnSection" style="display:none;margin-top:14px;">
               <div class="calburn-input-row">
                 <div class="form-group" style="flex:1;">
-                  <label>⏱ Durasi Sesi (menit)</label>
+                  <label><i data-lucide="clock" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Durasi Sesi (menit)</label>
                   <input type="number" id="gymDuration" class="form-input" placeholder="Contoh: 60" min="1" max="240" oninput="previewGymBurn()">
                 </div>
                 <div class="form-group" style="flex:1;">
-                  <label>💥 Intensitas</label>
+                  <label><i data-lucide="flame" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Intensitas</label>
                   <select id="gymIntensity" class="form-input" onchange="previewGymBurn()">
-                    <option value="low">🟢 Ringan</option>
-                    <option value="medium" selected>🟡 Sedang</option>
-                    <option value="high">🔴 Tinggi</option>
+                    <option value="low">Ringan</option>
+                    <option value="medium" selected>Sedang</option>
+                    <option value="high">Tinggi</option>
                   </select>
                 </div>
               </div>
@@ -710,7 +710,7 @@
         <!-- ===== TIDUR PANEL ===== -->
         <div id="actPanelSleep" style="display:none;">
           <div class="section-card">
-            <h3 class="section-title">😴 Catat Tidur</h3>
+            <h3 class="section-title"><i data-lucide="moon" style="display:inline-block;vertical-align:text-bottom;margin-right:6px;color:var(--accent);"></i> Catat Tidur</h3>
             <div class="sleep-time-inputs">
               <div class="form-group">
                 <label>Jam Mulai Tidur</label>
@@ -730,13 +730,13 @@
               <label>Tipe Tidur</label>
               <div class="sleep-type-btns">
                 <button class="sleep-type-btn active" data-type="malam" onclick="selectSleepType('malam')">
-                  🌙 Tidur Malam
+                  <i data-lucide="moon" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Tidur Malam
                 </button>
                 <button class="sleep-type-btn" data-type="siang" onclick="selectSleepType('siang')">
-                  ☀️ Tidur Siang
+                  <i data-lucide="sun" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Tidur Siang
                 </button>
                 <button class="sleep-type-btn" data-type="sebentar" onclick="selectSleepType('sebentar')">
-                  ⚡ Tidur Sebentar
+                  <i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Tidur Sebentar
                 </button>
               </div>
             </div>
@@ -744,13 +744,13 @@
               <label>Kualitas Tidur</label>
               <div class="sleep-type-btns">
                 <button class="sleep-quality-btn active" data-quality="lelap" onclick="selectSleepQuality('lelap')">
-                  🌙 Lelap
+                  <i data-lucide="smile" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Lelap
                 </button>
                 <button class="sleep-quality-btn" data-quality="biasa" onclick="selectSleepQuality('biasa')">
-                  💤 Biasa
+                  <i data-lucide="meh" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Biasa
                 </button>
                 <button class="sleep-quality-btn" data-quality="kurang" onclick="selectSleepQuality('kurang')">
-                  😵 Kurang Nyenyak
+                  <i data-lucide="frown" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Kurang Nyenyak
                 </button>
               </div>
             </div>

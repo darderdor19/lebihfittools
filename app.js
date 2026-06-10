@@ -34,7 +34,31 @@ async function initApp() {
         } else {
             document.getElementById('app').classList.remove('hidden');
             renderProfileDisplay();
-            showPage('dashboard');
+            
+            // Check url params for deep linking
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageParam = urlParams.get('page');
+            const rangeParam = urlParams.get('range');
+            const fromParam = urlParams.get('from');
+            const toParam = urlParams.get('to');
+            
+            if (pageParam === 'history') {
+                showPage('history');
+                if (fromParam && toParam) {
+                    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+                    document.getElementById('pCustom').classList.add('active');
+                    document.getElementById('customDateRange').classList.remove('hidden');
+                    document.getElementById('dateFrom').value = fromParam;
+                    document.getElementById('dateTo').value = toParam;
+                    loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
+                } else if (rangeParam) {
+                    setPeriod(rangeParam);
+                } else {
+                    setPeriod('7');
+                }
+            } else {
+                showPage('dashboard');
+            }
         }
     }
 
@@ -415,8 +439,8 @@ function saveWorkoutSession() {
     if (window.lucide) lucide.createIcons();
     renderTodayActivities();
     renderDashboardActivityCard();
-    const burnMsg = burn ? ` Estimasi ${burn.kcal} kcal terbakar 🔥` : '';
-    showToast(`Sesi workout disimpan! 💪${burnMsg}`, 'success');
+    const burnMsg = burn ? ` (Estimasi ${burn.kcal} kcal terbakar)` : '';
+    showToast(`Sesi workout disimpan!${burnMsg}`, 'success');
 }
 
 // --- Gym Functions ---
@@ -533,8 +557,8 @@ function saveGymSession() {
     document.getElementById('gymBurnPreview').innerHTML = '';
     renderTodayActivities();
     renderDashboardActivityCard();
-    const burnMsg = burn ? ` Estimasi ${burn.kcal} kcal terbakar 🔥` : '';
-    showToast(`Sesi gym disimpan! 🏋️${burnMsg}`, 'success');
+    const burnMsg = burn ? ` (Estimasi ${burn.kcal} kcal terbakar)` : '';
+    showToast(`Sesi gym disimpan!${burnMsg}`, 'success');
 }
 
 // --- Sleep Functions ---
@@ -594,7 +618,7 @@ function saveSleepLog() {
     document.getElementById('sleepDurationDisplay').textContent = '';
     _sleepHours = 0;
     renderTodayActivities();
-    showToast('Data tidur berhasil disimpan! 😴', 'success');
+    showToast('Data tidur berhasil disimpan!', 'success');
 }
 
 // --- Render Today Activities ---
@@ -614,12 +638,12 @@ function renderTodayActivities() {
         if (act.burn && (act.type === 'workout' || act.type === 'gym')) {
             burnBadge = `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
                 <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.3);border-radius:12px;font-size:0.75rem;font-weight:700;color:var(--success);">
-                    🔥 ${act.burn.kcal} kcal terbakar
+                    <i data-lucide="flame" style="width:12px;height:12px;"></i> ${act.burn.kcal} kcal terbakar
                 </span>
-                <span style="font-size:0.72rem;color:#ffab40;">🧴 Lemak ${act.burn.fatG}g</span>
-                <span style="font-size:0.72rem;color:#ffd60a;">⚡ Karbo ${act.burn.carbG}g</span>
-                <span style="font-size:0.72rem;color:var(--accent2);">💪 Protein ${act.burn.proteinG}g</span>
-                ${act.durationMin ? `<span style="font-size:0.7rem;color:var(--text3);">⏱ ${act.durationMin} menit</span>` : ''}
+                <span style="font-size:0.72rem;color:#ffab40;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="droplet" style="width:11px;height:11px;"></i> Lemak ${act.burn.fatG}g</span>
+                <span style="font-size:0.72rem;color:#ffd60a;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="zap" style="width:11px;height:11px;"></i> Karbo ${act.burn.carbG}g</span>
+                <span style="font-size:0.72rem;color:var(--accent2);display:inline-flex;align-items:center;gap:3px;"><i data-lucide="dumbbell" style="width:11px;height:11px;"></i> Protein ${act.burn.proteinG}g</span>
+                ${act.durationMin ? `<span style="font-size:0.7rem;color:var(--text3);display:inline-flex;align-items:center;gap:3px;"><i data-lucide="clock" style="width:11px;height:11px;"></i> ${act.durationMin} menit</span>` : ''}
             </div>`;
         }
 
@@ -634,8 +658,16 @@ function renderTodayActivities() {
             ).join('<br>');
             typeLabel = 'Gym';
         } else if (act.type === 'sleep') {
-            const sleepTypeLabel = { malam: '🌙 Tidur Malam', siang: '☀️ Tidur Siang', sebentar: '⚡ Tidur Sebentar' };
-            const qualityLabel = { lelap: '😴 Lelap', biasa: '💤 Biasa', kurang: '😵 Kurang Nyenyak' };
+            const sleepTypeLabel = { 
+                malam: '<i data-lucide="moon" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Tidur Malam', 
+                siang: '<i data-lucide="sun" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Tidur Siang', 
+                sebentar: '<i data-lucide="zap" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Tidur Sebentar' 
+            };
+            const qualityLabel = { 
+                lelap: '<i data-lucide="smile" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Lelap', 
+                biasa: '<i data-lucide="meh" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Biasa', 
+                kurang: '<i data-lucide="frown" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Kurang Nyenyak' 
+            };
             detail = `<b>${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m</b> — ${sleepTypeLabel[act.sleepType] || act.sleepType} · ${qualityLabel[act.quality] || act.quality}`;
             typeLabel = 'Tidur';
         }
@@ -694,16 +726,16 @@ function renderActivityHistory() {
             let badge = act.type;
             if (act.type === 'workout') {
                 detail = act.exercises.map(ex => `${ex.name} (${ex.sets.length} set)`).join(' · ');
-                badge = '💪 Workout';
+                badge = '<i data-lucide="zap" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Workout';
             } else if (act.type === 'gym') {
                 detail = act.muscles.map(m => `${MUSCLE_LABELS[m.muscle] || m.muscle}: ${m.variations.map(v=>v.name||'?').join(', ')}`).join(' | ');
-                badge = '🏋️ Gym';
+                badge = '<i data-lucide="dumbbell" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Gym';
             } else if (act.type === 'sleep') {
                 detail = `${Math.floor(act.hours)}j ${Math.round((act.hours%1)*60)}m — ${act.sleepType} — ${act.quality}`;
-                badge = '😴 Tidur';
+                badge = '<i data-lucide="moon" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Tidur';
             }
             return `<div style="padding:6px 10px;background:var(--bg);border-radius:6px;margin-top:6px;font-size:0.82rem;">
-                <span style="font-size:0.7rem;font-weight:700;color:var(--accent2);text-transform:uppercase;">${badge}</span><br>
+                <span style="font-size:0.7rem;font-weight:700;color:var(--accent2);text-transform:uppercase;display:inline-flex;align-items:center;gap:3px;">${badge}</span><br>
                 <span style="color:var(--text2);">${detail}</span>
             </div>`;
         }).join('');
@@ -712,24 +744,41 @@ function renderActivityHistory() {
             ${actHtml}
         </div>`;
     }).join('');
+    if (window.lucide) lucide.createIcons();
 }
 
+// --- History Comprehensive AI Analysis (food + activity + sleep) ---
 // --- History Comprehensive AI Analysis (food + activity + sleep) ---
 async function updateHistoryAIAnalysis(foodStats, fromDate, toDate) {
     const el = document.getElementById('historyAiContent');
     if (!el) return;
     const apiKey = localStorage.getItem('lf_apikey');
     if (!apiKey) {
-        el.innerHTML = `<p style="color:var(--text2);font-size:0.85rem;">⚡ Set API Key di Settings untuk analisis AI komprehensif.</p>`;
+        el.innerHTML = `<p style="color:var(--text2);font-size:0.85rem;">Set API Key di Settings untuk analisis AI komprehensif.</p>`;
         return;
     }
+
+    const email = localStorage.getItem('lf_user_email');
+    if (!email) return;
+    const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+    const signature = getRangeDataSignature(email, fromDate, toDate);
+    const cacheKey = `ai_history_sig_${safeEmail}_${fromDate}_${toDate}`;
+    const cached = localStorage.getItem(cacheKey);
+    let cacheData = null;
+    try { if (cached) cacheData = JSON.parse(cached); } catch(e){}
+
+    if (cacheData && cacheData.signature === signature && cacheData.html) {
+        el.innerHTML = cacheData.html;
+        return;
+    }
+
     el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
-        ✨ Menganalisis data komprehensif dengan Groq AI...
+        Menganalisis data komprehensif dengan Groq AI...
     </div>`;
 
     // Gather activity data for the period
-    const allActs = getActivitiesRange(new Date(fromDate), new Date(toDate));
+    const allActs = getActivitiesRange(new Date(fromDate.replace(/-/g, '/')), new Date(toDate.replace(/-/g, '/')));
     let workoutCount = 0, gymCount = 0, sleepData = [], musclesTrained = {};
     Object.values(allActs).forEach(dayActs => {
         dayActs.forEach(a => {
@@ -774,15 +823,21 @@ Buat analisis komprehensif dalam HTML VALID (tanpa markdown/code block). Wajib a
 5. Saran spesifik untuk perbaikan komposisi tubuh (body recomposition)
 6. Top 3 prioritas yang harus diubah minggu ini
 
-Gunakan div dengan border-left berwarna sesuai status. JAWAB HANYA HTML VALID.`;
+Jangan gunakan emoji sama sekali. Gunakan layout HTML yang bersih, elegan, dan profesional. Gunakan div dengan border-left berwarna sesuai status. JAWAB HANYA HTML VALID.`;
     try {
         const raw = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
         let cleanHtml = (raw || '').trim().replace(/```html\n?/gi,'').replace(/```\n?/gi,'').trim();
-        el.innerHTML = `
+        const aiHtml = `
             <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <b>Analisis AI Groq</b> · Makanan + Olahraga + Tidur · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
             </div>${cleanHtml}`;
+        
+        el.innerHTML = aiHtml;
+        
+        // Save to cache
+        const newCache = { html: aiHtml, signature: signature, timestamp: Date.now() };
+        DB.set(cacheKey, newCache);
     } catch(e) {
         el.innerHTML = `<p style="color:var(--text2);font-size:0.85rem;">Gagal memuat analisis AI: ${e.message}</p>`;
     }
@@ -1046,15 +1101,14 @@ async function updateDailyAIAnalysis(logs, profile, email) {
     aiCard.style.display = 'block';
 
     const today = new Date().toISOString().slice(0, 10);
-    const todayActs = getTodayActivities();
-    const activityCount = todayActs.length;
-    const cacheKey = `ai_daily_v3_${email}_${today}`;
+    const signature = getDailyDataSignature(email, today);
+    const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+    const cacheKey = `ai_daily_sig_${safeEmail}_${today}`;
     const cached = localStorage.getItem(cacheKey);
     let cacheData = null;
     try { if (cached) cacheData = JSON.parse(cached); } catch(e){}
 
-    // Use cache only if food count AND activity count match
-    if (cacheData && cacheData.logCount === logs.length && cacheData.activityCount === activityCount && cacheData.html) {
+    if (cacheData && cacheData.signature === signature && cacheData.html) {
         aiContent.innerHTML = cacheData.html;
         return;
     }
@@ -1094,6 +1148,7 @@ async function updateDailyAIAnalysis(logs, profile, email) {
 
         // Build activity context
         let activityContext = 'Tidak ada kegiatan tercatat hari ini.';
+        const todayActs = getTodayActivities();
         if (todayActs.length > 0) {
             const workouts = todayActs.filter(a => a.type === 'workout');
             const gyms = todayActs.filter(a => a.type === 'gym');
@@ -1118,7 +1173,7 @@ async function updateDailyAIAnalysis(logs, profile, email) {
             activityContext = lines.join('\n');
         }
 
-        const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(totals.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${totals.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((totals.protein/targetProtein)*100)}%)\n- Karbohidrat: ${totals.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((totals.carbs/targetCarbs)*100)}%)\n- Lemak: ${totals.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((totals.fat/targetFat)*100)}%)\n- Serat: ${totals.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${totals.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(totals.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Gunakan emoji relevan. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
+        const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(totals.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${totals.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((totals.protein/targetProtein)*100)}%)\n- Karbohidrat: ${totals.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((totals.carbs/targetCarbs)*100)}%)\n- Lemak: ${totals.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((totals.fat/targetFat)*100)}%)\n- Serat: ${totals.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${totals.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(totals.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
 
         const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
 
@@ -1135,10 +1190,9 @@ async function updateDailyAIAnalysis(logs, profile, email) {
 
             aiContent.innerHTML = aiHtml;
 
-            // Cache the result
-            const newCache = { html: aiHtml, logCount: logs.length, activityCount, timestamp: Date.now() };
-            localStorage.setItem(cacheKey, JSON.stringify(newCache));
-            syncToFirebase('lf_analysis_' + today, { text: 'AI HTML analysis', logCount: logs.length, timestamp: Date.now() });
+            // Cache the result using DB.set
+            const newCache = { html: aiHtml, signature: signature, timestamp: Date.now() };
+            DB.set(cacheKey, newCache);
         } else {
             aiContent.innerHTML = `<p style="color:var(--text2);font-size:0.9rem;">Gagal memuat analisis AI. Coba refresh halaman.</p>`;
         }
@@ -1557,7 +1611,7 @@ function loadHistory() {
     const fromVal = document.getElementById('dateFrom').value;
     const toVal = document.getElementById('dateTo').value;
     if (fromVal && toVal) {
-        loadHistoryData(new Date(fromVal), new Date(toVal));
+        loadHistoryData(new Date(fromVal.replace(/-/g, '/')), new Date(toVal.replace(/-/g, '/')));
     }
 }
 
@@ -2096,6 +2150,29 @@ function selectCustomOption(val, label) {
 function closeCustomSelect(e) {
     if (e && e.target !== e.currentTarget) return;
     document.getElementById('customSheetOverlay').classList.remove('active');
+}
+
+function openMobileAddSelect() {
+    currentSelectInputId = null;
+    document.getElementById('customSheetTitle').innerText = 'Tambah Data';
+    const optionsHtml = `
+        <div class="custom-sheet-opt" onclick="navigateFromMobileAdd('log')">
+            <i data-lucide="plus-circle" style="width:18px;height:18px;margin-right:10px;color:var(--accent);"></i>
+            <span>Log Makanan</span>
+        </div>
+        <div class="custom-sheet-opt" onclick="navigateFromMobileAdd('activity')">
+            <i data-lucide="dumbbell" style="width:18px;height:18px;margin-right:10px;color:var(--success);"></i>
+            <span>Kegiatan Harian</span>
+        </div>
+    `;
+    document.getElementById('customSheetOptions').innerHTML = optionsHtml;
+    document.getElementById('customSheetOverlay').classList.add('active');
+    if (window.lucide) lucide.createIcons();
+}
+
+function navigateFromMobileAdd(page) {
+    showPage(page);
+    closeCustomSelect();
 }
 
 function openReportRangeSelect() {
