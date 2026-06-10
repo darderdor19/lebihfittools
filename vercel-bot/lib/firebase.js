@@ -8,14 +8,18 @@ let db;
 function getDb() {
   if (!db) {
     if (!admin.apps.length) {
-      let serviceAccount;
-      try {
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      } catch (e) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT env var is invalid JSON');
-      }
+      // Gunakan individual env vars (lebih reliable di Vercel)
+      // daripada satu JSON blob yang sering bermasalah dengan newline
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY
+        ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        : undefined;
+
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: privateKey
+        }),
         databaseURL: process.env.FIREBASE_DATABASE_URL
       });
     }
