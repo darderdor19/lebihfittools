@@ -89,14 +89,15 @@ async function handleMessage(msg) {
 
   if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text);
   if (state === 'AWAIT_OTP') return onOtpInput(chatId, userId, text);
-  if (state === 'AWAIT_FOOD') return onFoodInput(chatId, userId, text);
+  if (state === 'AWAIT_FOOD_NAME' || state === 'AWAIT_FOOD') return onFoodNameInput(chatId, userId, text);
+  if (state === 'AWAIT_FOOD_PORTION') return onFoodPortionInput(chatId, userId, text);
+  if (state === 'AWAIT_FOOD_DESC') return onFoodDescInput(chatId, userId, text);
 
-  // Default: if logged in, treat as food input
+  // Default: if logged in, treat as food name input (shortcut)
   const email = await getLinkedEmail(userId);
   if (!email) return promptLogin(chatId, userId);
 
-  await setState(userId, 'AWAIT_FOOD');
-  return onFoodInput(chatId, userId, text);
+  return onFoodNameInput(chatId, userId, text);
 }
 
 // ====================================================
@@ -120,6 +121,7 @@ async function handleCallback(cb) {
   if (data === 'retry_login') return promptLogin(chatId, userId);
   if (data === 'confirm_yes') return confirmSaveFood(chatId, userId);
   if (data === 'confirm_no') return cancelFood(chatId, userId);
+  if (data === 'skip_food_desc') return onFoodDescInput(chatId, userId, null);
   if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
   if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
   if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
@@ -176,6 +178,21 @@ async function onEmailInput(chatId, userId, email) {
       }
     } else {
       console.warn('GAS_WEBAPP_URL not set, skipping OTP send');
+      await setState(userId, null);
+      await deleteCache(`${userId}_pending_email`);
+      return sendMessage(chatId,
+        `⚠️ *Konfigurasi Vercel Belum Lengkap*\n\n` +
+        `Bot tidak dapat mengirimkan OTP karena environment variable *GAS_WEBAPP_URL* belum diatur di Vercel.\n\n` +
+        `*Cara Mengatasi:*\n` +
+        `1. Masuk ke dashboard Vercel.\n` +
+        `2. Buka Settings -> Environment Variables untuk project bot ini.\n` +
+        `3. Tambahkan variable:\n` +
+        `   • Key: \`GAS_WEBAPP_URL\`\n` +
+        `   • Value: \`URL Web App Google Apps Script lu\`\n` +
+        `4. Klik *Save*, lalu lakukan **Redeploy** (Deploy ulang).\n\n` +
+        `Ketik /start lagi jika sudah selesai diatur!`,
+        { inline_keyboard: [[{ text: 'Kembali', callback_data: 'menu' }]] }
+      );
     }
 
     return sendMessage(chatId,
@@ -213,6 +230,8 @@ async function onOtpInput(chatId, userId, otpInput) {
           { inline_keyboard: [[{ text: 'Request OTP Baru', callback_data: 'retry_login' }, { text: 'Batal', callback_data: 'menu' }]] }
         );
       }
+    } else {
+      return sendMessage(chatId, 'Konfigurasi GAS_WEBAPP_URL tidak ditemukan. Verifikasi dibatalkan.');
     }
 
     // OTP valid — link account
@@ -311,51 +330,106 @@ async function showDashboard(chatId, email) {
 // LOG MAKANAN
 // ====================================================
 async function promptFoodInput(chatId, userId) {
-  await setState(userId, 'AWAIT_FOOD');
+  await setState(userId, 'AWAIT_FOOD_NAME');
   return sendMessage(chatId,
-    '*Log Makanan*\n\nKetik nama makanan yang lu makan:\n\n_Contoh:_\nnasi goreng ayam 1 piring\nayam geprek sambel 200g\nkopi susu gula 1 gelas',
-    { inline_keyboard: [[{ text: 'Batal', callback_data: 'menu' }]] }
+    '*Log Makanan - Langkah 1 dari 3* 🍽️\n\nMakanan apa yang lu makan hari ini?\n_Contoh: nasi goreng ayam, sate kambing, pisang goreng_',
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
   );
 }
 
-async function onFoodInput(chatId, userId, text) {
+async function onFoodNameInput(chatId, userId, text) {
   if (!text || text.length < 2) {
-    return sendMessage(chatId, 'Deskripsi makanan terlalu pendek. Coba lagi!');
+    return sendMessage(chatId, 'Nama makanan terlalu pendek. Coba lagi!');
   }
   const email = await getLinkedEmail(userId);
   if (!email) return promptLogin(chatId, userId);
 
+  await setCache(`${userId}_food_name`, text);
+  await setState(userId, 'AWAIT_FOOD_PORTION');
+  return sendMessage(chatId,
+    `*Log Makanan - Langkah 2 dari 3* ⚖️\n\nBerapa banyak *${text}* yang lu makan?\n_Contoh: 1 piring, 200g, 2 butir, secukupnya_`,
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
+  );
+}
+
+async function onFoodPortionInput(chatId, userId, text) {
+  if (!text || text.length < 1) {
+    return sendMessage(chatId, 'Porsi makanan tidak valid. Coba lagi!');
+  }
+  const foodName = await getCache(`${userId}_food_name`) || 'Makanan';
+  await setCache(`${userId}_food_portion`, text);
+  await setState(userId, 'AWAIT_FOOD_DESC');
+  return sendMessage(chatId,
+    `*Log Makanan - Langkah 3 dari 3* 📝\n\nAda deskripsi lainnya untuk *${foodName}* (porsi: ${text})? (Opsional)\n_Contoh: digoreng pake minyak dikit, pake bumbu kacang, kecap manis_`,
+    {
+      inline_keyboard: [
+        [{ text: '⏭️ Lewati & Analisis AI', callback_data: 'skip_food_desc' }],
+        [{ text: '❌ Batal', callback_data: 'confirm_no' }]
+      ]
+    }
+  );
+}
+
+async function onFoodDescInput(chatId, userId, text) {
+  const foodName = await getCache(`${userId}_food_name`);
+  const foodPortion = await getCache(`${userId}_food_portion`);
+
+  if (!foodName || !foodPortion) {
+    await setState(userId, null);
+    await deleteCache(`${userId}_food_name`);
+    await deleteCache(`${userId}_food_portion`);
+    return sendMessage(chatId, 'Sesi expired. Silakan log ulang.', mainMenuKeyboard());
+  }
+
+  const foodDesc = text ? text.trim() : '';
+
   await setState(userId, null);
+  await deleteCache(`${userId}_food_name`);
+  await deleteCache(`${userId}_food_portion`);
+
   await sendChatAction(chatId, 'typing');
-  await sendMessage(chatId, `Menganalisis: _${text}_...`, null);
+
+  let descString = `porsi: ${foodPortion}`;
+  if (foodDesc) {
+    descString += `, deskripsi: ${foodDesc}`;
+  }
+  const query = `${foodName}, ${descString}`;
+  await sendMessage(chatId, `Menganalisis: _${query}_...`, null);
 
   try {
-    const nutrition = await analyzeFood(text);
+    const nutrition = await analyzeFood(query);
     await setCache(userId + '_pending', JSON.stringify(nutrition));
 
-    let msg = 'Hasil Analisis AI:\n\n';
+    let msg = '🤖 *Hasil Analisis AI:*\n\n';
     msg += `*${nutrition.name}*\n`;
-    msg += `Porsi: ${nutrition.portion || '1 porsi'}\n\n`;
-    msg += `Kalori: *${Math.round(nutrition.cal || 0)} kcal*\n`;
-    msg += `Protein: *${Number(nutrition.protein || 0).toFixed(1)}g*\n`;
-    msg += `Karbo: *${Number(nutrition.carbs || 0).toFixed(1)}g*\n`;
-    msg += `Lemak: *${Number(nutrition.fat || 0).toFixed(1)}g*\n`;
-    msg += `Serat: *${Number(nutrition.fiber || 0).toFixed(1)}g*\n\n`;
+    msg += `Porsi: ${nutrition.portion || foodPortion}\n\n`;
+    msg += `• Kalori: *${Math.round(nutrition.cal || 0)} kcal*\n`;
+    msg += `• Protein: *${Number(nutrition.protein || 0).toFixed(1)}g*\n`;
+    msg += `• Karbo: *${Number(nutrition.carbs || 0).toFixed(1)}g*\n`;
+    msg += `• Lemak: *${Number(nutrition.fat || 0).toFixed(1)}g*\n`;
+    msg += `• Serat: *${Number(nutrition.fiber || 0).toFixed(1)}g*\n\n`;
     msg += '_Simpan ke dashboard?_';
 
     return sendMessage(chatId, msg, {
-      inline_keyboard: [[
-        { text: '✅ Simpan', callback_data: 'confirm_yes' },
-        { text: '❌ Batal', callback_data: 'confirm_no' }
-      ]]
+      inline_keyboard: [
+        [
+          { text: '✅ Simpan', callback_data: 'confirm_yes' },
+          { text: '🔄 Reset / Log Lagi', callback_data: 'log_food' }
+        ],
+        [
+          { text: '🏠 Menu Utama', callback_data: 'menu' }
+        ]
+      ]
     });
   } catch (err) {
-    console.error('onFoodInput error:', err);
-    return sendMessage(chatId, 'Gagal analisis: ' + err.message, {
-      inline_keyboard: [[
-        { text: 'Coba Lagi', callback_data: 'log_food' },
-        { text: 'Menu', callback_data: 'menu' }
-      ]]
+    console.error('onFoodDescInput error:', err);
+    return sendMessage(chatId, 'Gagal analisis AI: ' + err.message, {
+      inline_keyboard: [
+        [
+          { text: '🔄 Reset / Log Lagi', callback_data: 'log_food' },
+          { text: '🏠 Menu Utama', callback_data: 'menu' }
+        ]
+      ]
     });
   }
 }
@@ -371,7 +445,6 @@ async function confirmSaveFood(chatId, userId) {
   await deleteCache(userId + '_pending');
 
   const today = todayKey();
-  // Use web app's unified path: lf_logs/{date}
   const logsPath = `users/${safe(email)}/lf_logs/${today}`;
   const existing = await getFirebase(logsPath) || [];
 
@@ -419,13 +492,39 @@ async function confirmSaveFood(chatId, userId) {
 }
 
 async function cancelFood(chatId, userId) {
+  await setState(userId, null);
+  await deleteCache(userId + '_food_name');
+  await deleteCache(userId + '_food_portion');
   await deleteCache(userId + '_pending');
-  return sendMessage(chatId, 'Dibatalkan.', mainMenuKeyboard());
+  return sendMessage(chatId, 'Pencatatan makanan dibatalkan.', mainMenuKeyboard());
 }
 
 // ====================================================
 // HISTORY
 // ====================================================
+// Helper to get past dates in WIB (UTC+7) timezone
+function getPastWibDates(days) {
+  const dates = [];
+  const now = new Date();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now.getTime() + (7 * 60 * 60 * 1000) - (i * 24 * 60 * 60 * 1000));
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+// Helper to draw ASCII bar chart
+function renderAsciiBar(cal, target) {
+  if (!target || target <= 0) target = 2000;
+  const pct = cal / target;
+  const filledCount = Math.min(10, Math.round(pct * 10));
+  let bar = '';
+  for (let i = 0; i < 10; i++) {
+    bar += (i < filledCount) ? '█' : '░';
+  }
+  return bar;
+}
+
 async function showHistory(chatId, email) {
   return sendMessage(chatId, '*History*\n\nPilih rentang waktu:', {
     inline_keyboard: [
@@ -440,49 +539,145 @@ async function showHistory(chatId, email) {
 }
 
 async function showHistoryDays(chatId, email, days) {
-  const results = [];
-  for (let i = 0; i < days; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    // Read from web app's unified path: lf_logs/{date}
-    // Use toArray() because Firebase stores arrays as {0:..., 1:...} objects
-    const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${key}`);
-    const logs = toArray(rawLogs);
-    if (logs.length > 0) {
-      const t = sumNutrients(logs);
-      results.push({ date: key, cal: Math.round(t.cal), count: logs.length });
-    }
-  }
+  await sendChatAction(chatId, 'typing');
 
-  if (results.length === 0) {
-    return sendMessage(chatId, `Belum ada data untuk ${days} hari terakhir.`, {
+  const dates = getPastWibDates(days);
+  const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+  const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+
+  try {
+    // Fetch all days in parallel
+    const promises = dates.map(async (key) => {
+      const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${key}`);
+      const logs = toArray(rawLogs);
+      return { key, logs };
+    });
+
+    const rawResults = await Promise.all(promises);
+
+    let totalCal = 0;
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFat = 0;
+    let totalFiber = 0;
+
+    let activeDays = 0;
+    let compliantDays = 0;
+    let maxCal = 0;
+    let maxCalDate = '-';
+    let minCal = Infinity;
+    let minCalDate = '-';
+
+    const dailyData = [];
+
+    for (const { key, logs } of rawResults) {
+      const t = sumNutrients(logs);
+      const dayCal = Math.round(t.cal);
+
+      if (logs.length > 0) {
+        activeDays++;
+        totalCal += dayCal;
+        totalProtein += t.protein;
+        totalCarbs += t.carbs;
+        totalFat += t.fat;
+        totalFiber += t.fiber;
+
+        if (dayCal <= calTarget) {
+          compliantDays++;
+        }
+
+        if (dayCal > maxCal) {
+          maxCal = dayCal;
+          maxCalDate = key;
+        }
+        if (dayCal < minCal) {
+          minCal = dayCal;
+          minCalDate = key;
+        }
+      }
+
+      dailyData.push({
+        dateKey: key,
+        cal: dayCal,
+        count: logs.length
+      });
+    }
+
+    if (minCal === Infinity) {
+      minCal = 0;
+    }
+
+    if (activeDays === 0) {
+      return sendMessage(chatId, `Belum ada data makan tercatat dalam ${days} hari terakhir.`, {
+        inline_keyboard: [
+          [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
+          [{ text: '🏠 Menu Utama', callback_data: 'menu' }]
+        ]
+      });
+    }
+
+    const avgCal = Math.round(totalCal / activeDays);
+    const avgProtein = totalProtein / activeDays;
+    const avgCarbs = totalCarbs / activeDays;
+    const avgFat = totalFat / activeDays;
+    const avgFiber = totalFiber / activeDays;
+
+    const formatDateKey = (key) => {
+      if (key === '-') return '-';
+      const parts = key.split('-');
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][d.getDay()];
+      return `${dayName}, ${parts[2]}/${parts[1]}`;
+    };
+
+    // Render ASCII chart (oldest first)
+    let chartText = '```\n';
+    const sortedDailyData = [...dailyData].reverse();
+    for (const day of sortedDailyData) {
+      const label = formatDateKey(day.dateKey);
+      const bar = renderAsciiBar(day.cal, calTarget);
+      const calStr = day.cal.toString().padStart(4, ' ');
+      const pct = calTarget > 0 ? Math.round((day.cal / calTarget) * 100) : 0;
+      const overIndicator = pct > 100 ? '🔥' : '  ';
+      chartText += `${label}: [${bar}]${overIndicator} ${calStr} kcal\n`;
+    }
+    chartText += '```';
+
+    let msg = `📈 *History ${days} Hari Terakhir*\n\n`;
+    msg += `📊 *Grafik Kalori:*\n${chartText}\n`;
+    msg += `_(Target: ${calTarget} kcal/hari)_\n\n`;
+
+    msg += `📝 *Ringkasan Statistik:*\n`;
+    msg += `• Rata-rata Kalori: *${avgCal} kcal/hari*\n`;
+    msg += `• Kepatuhan Target: *${compliantDays}/${activeDays} hari aktif* (≤ target)\n`;
+    msg += `• Hari Aktif Mencatat: *${activeDays}/${days} hari*\n`;
+    msg += `• Kalori Tertinggi: *${maxCal} kcal* (${formatDateKey(maxCalDate)})\n`;
+    msg += `• Kalori Terendah: *${minCal} kcal* (${formatDateKey(minCalDate)})\n\n`;
+
+    msg += `🍎 *Rata-rata Gizi Harian (Hari Aktif):*\n`;
+    msg += `• Protein: *${avgProtein.toFixed(1)}g*\n`;
+    msg += `• Karbohidrat: *${avgCarbs.toFixed(1)}g*\n`;
+    msg += `• Lemak: *${avgFat.toFixed(1)}g*\n`;
+    msg += `• Serat: *${avgFiber.toFixed(1)}g*\n`;
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [
+          { text: '📊 Dashboard Hari Ini', callback_data: 'dashboard' },
+          { text: '📈 Rentang Lain', callback_data: 'history' }
+        ],
+        [
+          { text: '🏠 Menu Utama', callback_data: 'menu' },
+          { text: '🌐 Buka Web App', url: 'https://darderdor19.github.io/lebihfittools/' }
+        ]
+      ]
+    });
+  } catch (err) {
+    console.error('showHistoryDays error:', err);
+    return sendMessage(chatId, 'Gagal memuat history: ' + err.message, {
       inline_keyboard: [[{ text: 'Menu Utama', callback_data: 'menu' }]]
     });
   }
-
-  const totalCal = results.reduce((sum, r) => sum + r.cal, 0);
-  const avgCal = Math.round(totalCal / results.length);
-
-  let msg = `*History ${days} Hari Terakhir*\n\n`;
-  msg += `Rata-rata: *${avgCal} kcal/hari*\n`;
-  msg += `Hari aktif: *${results.length} hari*\n\n`;
-  msg += '*Detail:*\n';
-
-  const shown = results.slice(0, 10);
-  shown.forEach(r => {
-    const dt = new Date(r.date);
-    const label = `${dt.getDate()}/${dt.getMonth() + 1}`;
-    msg += `${label}: *${r.cal} kcal* (${r.count} makanan)\n`;
-  });
-  if (results.length > 10) msg += `_...dan ${results.length - 10} hari lainnya_\n`;
-
-  return sendMessage(chatId, msg, {
-    inline_keyboard: [
-      [{ text: '📊 Dashboard Hari Ini', callback_data: 'dashboard' }],
-      [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
-    ]
-  });
 }
 
 // ====================================================
