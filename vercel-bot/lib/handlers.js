@@ -92,6 +92,10 @@ async function handleMessage(msg) {
   if (state === 'AWAIT_FOOD_NAME' || state === 'AWAIT_FOOD') return onFoodNameInput(chatId, userId, text);
   if (state === 'AWAIT_FOOD_PORTION') return onFoodPortionInput(chatId, userId, text);
   if (state === 'AWAIT_FOOD_DESC') return onFoodDescInput(chatId, userId, text);
+  if (state === 'AWAIT_RECALC_TB') return onRecalcTb(chatId, userId, text);
+  if (state === 'AWAIT_RECALC_BB') return onRecalcBb(chatId, userId, text);
+  if (state === 'AWAIT_RECALC_USIA') return onRecalcUsia(chatId, userId, text);
+  if (state === 'AWAIT_RECALC_CATATAN') return onRecalcCatatanInput(chatId, userId, text);
 
   // Default: if logged in, treat as food name input (shortcut)
   const email = await getLinkedEmail(userId);
@@ -122,6 +126,21 @@ async function handleCallback(cb) {
   if (data === 'confirm_yes') return confirmSaveFood(chatId, userId);
   if (data === 'confirm_no') return cancelFood(chatId, userId);
   if (data === 'skip_food_desc') return onFoodDescInput(chatId, userId, null);
+  if (data === 'recalc_profile') return email ? startRecalcWizard(chatId, userId) : promptLogin(chatId, userId);
+  if (data.startsWith('recalc_gen_')) {
+    const gender = data.replace('recalc_gen_', '') === 'pria' ? 'Pria' : 'Wanita';
+    return onRecalcGenderSelect(chatId, userId, gender);
+  }
+  if (data.startsWith('recalc_act_')) {
+    const activity = data.replace('recalc_act_', '');
+    return onRecalcActivitySelect(chatId, userId, activity);
+  }
+  if (data.startsWith('recalc_tgt_')) {
+    const targetVal = data.replace('recalc_tgt_', '');
+    return onRecalcTargetSelect(chatId, userId, targetVal);
+  }
+  if (data === 'skip_recalc_catatan') return onRecalcCatatanInput(chatId, userId, null);
+  if (data === 'save_profile_yes') return saveProfile(chatId, userId);
   if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
   if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
   if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
@@ -496,7 +515,8 @@ async function cancelFood(chatId, userId) {
   await deleteCache(userId + '_food_name');
   await deleteCache(userId + '_food_portion');
   await deleteCache(userId + '_pending');
-  return sendMessage(chatId, 'Pencatatan makanan dibatalkan.', mainMenuKeyboard());
+  await deleteRecalcCache(userId);
+  return sendMessage(chatId, 'Dibatalkan.', mainMenuKeyboard());
 }
 
 // ====================================================
@@ -681,7 +701,7 @@ async function showHistoryDays(chatId, email, days) {
 }
 
 // ====================================================
-// SETTINGS
+// SETTINGS & WIZARD
 // ====================================================
 async function showSettings(chatId, userId, email) {
   let msg = '*Settings*\n\n';
@@ -692,10 +712,13 @@ async function showSettings(chatId, userId, email) {
       msg += `Target: *${Math.round((profile.targets && profile.targets.cal) ? profile.targets.cal : 0)} kcal/hari*\n`;
       msg += `Tujuan: *${(profile.target || '-').replace(/_/g, ' ').toUpperCase()}*\n`;
       msg += `BB/TB: *${profile.bb}kg / ${profile.tb}cm*\n`;
+      msg += `Usia/Gender: *${profile.usia}th / ${profile.gender || '-'}*\n`;
+      msg += `BMR Est: *${(profile.targets && profile.targets.bmr) ? profile.targets.bmr : '-'} kcal*\n`;
+      msg += `TDEE Est: *${(profile.targets && profile.targets.tdee) ? profile.targets.tdee : '-'} kcal*\n`;
     }
-    msg += '\n_Untuk ubah profil, gunakan web app._';
     return sendMessage(chatId, msg, {
       inline_keyboard: [
+        [{ text: '⚙️ Kalkulator Fitness', callback_data: 'recalc_profile' }],
         [{ text: '🚪 Logout', callback_data: 'logout' }],
         [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
       ]
@@ -716,6 +739,192 @@ async function doLogout(chatId, userId) {
   }
   await setState(userId, null);
   return sendMessage(chatId, 'Logout berhasil! Ketik /start untuk login lagi.', null);
+}
+
+async function startRecalcWizard(chatId, userId) {
+  await setState(userId, 'AWAIT_RECALC_TB');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 1 dari 7* 📏\n\nMasukkan tinggi badan lu (dalam cm):\n_Contoh: 173_',
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
+  );
+}
+
+async function onRecalcTb(chatId, userId, text) {
+  const tb = parseInt(text);
+  if (isNaN(tb) || tb < 50 || tb > 300) {
+    return sendMessage(chatId, 'Tinggi badan tidak valid. Masukkan angka cm yang benar (50 - 300):');
+  }
+  await setCache(`${userId}_recalc_tb`, tb.toString());
+  await setState(userId, 'AWAIT_RECALC_BB');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 2 dari 7* ⚖️\n\nMasukkan berat badan lu (dalam kg):\n_Contoh: 71_',
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
+  );
+}
+
+async function onRecalcBb(chatId, userId, text) {
+  const bb = parseFloat(text);
+  if (isNaN(bb) || bb < 20 || bb > 500) {
+    return sendMessage(chatId, 'Berat badan tidak valid. Masukkan angka kg yang benar (20 - 500):');
+  }
+  await setCache(`${userId}_recalc_bb`, bb.toString());
+  await setState(userId, 'AWAIT_RECALC_USIA');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 3 dari 7* 🎂\n\nMasukkan usia lu (dalam tahun):\n_Contoh: 21_',
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
+  );
+}
+
+async function onRecalcUsia(chatId, userId, text) {
+  const usia = parseInt(text);
+  if (isNaN(usia) || usia < 1 || usia > 120) {
+    return sendMessage(chatId, 'Usia tidak valid. Masukkan angka tahun yang benar (1 - 120):');
+  }
+  await setCache(`${userId}_recalc_usia`, usia.toString());
+  await setState(userId, 'AWAIT_RECALC_GENDER');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 4 dari 7* 🚻\n\nPilih jenis kelamin lu:',
+    {
+      inline_keyboard: [
+        [{ text: '👨 Pria', callback_data: 'recalc_gen_pria' }, { text: '👩 Wanita', callback_data: 'recalc_gen_wanita' }],
+        [{ text: '❌ Batal', callback_data: 'confirm_no' }]
+      ]
+    }
+  );
+}
+
+async function onRecalcGenderSelect(chatId, userId, gender) {
+  await setCache(`${userId}_recalc_gender`, gender);
+  await setState(userId, 'AWAIT_RECALC_AKTIVITAS');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 5 dari 7* ⚡\n\nPilih level aktivitas fisik harian lu:',
+    {
+      inline_keyboard: [
+        [{ text: 'Sedentary (Jarang olahraga)', callback_data: 'recalc_act_sedentary' }],
+        [{ text: 'Light (Olahraga 1-3x/minggu)', callback_data: 'recalc_act_light' }],
+        [{ text: 'Moderate (Olahraga 3-5x/minggu)', callback_data: 'recalc_act_moderate' }],
+        [{ text: 'Heavy (Olahraga 6-7x/minggu)', callback_data: 'recalc_act_heavy' }],
+        [{ text: 'Athlete (Olahraga berat/atlet)', callback_data: 'recalc_act_athlete' }],
+        [{ text: '❌ Batal', callback_data: 'confirm_no' }]
+      ]
+    }
+  );
+}
+
+async function onRecalcActivitySelect(chatId, userId, activity) {
+  await setCache(`${userId}_recalc_aktivitas`, activity);
+  await setState(userId, 'AWAIT_RECALC_TARGET');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 6 dari 7* 🎯\n\nPilih target/tujuan fitness lu:',
+    {
+      inline_keyboard: [
+        [{ text: 'Cutting Agresif (-1kg/minggu)', callback_data: 'recalc_tgt_cutting_agresif' }],
+        [{ text: 'Cutting Perlahan (-0.5kg/minggu)', callback_data: 'recalc_tgt_cutting_perlahan' }],
+        [{ text: 'Pertahankan BB', callback_data: 'recalc_tgt_maintain' }],
+        [{ text: 'Bulking Perlahan (+0.5kg/minggu)', callback_data: 'recalc_tgt_bulking_perlahan' }],
+        [{ text: 'Bulking Agresif (+1kg/minggu)', callback_data: 'recalc_tgt_bulking_agresif' }],
+        [{ text: '❌ Batal', callback_data: 'confirm_no' }]
+      ]
+    }
+  );
+}
+
+async function onRecalcTargetSelect(chatId, userId, targetVal) {
+  await setCache(`${userId}_recalc_target`, targetVal);
+  await setState(userId, 'AWAIT_RECALC_CATATAN');
+  return sendMessage(chatId,
+    '*Kalkulator Fitness - Langkah 7 dari 7* 📝\n\nMasukkan catatan tambahan (opsional):\n_Contoh: Cutting sambil bangun masa otot, sensitif laktosa, dll._',
+    {
+      inline_keyboard: [
+        [{ text: '⏭️ Lewati & Hitung Target', callback_data: 'skip_recalc_catatan' }],
+        [{ text: '❌ Batal', callback_data: 'confirm_no' }]
+      ]
+    }
+  );
+}
+
+async function onRecalcCatatanInput(chatId, userId, text) {
+  const tb = await getCache(`${userId}_recalc_tb`);
+  const bb = await getCache(`${userId}_recalc_bb`);
+  const usia = await getCache(`${userId}_recalc_usia`);
+  const gender = await getCache(`${userId}_recalc_gender`);
+  const aktivitas = await getCache(`${userId}_recalc_aktivitas`);
+  const target = await getCache(`${userId}_recalc_target`);
+  const catatan = text ? text.trim() : '';
+
+  if (!tb || !bb || !usia || !gender || !aktivitas || !target) {
+    await setState(userId, null);
+    await deleteRecalcCache(userId);
+    return sendMessage(chatId, 'Sesi expired. Silakan ulangi kalkulasi.', mainMenuKeyboard());
+  }
+
+  await setState(userId, null);
+
+  await sendChatAction(chatId, 'typing');
+  await sendMessage(chatId, '⏳ Menghitung ulang target gizi dengan AI...', null);
+
+  try {
+    const profile = { tb, bb, usia, gender, aktivitas, target, catatan };
+    const { recalculateTargets } = require('./groq');
+    const aiResult = await recalculateTargets(profile);
+
+    const finalProfile = { ...profile, targets: aiResult };
+    await setCache(`${userId}_recalc_result`, JSON.stringify(finalProfile));
+
+    let msg = '📊 *Hasil Kalkulasi Target Baru:*\n\n';
+    msg += `• BMR Est: *${aiResult.bmr || '-'} kcal*\n`;
+    msg += `• TDEE Est: *${aiResult.tdee || '-'} kcal*\n\n`;
+    msg += `🔥 *Rekomendasi Gizi Harian:*\n`;
+    msg += `• Kalori: *${aiResult.cal} kcal*\n`;
+    msg += `• Protein: *${aiResult.protein}g*\n`;
+    msg += `• Karbo: *${aiResult.carbs}g*\n`;
+    msg += `• Lemak: *${aiResult.fat}g*\n`;
+    msg += `• Serat: *${aiResult.fiber || 0}g*\n\n`;
+    msg += `🤖 *Catatan AI:*\n_${aiResult.notes || '-'}_\n\n`;
+    msg += 'Simpan perubahan profil ini?';
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [
+          { text: '✅ Simpan Profil', callback_data: 'save_profile_yes' },
+          { text: '❌ Batal', callback_data: 'confirm_no' }
+        ]
+      ]
+    });
+
+  } catch (err) {
+    console.error('onRecalcCatatanInput error:', err);
+    await deleteRecalcCache(userId);
+    return sendMessage(chatId, 'Gagal kalkulasi target: ' + err.message, {
+      inline_keyboard: [[{ text: 'Menu Utama', callback_data: 'menu' }]]
+    });
+  }
+}
+
+async function saveProfile(chatId, userId) {
+  const email = await getLinkedEmail(userId);
+  if (!email) return promptLogin(chatId, userId);
+
+  const raw = await getCache(`${userId}_recalc_result`);
+  if (!raw) return sendMessage(chatId, 'Data expired. Silakan kalkulasi ulang.', mainMenuKeyboard());
+
+  const finalProfile = JSON.parse(raw);
+  await deleteRecalcCache(userId);
+
+  await setFirebase(`users/${safe(email)}/lf_profile`, finalProfile);
+
+  return sendMessage(chatId, '✅ *Profil & Target Gizi berhasil diperbarui!*', mainMenuKeyboard());
+}
+
+async function deleteRecalcCache(userId) {
+  await deleteCache(`${userId}_recalc_tb`);
+  await deleteCache(`${userId}_recalc_bb`);
+  await deleteCache(`${userId}_recalc_usia`);
+  await deleteCache(`${userId}_recalc_gender`);
+  await deleteCache(`${userId}_recalc_aktivitas`);
+  await deleteCache(`${userId}_recalc_target`);
+  await deleteCache(`${userId}_recalc_catatan`);
+  await deleteCache(`${userId}_recalc_result`);
 }
 
 // ====================================================
