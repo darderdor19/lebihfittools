@@ -1,0 +1,12 @@
+{
+  "name": "lebihfit-telegram-bot",
+  "version": "1.0.0",
+  "description": "LebihFit Telegram Bot - hosted on Vercel",
+  "private": true,
+  "engines": {
+    "node": ">=18.x"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
