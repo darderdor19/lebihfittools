@@ -398,6 +398,7 @@ a{color:var(--accent);text-decoration:none}
 .mobile-logo{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 @media(max-width:768px){
+  html { font-size: 87.5%; }
   .sidebar{left:-220px !important;transform:translateX(0)}
   .sidebar.open{left:0 !important;box-shadow:8px 0 32px rgba(0,0,0,.5)}
   .sidebar-overlay{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;opacity:0;pointer-events:none;transition:.3s}
@@ -421,6 +422,12 @@ a{color:var(--accent);text-decoration:none}
     margin-top: -16px;
     border-bottom: 1px solid var(--border);
   }
+  .page-header h2{font-size:1.4rem}
+  .section-title{font-size:0.9rem}
+  .ring-value{font-size:1.2rem}
+  .avg-item .val{font-size:1.15rem}
+  .food-item-cal{font-size:0.95rem}
+  .result-item .val{font-size:1.2rem}
   .sidebar-profile{padding-bottom:80px}
   .page-header .btn-primary{width:100%}
   .form-actions{flex-direction:column}
