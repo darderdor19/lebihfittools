@@ -4,6 +4,7 @@
 const { getFirebase, setFirebase, toArray, safe, getState, setState, getCache, setCache, deleteCache, getLinkedEmail } = require('./firebase');
 const { sendMessage, sendChatAction, answerCallback } = require('./telegram');
 const { analyzeFood, sumNutrients } = require('./groq');
+const crypto = require('crypto');
 
 // ====================================================
 // UTILITIES
@@ -16,6 +17,11 @@ function escapeMarkdown(text) {
     str = str.replace(/_/g, ' ');
   }
   return str.replace(/[*_`\[]/g, '\\$&');
+}
+
+function getReportToken(userId) {
+  const secret = process.env.TELEGRAM_BOT_TOKEN || 'lebihfit-secret';
+  return crypto.createHmac('sha256', secret).update(userId.toString()).digest('hex').slice(0, 16);
 }
 
 function todayKey() {
@@ -184,6 +190,20 @@ async function handleCallback(cb) {
     );
   }
   if (data === 'confirm_delete_account_yes') return doDeleteAccount(chatId, userId);
+  if (data === 'pdf_report') {
+    const token = getReportToken(userId);
+    const host = process.env.VERCEL_URL || 'lebihfit-bot.vercel.app';
+    const reportUrl = `https://${host}/api/report?id=${userId}&token=${token}`;
+    return sendMessage(chatId,
+      '📊 *Laporan Gizi Mingguan LebihFit*\n\nKlik link di bawah ini untuk membuka dan mengunduh laporan gizi mingguan lu yang berformat PDF cantik:',
+      {
+        inline_keyboard: [
+          [{ text: '🌐 Buka Laporan PDF', url: reportUrl }],
+          [{ text: '⚙️ Settings', callback_data: 'settings' }]
+        ]
+      }
+    );
+  }
   if (data === 'hist_7') return showHistoryDays(chatId, email, 7);
   if (data === 'hist_14') return showHistoryDays(chatId, email, 14);
   if (data === 'hist_30') return showHistoryDays(chatId, email, 30);
@@ -766,6 +786,7 @@ async function showSettings(chatId, userId, email) {
           { text: '🚪 Logout', callback_data: 'logout' },
           { text: '⚠️ Hapus Akun', callback_data: 'delete_account_confirm' }
         ],
+        [{ text: '📊 Laporan Gizi (PDF)', callback_data: 'pdf_report' }],
         [{ text: '🏠 Menu Utama', callback_data: 'menu' }, { text: '🌐 Web App', url: 'https://darderdor19.github.io/lebihfittools/' }]
       ]
     });
