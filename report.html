@@ -411,7 +411,7 @@
           <div class="value" id="remainingCal">-</div>
         </div>
         <div class="summary-card">
-          <div class="label">Status Mingguan</div>
+          <div class="label" id="statusLabel">Status Mingguan</div>
           <div class="value" id="statusVal">-</div>
         </div>
       </div>
@@ -436,7 +436,7 @@
       </div>
 
       <div class="chart-container">
-        <div class="chart-title">Grafik Tren Kalori Mingguan</div>
+        <div class="chart-title" id="chartTitle">Grafik Tren Kalori Mingguan</div>
         <div id="chartSvgWrapper">
           <!-- Dynamically populated SVG -->
         </div>
@@ -633,6 +633,25 @@
         statusElement.textContent = '🔴 SURPLUS';
         statusElement.style.color = 'var(--accent)';
       }
+
+      // Update dynamic labels depending on range
+      let statusLabelText = 'Status Mingguan';
+      if (range === '30') statusLabelText = 'Status Bulanan';
+      else if (range === '90') statusLabelText = 'Status 3 Bulan';
+      else if (range === '180') statusLabelText = 'Status 6 Bulan';
+      else if (range === '365') statusLabelText = 'Status 1 Tahun';
+      else if (range === 'all') statusLabelText = 'Status All Time';
+      const statusLabelEl = document.getElementById('statusLabel');
+      if (statusLabelEl) statusLabelEl.textContent = statusLabelText;
+
+      let chartTitleText = 'Grafik Tren Kalori Mingguan';
+      if (range === '30') chartTitleText = 'Grafik Tren Kalori Bulanan';
+      else if (range === '90') chartTitleText = 'Grafik Tren Kalori 3 Bulan';
+      else if (range === '180') chartTitleText = 'Grafik Tren Kalori 6 Bulan';
+      else if (range === '365') chartTitleText = 'Grafik Tren Kalori 1 Tahun';
+      else if (range === 'all') chartTitleText = 'Grafik Tren Kalori All Time';
+      const chartTitleEl = document.getElementById('chartTitle');
+      if (chartTitleEl) chartTitleEl.textContent = chartTitleText;
 
       // 4. SVG Calorie Trend Line Chart Grouping
       let chartPoints = [];
