@@ -351,11 +351,9 @@ async function showDashboard(chatId, email) {
 
   if (logs.length > 0) {
     msg += '\n*Log Makanan:*\n';
-    const shown = logs.slice(-5);
-    shown.forEach((item, i) => {
+    logs.forEach((item, i) => {
       msg += `${i + 1}. ${escapeMarkdown(item.name)} - ${Math.round(item.cal)} kcal\n`;
     });
-    if (logs.length > 5) msg += `_...dan ${logs.length - 5} lainnya_\n`;
 
     try {
       const aiAnalysis = await getFirebase(`users/${safe(email)}/lf_analysis_${today}`);
