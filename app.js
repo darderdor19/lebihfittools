@@ -3551,8 +3551,8 @@ async function startProgressAnalysis() {
     
     // Check Cache
     const cacheParams = {
-        from: fromDate.getTime(),
-        to: toDate.getTime(),
+        from: fromDate.toISOString().slice(0, 10),
+        to: toDate.toISOString().slice(0, 10),
         food: foodChecked,
         act: actChecked,
         sleep: sleepChecked

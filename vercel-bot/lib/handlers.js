@@ -2863,8 +2863,33 @@ async function runProgressAnalysis(chatId, userId, email) {
       return sendMessage(chatId, `⚠️ *Tidak ada data* pada periode *${days} hari terakhir* untuk tipe analisis yang lu pilih.\n\nCoba catat makanan/kegiatan lu dulu atau ubah rentang periodenya.`);
     }
 
+    // Check Firebase Cache
+    const cachedData = await getFirebase(`users/${safeEmail}/lf_analysis_cache`);
+    if (cachedData && cachedData.params) {
+      const p = cachedData.params;
+      if (p.from === fromDate && p.to === toDate &&
+          p.food === config.food && p.act === config.activity && p.sleep === config.sleep) {
+          
+          let msg = `⚡ *Hasil Analisis Terakhir (Cache)* ⚡\n_Menampilkan data analisis yang sudah tersimpan untuk kombinasi ini._\n\n`;
+          if (cachedData.html) {
+            msg += cleanHtmlToMarkdown(cachedData.html);
+          } else {
+            msg += `Gagal membaca cache.`;
+          }
+          
+          return sendMessage(chatId, msg, {
+            inline_keyboard: [
+              [
+                { text: '🔙 Kembali', callback_data: 'progress_menu' },
+                { text: '🏠 Menu Utama', callback_data: 'menu' }
+              ]
+            ]
+          });
+      }
+    }
+
     // Show loading message
-    const loadingMsg = await sendMessage(chatId, `🤖 *Menghubungi Groq AI...*\nMemproses data progress lu selama ${days} hari terakhir untuk membuat analisis progress AI. Harap tunggu sebentar...`);
+    const loadingMsg = await sendMessage(chatId, `🤖 *Menghubungi Groq AI...*\nMemproses data progress lu selama ${days === 1 ? 'hari ini' : days + ' hari terakhir'} untuk membuat analisis progress AI. Harap tunggu sebentar...`);
     const loadingMsgId = loadingMsg && loadingMsg.result ? loadingMsg.result.message_id : null;
 
     // Build the AI Prompt based on selected types
@@ -2949,6 +2974,18 @@ async function runProgressAnalysis(chatId, userId, email) {
         </div>
         ${cleanHtml}
       `;
+      
+      // Save cache to Firebase
+      await setFirebase(`users/${safeEmail}/lf_analysis_cache`, {
+        params: {
+          from: fromDate,
+          to: toDate,
+          food: config.food,
+          act: config.activity,
+          sleep: config.sleep
+        },
+        html: html
+      });
     }
 
     if (loadingMsgId) {
