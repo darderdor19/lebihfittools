@@ -405,16 +405,17 @@ a{color:var(--accent);text-decoration:none}
   .sidebar-overlay.active{opacity:1;pointer-events:all}
   .main-content{margin-left:0 !important;padding:16px !important;padding-top:72px !important;width:100% !important}
   .mobile-topbar{display:flex !important;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:fixed;top:0;left:0;right:0;z-index:98}
-  .summary-cards{grid-template-columns:1fr}
-  .main-card{flex-direction:row;text-align:left;padding:20px 18px;gap:16px;align-items:center}
-  .ring-container{width:110px;height:110px;flex-shrink:0}
-  .ring-svg{width:110px;height:110px}
-  .ring-value{font-size:1.35rem}
-  .ring-label{font-size:0.72rem}
-  .card-info h3{font-size:0.95rem;margin-bottom:10px}
-  .cal-stats{flex-wrap:wrap;justify-content:flex-start;gap:12px}
-  .cal-stat span{font-size:1.15rem}
-  .cal-stat small{font-size:0.68rem}
+  .summary-cards{grid-template-columns:1fr !important}
+  .main-card{flex-direction:row !important;text-align:left !important;padding:18px 16px !important;gap:14px !important;align-items:center !important}
+  .ring-container{width:100px !important;height:100px !important;flex-shrink:0 !important}
+  .ring-svg{width:100px !important;height:100px !important}
+  .ring-value{font-size:1.25rem !important}
+  .ring-label{font-size:0.7rem !important}
+  .card-info{flex:1;min-width:0}
+  .card-info h3{font-size:0.92rem !important;margin-bottom:8px !important}
+  .cal-stats{flex-wrap:wrap !important;justify-content:flex-start !important;gap:10px 16px !important}
+  .cal-stat span{font-size:1.1rem !important}
+  .cal-stat small{font-size:0.67rem !important}
   .form-grid{grid-template-columns:1fr}
   .target-grid{grid-template-columns:1fr 1fr}
   .onboarding-card{padding:24px 20px;margin:20px auto;border-radius:0;border-left:none;border-right:none}
@@ -431,7 +432,7 @@ a{color:var(--accent);text-decoration:none}
   }
   .page-header h2{font-size:1.4rem}
   .section-title{font-size:0.9rem}
-  .ring-value{font-size:1.35rem}
+  /* ring-value already set above */
   .avg-item .val{font-size:1.15rem}
   .food-item-cal{font-size:0.95rem}
   .result-item .val{font-size:1.2rem}
