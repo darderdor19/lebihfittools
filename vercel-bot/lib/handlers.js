@@ -253,6 +253,16 @@ async function handleCallback(cb) {
   if (data === 'skip_recalc_catatan') return onRecalcCatatanInput(chatId, userId, null);
   if (data === 'save_profile_yes') return saveProfile(chatId, userId);
   if (data === 'manage_logs') return email ? showManageLogs(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'manage_food_logs') return email ? showManageFoodLogs(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'manage_act_logs') return email ? showManageActLogs(chatId, email) : promptLogin(chatId, userId);
+  if (data.startsWith('del_act_')) {
+    const actId = data.replace('del_act_', '');
+    return confirmDeleteAct(chatId, userId, email, actId);
+  }
+  if (data.startsWith('confirm_del_act_')) {
+    const actId = data.replace('confirm_del_act_', '');
+    return deleteActItem(chatId, userId, email, actId);
+  }
   if (data.startsWith('show_details_')) return; // do nothing
   if (data.startsWith('del_log_')) {
     const logId = data.replace('del_log_', '');
@@ -1242,6 +1252,19 @@ async function sendHelp(chatId) {
 // FOOD LOGS MANAGEMENT (EDIT & DELETE)
 // ====================================================
 async function showManageLogs(chatId, email) {
+  return sendMessage(chatId,
+    '✏️ *Kelola Log Hari Ini*\n\nPilih tipe log yang ingin lu kelola di bawah ini:',
+    {
+      inline_keyboard: [
+        [{ text: '🍽️ Kelola Log Makanan', callback_data: 'manage_food_logs' }],
+        [{ text: '💪 Kelola Log Aktivitas', callback_data: 'manage_act_logs' }],
+        [{ text: '📊 Dashboard', callback_data: 'dashboard' }]
+      ]
+    }
+  );
+}
+
+async function showManageFoodLogs(chatId, email) {
   const today = todayKey();
   const rawLogs = await getFirebase(`users/${safe(email)}/lf_logs/${today}`);
   const logs = toArray(rawLogs);
@@ -1252,7 +1275,7 @@ async function showManageLogs(chatId, email) {
       {
         inline_keyboard: [
           [{ text: '🍽️ Log Makanan Baru', callback_data: 'log_food' }],
-          [{ text: '📊 Dashboard', callback_data: 'dashboard' }]
+          [{ text: '⬅️ Kembali', callback_data: 'manage_logs' }]
         ]
       }
     );
@@ -1275,10 +1298,122 @@ async function showManageLogs(chatId, email) {
   });
 
   inline_keyboard.push([
-    { text: '📊 Kembali ke Dashboard', callback_data: 'dashboard' }
+    { text: '⬅️ Kembali', callback_data: 'manage_logs' }
   ]);
 
   return sendMessage(chatId, msg, { inline_keyboard });
+}
+
+async function showManageActLogs(chatId, email) {
+  const today = todayKey();
+  const rawActs = await getFirebase(`users/${safe(email)}/lf_activities/${today}`);
+  const acts = toArray(rawActs);
+
+  if (acts.length === 0) {
+    return sendMessage(chatId,
+      '✏️ *Kelola Log Aktivitas*\n\nBelum ada aktivitas tercatat hari ini.',
+      {
+        inline_keyboard: [
+          [{ text: '🏃 Catat Kegiatan Baru', callback_data: 'log_activity' }],
+          [{ text: '⬅️ Kembali', callback_data: 'manage_logs' }]
+        ]
+      }
+    );
+  }
+
+  let msg = '✏️ *Kelola Log Aktivitas Hari Ini*\n\nPilih aktivitas di bawah yang ingin lu hapus:\n';
+  const inline_keyboard = [];
+
+  acts.forEach((act, index) => {
+    let typeLabel = act.type;
+    let detail = '';
+    
+    if (act.type === 'workout') {
+      typeLabel = '💪 Workout';
+      detail = (act.exercises || []).map(e => `${e.name} (${(e.sets || []).length}s)`).join(', ');
+    } else if (act.type === 'gym') {
+      typeLabel = '🏋️ Gym';
+      detail = (act.muscles || []).map(m => m.muscle).join(', ');
+    } else if (act.type === 'cardio') {
+      typeLabel = '❤️ Kardio';
+      detail = `${act.name} · ${act.durationMin}m`;
+    } else if (act.type === 'other') {
+      typeLabel = '🏃 Lainnya';
+      detail = `${act.name} · ${act.durationMin}m`;
+    } else if (act.type === 'sleep') {
+      typeLabel = '😴 Tidur';
+      detail = `${act.hours} jam · ${act.quality}`;
+    }
+
+    msg += `\n*${index + 1}. ${typeLabel}*\n${escapeMarkdown(detail)}\n`;
+    if (act.burn) {
+      msg += `Kalori terbakar: *${Math.round(act.burn.kcal)} kcal*\n`;
+    }
+
+    inline_keyboard.push([
+      { text: `🗑️ Hapus ${typeLabel}`, callback_data: `del_act_${act.id}` }
+    ]);
+  });
+
+  inline_keyboard.push([
+    { text: '⬅️ Kembali', callback_data: 'manage_logs' }
+  ]);
+
+  return sendMessage(chatId, msg, { inline_keyboard });
+}
+
+async function confirmDeleteAct(chatId, userId, email, actId) {
+  const today = todayKey();
+  const rawActs = await getFirebase(`users/${safe(email)}/lf_activities/${today}`);
+  const acts = toArray(rawActs);
+  const act = acts.find(a => a.id === actId);
+
+  if (!act) {
+    return sendMessage(chatId, 'Aktivitas tidak ditemukan atau sudah dihapus.', {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_act_logs' }]]
+    });
+  }
+
+  let typeLabel = act.type === 'workout' ? 'Workout' : act.type === 'gym' ? 'Gym' : act.type === 'cardio' ? 'Kardio' : act.type === 'other' ? 'Lainnya' : 'Tidur';
+
+  return sendMessage(chatId,
+    `Apakah lu yakin ingin menghapus log aktivitas *${typeLabel}*?`,
+    {
+      inline_keyboard: [
+        [
+          { text: '🗑️ Ya, Hapus', callback_data: `confirm_del_act_${actId}` },
+          { text: '❌ Batal', callback_data: 'manage_act_logs' }
+        ]
+      ]
+    }
+  );
+}
+
+async function deleteActItem(chatId, userId, email, actId) {
+  const today = todayKey();
+  const actsPath = `users/${safe(email)}/lf_activities/${today}`;
+  const rawActs = await getFirebase(actsPath);
+  
+  if (rawActs && typeof rawActs === 'object') {
+    if (rawActs[actId]) {
+      delete rawActs[actId];
+      await setFirebase(actsPath, rawActs);
+    } else {
+      let found = false;
+      for (const k in rawActs) {
+        if (rawActs[k] && (rawActs[k].id === actId || rawActs[k].id === actId)) {
+          delete rawActs[k];
+          found = true;
+        }
+      }
+      if (found) {
+        await setFirebase(actsPath, rawActs);
+      }
+    }
+  }
+
+  await sendMessage(chatId, '✅ Aktivitas berhasil dihapus!');
+  return showManageActLogs(chatId, email);
 }
 
 async function confirmDeleteLog(chatId, userId, email, logId) {
@@ -1289,7 +1424,7 @@ async function confirmDeleteLog(chatId, userId, email, logId) {
 
   if (!item) {
     return sendMessage(chatId, 'Makanan tidak ditemukan atau sudah dihapus.', {
-      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_food_logs' }]]
     });
   }
 
@@ -1299,7 +1434,7 @@ async function confirmDeleteLog(chatId, userId, email, logId) {
       inline_keyboard: [
         [
           { text: '🗑️ Ya, Hapus', callback_data: `confirm_del_${logId}` },
-          { text: '❌ Batal', callback_data: 'manage_logs' }
+          { text: '❌ Batal', callback_data: 'manage_food_logs' }
         ]
       ]
     }
@@ -1316,7 +1451,7 @@ async function deleteLogItem(chatId, userId, email, logId) {
   await setFirebase(logsPath, updatedLogs);
 
   await sendMessage(chatId, '✅ Makanan berhasil dihapus!');
-  return showManageLogs(chatId, email);
+  return showManageFoodLogs(chatId, email);
 }
 
 async function startEditLogWizard(chatId, userId, email, logId) {
@@ -1327,7 +1462,7 @@ async function startEditLogWizard(chatId, userId, email, logId) {
 
   if (!item) {
     return sendMessage(chatId, 'Makanan tidak ditemukan.', {
-      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_food_logs' }]]
     });
   }
 
@@ -1340,7 +1475,7 @@ async function startEditLogWizard(chatId, userId, email, logId) {
   await setState(userId, 'AWAIT_EDIT_NAME');
   return sendMessage(chatId,
     `✏️ *Edit Makanan - Langkah 1 dari 3*\n\nMakanan saat ini: *${escapeMarkdown(item.name)}*\n\nMasukkan nama makanan yang baru:\n_(Atau ketik /skip jika tidak ingin mengubah nama)_`,
-    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'manage_logs' }]] }
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'manage_food_logs' }]] }
   );
 }
 
@@ -1358,7 +1493,7 @@ async function onEditNameInput(chatId, userId, text) {
   await setState(userId, 'AWAIT_EDIT_PORTION');
   return sendMessage(chatId,
     `✏️ *Edit Makanan - Langkah 2 dari 3*\n\nPorsi saat ini: *${escapeMarkdown(origPortion)}*\n\nMasukkan porsi makanan yang baru:\n_(Atau ketik /skip jika tidak ingin mengubah porsi)_`,
-    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'manage_logs' }]] }
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'manage_food_logs' }]] }
   );
 }
 
@@ -1377,7 +1512,7 @@ async function onEditPortionInput(chatId, userId, text) {
     {
       inline_keyboard: [
         [{ text: '⏭️ Lewati & Analisis Ulang', callback_data: 'skip_edit_desc' }],
-        [{ text: '❌ Batal', callback_data: 'manage_logs' }]
+        [{ text: '❌ Batal', callback_data: 'manage_food_logs' }]
       ]
     }
   );
@@ -1443,7 +1578,7 @@ async function onEditDescInput(chatId, userId, text) {
       inline_keyboard: [
         [
           { text: '✅ Ya, Update', callback_data: 'confirm_edit_yes' },
-          { text: '❌ Batal', callback_data: 'manage_logs' }
+          { text: '❌ Batal', callback_data: 'manage_food_logs' }
         ]
       ]
     });
@@ -1452,7 +1587,7 @@ async function onEditDescInput(chatId, userId, text) {
     console.error('onEditDescInput error:', err);
     await deleteEditCache(userId);
     return sendMessage(chatId, 'Gagal analisis AI: ' + err.message, {
-      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_food_logs' }]]
     });
   }
 }
@@ -1462,7 +1597,7 @@ async function saveEditedLog(chatId, userId, email) {
   if (!rawResult) {
     await deleteEditCache(userId);
     return sendMessage(chatId, 'Data expired. Silakan edit ulang.', {
-      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_logs' }]]
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'manage_food_logs' }]]
     });
   }
 
@@ -1491,7 +1626,7 @@ async function saveEditedLog(chatId, userId, email) {
 
   await setFirebase(logsPath, updatedLogs);
   await sendMessage(chatId, '✅ Log makanan berhasil diperbarui!');
-  return showManageLogs(chatId, email);
+  return showManageFoodLogs(chatId, email);
 }
 
 async function deleteEditCache(userId) {
