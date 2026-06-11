@@ -2,7 +2,8 @@
 let currentChart = null;
 let currentMacroChart = null;
 let currentActivityChart = null;
-let energyComparisonChart = null;
+let energyCalChart = null;
+let energyFatChart = null;
 let progressAnalysisChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1315,9 +1316,10 @@ function renderTodayActivities() {
             ).join('<br>');
             typeLabel = 'Workout';
         } else if (act.type === 'gym') {
-            detail = act.muscles.map(m =>
-                `<b>${MUSCLE_LABELS[m.muscle] || m.muscle}:</b> ${m.variations.map(v => v.name || '(tanpa nama)').join(', ')}`
-            ).join('<br>');
+            detail = act.muscles.map(m => {
+                const varList = (m.variations || []).map(v => `&nbsp;&nbsp;• ${v.name || '(tanpa nama)'}`).join('<br>');
+                return `<b>${MUSCLE_LABELS[m.muscle] || m.muscle}</b>${m.restTime ? ` <span style="font-size:0.75rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : ''}<br>${varList}`;
+            }).join('<br><br>');
             typeLabel = 'Gym';
         } else if (act.type === 'cardio') {
             const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
@@ -1796,11 +1798,19 @@ function renderDashboard() {
     const elFatBurnedToday = document.getElementById('totalFatBurnedToday');
     if (elFatBurnedToday) elFatBurnedToday.textContent = `${totalFatBurned.toFixed(1)} g`;
     
+    // Kalori & Lemak masuk (from food logs)
+    const elCalIn = document.getElementById('statCalIn');
+    if (elCalIn) elCalIn.textContent = `${Math.round(calConsumed)} kcal`;
+    const fatIntake = totals.fat || 0;
+    const elFatIn = document.getElementById('statFatIn');
+    if (elFatIn) elFatIn.textContent = `${fatIntake.toFixed(1)} g`;
+    
     document.getElementById('calConsumed').textContent = Math.round(calConsumed);
     document.getElementById('calTarget').textContent = calTarget;
     document.getElementById('calRemaining').textContent = Math.max(0, calTarget - Math.round(calConsumed) + Math.round(totalBurned));
     
-    renderEnergyComparisonChart(calConsumed, totalBurned);
+    renderEnergyCalChart(calConsumed, totalBurned);
+    renderEnergyFatChart(fatIntake, totalFatBurned);
     
     const calRing = document.getElementById('calRing');
     const circumference = 2 * Math.PI * 50; // r=50
@@ -1925,7 +1935,7 @@ function renderDashboardActivityCard() {
                 detail = (act.exercises || []).map(e => `${e.name} (${(e.sets || []).length}s)`).join(' · ');
             } else if (act.type === 'gym') {
                 badge = '🏋️ Gym';
-                detail = (act.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+                detail = (act.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(' · ');
             } else if (act.type === 'cardio') {
                 badge = '❤️ Kardio';
                 detail = `${act.name} · ${act.durationMin}m${act.distanceKm ? ` · ${act.distanceKm}km` : ''}`;
@@ -1937,10 +1947,15 @@ function renderDashboardActivityCard() {
                 const h = parseFloat(act.hours || 0);
                 detail = `${Math.floor(h)}j ${Math.round((h % 1) * 60)}m · ${act.quality === 'lelap' ? '🌙 Lelap' : act.quality === 'biasa' ? '💤 Biasa' : '😵 Kurang'}`;
             }
-            return `<div class="dash-activity-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            // Burn badge for applicable types
+            const burnHtml = (act.burn && act.type !== 'sleep')
+                ? `<div style="margin-top:3px;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.25);border-radius:10px;font-size:0.7rem;font-weight:700;color:var(--success);"><i data-lucide="flame" style="width:10px;height:10px;"></i>${act.burn.kcal} kcal terbakar · Lemak ${act.burn.fatG}g</div>`
+                : '';
+            return `<div class="dash-activity-item" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
                 <div style="flex:1; min-width:0;">
                     <div class="type-badge" style="margin-bottom:2px;">${badge}</div>
                     <div class="act-detail" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${detail.replace(/"/g, '&quot;')}">${detail}</div>
+                    ${burnHtml}
                 </div>
                 <div style="display:flex; gap:4px; flex-shrink:0;">
                     <button class="activity-log-edit" onclick="editActivity('${act.id}')" title="Edit" style="background:none; border:none; color:var(--text3); cursor:pointer; padding:4px; display:inline-flex; align-items:center; justify-content:center;">
@@ -3250,33 +3265,25 @@ function styleAIHtml(rawHtml) {
     return doc.body.innerHTML;
 }
 
-function renderEnergyComparisonChart(intake, burned) {
-    const canvas = document.getElementById('energyComparisonChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    if (energyComparisonChart) {
-        energyComparisonChart.destroy();
-    }
-    
-    energyComparisonChart = new Chart(ctx, {
+function _makeEnergyChartConfig(label1, val1, color1, label2, val2, color2, unit) {
+    return {
         type: 'bar',
         data: {
-            labels: ['Energi Hari Ini'],
+            labels: ['Masuk', 'Keluar'],
             datasets: [
                 {
-                    label: 'Asupan (Intake)',
-                    data: [Math.round(intake)],
-                    backgroundColor: 'rgba(108, 99, 255, 0.85)',
-                    borderColor: '#6c63ff',
+                    label: label1,
+                    data: [val1, null],
+                    backgroundColor: color1 + 'cc',
+                    borderColor: color1,
                     borderWidth: 1,
                     borderRadius: 6
                 },
                 {
-                    label: 'Terbakar (Out)',
-                    data: [Math.round(burned)],
-                    backgroundColor: 'rgba(255, 77, 109, 0.85)',
-                    borderColor: '#ff4d6d',
+                    label: label2,
+                    data: [null, val2],
+                    backgroundColor: color2 + 'cc',
+                    borderColor: color2,
                     borderWidth: 1,
                     borderRadius: 6
                 }
@@ -3286,31 +3293,45 @@ function renderEnergyComparisonChart(intake, burned) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: true,
-                    labels: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 11 } }
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
-                            return ` ${context.dataset.label}: ${context.raw} kcal`;
-                        }
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw : 0} ${unit}`
                     }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } }
+                    stacked: false,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#8caebf', font: { family: '"Inter",sans-serif', size: 9 } }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 11 } }
+                    ticks: { color: '#8caebf', font: { family: '"Inter",sans-serif', size: 10 } }
                 }
             }
         }
-    });
+    };
+}
+
+function renderEnergyCalChart(intake, burned) {
+    const canvas = document.getElementById('energyCalChart');
+    if (!canvas) return;
+    if (energyCalChart) { energyCalChart.destroy(); energyCalChart = null; }
+    energyCalChart = new Chart(canvas.getContext('2d'),
+        _makeEnergyChartConfig('Masuk', Math.round(intake), '#6c63ff', 'Keluar', Math.round(burned), '#ff4d6d', 'kcal')
+    );
+}
+
+function renderEnergyFatChart(fatIntake, fatBurned) {
+    const canvas = document.getElementById('energyFatChart');
+    if (!canvas) return;
+    if (energyFatChart) { energyFatChart.destroy(); energyFatChart = null; }
+    energyFatChart = new Chart(canvas.getContext('2d'),
+        _makeEnergyChartConfig('Masuk', parseFloat(fatIntake.toFixed(1)), '#a78bfa', 'Keluar', parseFloat(fatBurned.toFixed(1)), '#ffab40', 'g')
+    );
 }
 
 // ============================================================

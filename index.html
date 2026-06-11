@@ -319,17 +319,34 @@
         <div class="section-card" id="energyComparisonCard">
           <h3 class="section-title"><i data-lucide="scale" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Perbandingan Energi Hari Ini</h3>
           <div class="comparison-layout" style="display: flex; flex-direction: column; gap: 16px;">
-            <div class="comparison-chart-container" style="position: relative; height: 180px; width: 100%;">
-              <canvas id="energyComparisonChart"></canvas>
-            </div>
-            <div class="comparison-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center;">
-              <div class="comp-stat-box" style="background: var(--surface2); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm);">
-                <div style="font-size: 0.78rem; color: var(--text2);">Total Kalori Keluar</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: var(--danger); margin-top: 4px;" id="totalCalBurnedToday">0 kcal</div>
+            <!-- Dual charts: Kalori & Lemak -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <div style="font-size:0.75rem;color:var(--text2);text-align:center;margin-bottom:6px;font-weight:600;letter-spacing:0.04em;">⚡ KALORI (kcal)</div>
+                <div style="position:relative;height:160px;"><canvas id="energyCalChart"></canvas></div>
               </div>
-              <div class="comp-stat-box" style="background: var(--surface2); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm);">
-                <div style="font-size: 0.78rem; color: var(--text2);">Total Lemak Terbakar</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: #ffab40; margin-top: 4px;" id="totalFatBurnedToday">0 g</div>
+              <div>
+                <div style="font-size:0.75rem;color:var(--text2);text-align:center;margin-bottom:6px;font-weight:600;letter-spacing:0.04em;">🔥 LEMAK (g)</div>
+                <div style="position:relative;height:160px;"><canvas id="energyFatChart"></canvas></div>
+              </div>
+            </div>
+            <!-- 4 stat boxes -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center;">
+              <div class="comp-stat-box" style="background:var(--surface2);border:1px solid rgba(108,99,255,0.35);padding:10px;border-radius:var(--radius-sm);">
+                <div style="font-size:0.7rem;color:var(--text2);">Kalori Masuk</div>
+                <div style="font-size:1.05rem;font-weight:700;color:#6c63ff;margin-top:4px;" id="statCalIn">0 kcal</div>
+              </div>
+              <div class="comp-stat-box" style="background:var(--surface2);border:1px solid rgba(255,77,109,0.35);padding:10px;border-radius:var(--radius-sm);">
+                <div style="font-size:0.7rem;color:var(--text2);">Kalori Keluar</div>
+                <div style="font-size:1.05rem;font-weight:700;color:var(--danger);margin-top:4px;" id="totalCalBurnedToday">0 kcal</div>
+              </div>
+              <div class="comp-stat-box" style="background:var(--surface2);border:1px solid rgba(108,99,255,0.25);padding:10px;border-radius:var(--radius-sm);">
+                <div style="font-size:0.7rem;color:var(--text2);">Lemak Masuk</div>
+                <div style="font-size:1.05rem;font-weight:700;color:#a78bfa;margin-top:4px;" id="statFatIn">0 g</div>
+              </div>
+              <div class="comp-stat-box" style="background:var(--surface2);border:1px solid rgba(255,171,64,0.35);padding:10px;border-radius:var(--radius-sm);">
+                <div style="font-size:0.7rem;color:var(--text2);">Lemak Keluar</div>
+                <div style="font-size:1.05rem;font-weight:700;color:#ffab40;margin-top:4px;" id="totalFatBurnedToday">0 g</div>
               </div>
             </div>
           </div>
