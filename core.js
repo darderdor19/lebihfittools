@@ -376,7 +376,7 @@ Hitung estimasi:
 Jawab HANYA dengan JSON valid format berikut tanpa markdown/teks lain:
 {"kcal":0,"fatG":0,"carbG":0,"proteinG":0,"analysis":"isi feedback di sini"}`;
 
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'meta-llama/llama-3.3-70b-versatile');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   try {
