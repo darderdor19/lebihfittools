@@ -596,13 +596,19 @@
 
         <!-- ===== OLAHRAGA PANEL ===== -->
         <div id="actPanelSport">
-          <!-- Sub-tabs Workout / Gym -->
+          <!-- Sub-tabs Workout / Gym / Cardio / Other -->
           <div class="workout-sub-tabs">
             <button class="workout-sub-tab active" id="wTabWorkout" onclick="switchWorkoutTab('workout')">
               <i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Workout
             </button>
             <button class="workout-sub-tab" id="wTabGym" onclick="switchWorkoutTab('gym')">
               <i data-lucide="dumbbell" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Gym
+            </button>
+            <button class="workout-sub-tab" id="wTabCardio" onclick="switchWorkoutTab('cardio')">
+              <i data-lucide="heart" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Kardio
+            </button>
+            <button class="workout-sub-tab" id="wTabOther" onclick="switchWorkoutTab('other')">
+              <i data-lucide="more-horizontal" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Lainnya
             </button>
           </div>
 
@@ -714,6 +720,74 @@
 
             <button class="btn-primary btn-full" id="btnSaveGym" onclick="saveGymSession()" style="display:none;margin-top:12px;background:var(--success);">
               <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Gym
+            </button>
+          </div>
+
+          <!-- CARDIO PANEL -->
+          <div id="wPanelCardio" class="section-card" style="display:none;">
+            <h3 class="section-title"><i data-lucide="heart" style="display:inline-block;vertical-align:text-bottom;margin-right:6px;color:var(--accent);"></i> Catat Kardio</h3>
+            <div class="preset-label">Jenis Kardio:</div>
+            <div class="preset-chips">
+              <button class="preset-chip" onclick="selectCardioPreset('Lari (Running)')">Lari</button>
+              <button class="preset-chip" onclick="selectCardioPreset('Bersepeda (Cycling)')">Sepeda</button>
+              <button class="preset-chip" onclick="selectCardioPreset('Berenang (Swimming)')">Renang</button>
+              <button class="preset-chip" onclick="selectCardioPreset('Jalan Santai (Walking)')">Jalan Santai</button>
+              <button class="preset-chip" onclick="selectCardioPreset('Treadmill')">Treadmill</button>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label>Nama Aktivitas</label>
+              <input type="text" id="cardioName" placeholder="Contoh: Lari Pagi" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Durasi (menit)</label>
+              <input type="number" id="cardioDuration" placeholder="Contoh: 30" min="1" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Jarak (km) - Opsional</label>
+              <input type="number" id="cardioDistance" placeholder="Contoh: 5" min="0" step="0.1" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Intensitas</label>
+              <select id="cardioIntensity" class="form-input">
+                <option value="low">Ringan</option>
+                <option value="medium" selected>Sedang</option>
+                <option value="high">Tinggi</option>
+              </select>
+            </div>
+            <button class="btn-primary btn-full" id="btnSaveCardio" onclick="saveCardioSession()" style="margin-top:16px;background:var(--success);">
+              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Kardio
+            </button>
+          </div>
+
+          <!-- OTHER ACTIVITY PANEL -->
+          <div id="wPanelOther" class="section-card" style="display:none;">
+            <h3 class="section-title"><i data-lucide="more-horizontal" style="display:inline-block;vertical-align:text-bottom;margin-right:6px;color:var(--accent);"></i> Catat Aktivitas Lainnya</h3>
+            <div class="preset-label">Aktivitas Populer:</div>
+            <div class="preset-chips">
+              <button class="preset-chip" onclick="selectOtherPreset('Badminton')">Badminton</button>
+              <button class="preset-chip" onclick="selectOtherPreset('Futsal / Sepakbola')">Futsal</button>
+              <button class="preset-chip" onclick="selectOtherPreset('Yoga')">Yoga</button>
+              <button class="preset-chip" onclick="selectOtherPreset('Basket')">Basket</button>
+              <button class="preset-chip" onclick="selectOtherPreset('Lompat Tali (Jump Rope)')">Lompat Tali</button>
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label>Nama Aktivitas</label>
+              <input type="text" id="otherActName" placeholder="Contoh: Main Badminton" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Durasi (menit)</label>
+              <input type="number" id="otherActDuration" placeholder="Contoh: 45" min="1" class="form-input">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Intensitas</label>
+              <select id="otherActIntensity" class="form-input">
+                <option value="low">Ringan</option>
+                <option value="medium" selected>Sedang</option>
+                <option value="high">Tinggi</option>
+              </select>
+            </div>
+            <button class="btn-primary btn-full" id="btnSaveOther" onclick="saveOtherSession()" style="margin-top:16px;background:var(--success);">
+              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Lainnya
             </button>
           </div>
         </div>

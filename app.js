@@ -253,7 +253,15 @@ function switchWorkoutTab(tab) {
     document.querySelectorAll('.workout-sub-tab').forEach(b => b.classList.remove('active'));
     document.getElementById('wPanelWorkout').style.display = tab === 'workout' ? '' : 'none';
     document.getElementById('wPanelGym').style.display = tab === 'gym' ? '' : 'none';
-    document.getElementById(tab === 'workout' ? 'wTabWorkout' : 'wTabGym').classList.add('active');
+    document.getElementById('wPanelCardio').style.display = tab === 'cardio' ? '' : 'none';
+    document.getElementById('wPanelOther').style.display = tab === 'other' ? '' : 'none';
+    
+    let activeTabId = 'wTabWorkout';
+    if (tab === 'gym') activeTabId = 'wTabGym';
+    else if (tab === 'cardio') activeTabId = 'wTabCardio';
+    else if (tab === 'other') activeTabId = 'wTabOther';
+    
+    document.getElementById(activeTabId).classList.add('active');
 }
 
 function switchHistoryMainTab(tab) {
@@ -271,6 +279,16 @@ let _workoutSetCount = 1;
 function selectWorkoutPreset(name) {
     document.getElementById('workoutExName').value = name;
     document.getElementById('workoutExName').focus();
+}
+
+function selectCardioPreset(name) {
+    document.getElementById('cardioName').value = name;
+    document.getElementById('cardioName').focus();
+}
+
+function selectOtherPreset(name) {
+    document.getElementById('otherActName').value = name;
+    document.getElementById('otherActName').focus();
 }
 
 function addWorkoutSet() {
@@ -336,6 +354,8 @@ function addWorkoutExercise() {
 // MET values per intensity
 const MET_WORKOUT = { low: 3.5, medium: 5.5, high: 8.0 };
 const MET_GYM     = { low: 3.0, medium: 5.0, high: 6.5 };
+const MET_CARDIO  = { low: 4.5, medium: 7.0, high: 9.5 };
+const MET_OTHER   = { low: 3.5, medium: 5.5, high: 7.5 };
 // Ratio of energy from fat/carb/protein during exercise
 const BURN_RATIO  = { fat: 0.30, carb: 0.60, protein: 0.10 }; // kcal proportion
 // Fat: 9 kcal/g, Carb: 4 kcal/g, Protein: 4 kcal/g
@@ -427,6 +447,14 @@ function saveGymSession() {
     handleWorkoutOrGymSave('gym');
 }
 
+function saveCardioSession() {
+    handleWorkoutOrGymSave('cardio');
+}
+
+function saveOtherSession() {
+    handleWorkoutOrGymSave('other');
+}
+
 async function handleWorkoutOrGymSave(type) {
     let item = null;
     const profile = getProfile() || {};
@@ -487,20 +515,62 @@ async function handleWorkoutOrGymSave(type) {
             burn: null,
             createdAt: Date.now()
         };
+    } else if (type === 'cardio') {
+        const cardioName = document.getElementById('cardioName').value.trim();
+        const cardioDuration = parseFloat(document.getElementById('cardioDuration').value) || 0;
+        const cardioDistance = parseFloat(document.getElementById('cardioDistance').value) || 0;
+        const cardioIntensity = document.getElementById('cardioIntensity').value;
+        
+        if (!cardioName) { showToast('Nama kardio tidak boleh kosong', 'error'); return; }
+        if (cardioDuration <= 0) { showToast('Durasi harus lebih dari 0 menit', 'error'); return; }
+        
+        item = {
+            id: uid(),
+            date: todayKey(),
+            type: 'cardio',
+            name: cardioName,
+            durationMin: cardioDuration,
+            distanceKm: cardioDistance,
+            intensity: cardioIntensity,
+            burn: null,
+            createdAt: Date.now()
+        };
+    } else if (type === 'other') {
+        const otherActName = document.getElementById('otherActName').value.trim();
+        const otherActDuration = parseFloat(document.getElementById('otherActDuration').value) || 0;
+        const otherActIntensity = document.getElementById('otherActIntensity').value;
+        
+        if (!otherActName) { showToast('Nama aktivitas tidak boleh kosong', 'error'); return; }
+        if (otherActDuration <= 0) { showToast('Durasi harus lebih dari 0 menit', 'error'); return; }
+        
+        item = {
+            id: uid(),
+            date: todayKey(),
+            type: 'other',
+            name: otherActName,
+            durationMin: otherActDuration,
+            intensity: otherActIntensity,
+            burn: null,
+            createdAt: Date.now()
+        };
     }
     
     const apiKey = getApiKey();
     if (!apiKey) {
         showToast('Menggunakan kalkulasi standar (API Key tidak ditemukan)', 'info');
-        const intensity = 'medium';
-        const met = type === 'workout' ? MET_WORKOUT[intensity] : MET_GYM[intensity];
+        const intensity = item.intensity || 'medium';
+        let met = 5.0;
+        if (type === 'workout') met = MET_WORKOUT[intensity] || 5.5;
+        else if (type === 'gym') met = MET_GYM[intensity] || 5.0;
+        else if (type === 'cardio') met = MET_CARDIO[intensity] || 7.0;
+        else if (type === 'other') met = MET_OTHER[intensity] || 5.5;
         const burn = calcBurnedCalories(met, item.durationMin || 30);
         item.burn = burn;
         executeSaveActivity(item);
         return;
     }
     
-    const saveBtnId = type === 'workout' ? 'btnSaveWorkout' : 'btnSaveGym';
+    const saveBtnId = type === 'workout' ? 'btnSaveWorkout' : type === 'gym' ? 'btnSaveGym' : type === 'cardio' ? 'btnSaveCardio' : 'btnSaveOther';
     const saveBtn = document.getElementById(saveBtnId);
     if (!saveBtn) return;
     const origText = saveBtn.innerHTML;
@@ -526,17 +596,25 @@ async function handleWorkoutOrGymSave(type) {
     } catch (error) {
         console.error(error);
         showToast('AI Error: ' + error.message + '. Menyimpan dengan kalkulasi standar.', 'error');
-        const intensity = 'medium';
-        const met = type === 'workout' ? MET_WORKOUT[intensity] : MET_GYM[intensity];
+        const intensity = item.intensity || 'medium';
+        let met = 5.0;
+        if (type === 'workout') met = MET_WORKOUT[intensity] || 5.5;
+        else if (type === 'gym') met = MET_GYM[intensity] || 5.0;
+        else if (type === 'cardio') met = MET_CARDIO[intensity] || 7.0;
+        else if (type === 'other') met = MET_OTHER[intensity] || 5.5;
         const burn = calcBurnedCalories(met, item.durationMin || 30);
         item.burn = burn;
         executeSaveActivity(item);
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = origText;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origText;
+        }
         if (window.lucide) lucide.createIcons();
     }
 }
+
+let _editingActivityId = null;
 
 function showWorkoutAiModal(item) {
     const modal = document.getElementById('workoutAiModal');
@@ -544,6 +622,9 @@ function showWorkoutAiModal(item) {
     if (!modal || !content) return;
     
     const isGym = item.type === 'gym';
+    const isWorkout = item.type === 'workout';
+    const isCardio = item.type === 'cardio';
+    const isOther = item.type === 'other';
     let activitySummary = '';
     
     if (isGym) {
@@ -551,8 +632,12 @@ function showWorkoutAiModal(item) {
             const vars = m.variations.map(v => `${v.name} (${v.sets.length} set)`).join(', ');
             return `<strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>: ${vars}`;
         }).join('<br>');
-    } else {
+    } else if (isWorkout) {
         activitySummary = (item.exercises || []).map(ex => `<strong>${ex.name}</strong> (${ex.sets.length} set)`).join('<br>');
+    } else if (isCardio) {
+        activitySummary = `<strong>Kardio: ${item.name}</strong><br>Durasi: ${item.durationMin} menit${item.distanceKm ? `, Jarak: ${item.distanceKm} km` : ''}<br>Intensitas: ${item.intensity === 'low' ? 'Ringan' : item.intensity === 'medium' ? 'Sedang' : 'Tinggi'}`;
+    } else if (isOther) {
+        activitySummary = `<strong>Aktivitas Lainnya: ${item.name}</strong><br>Durasi: ${item.durationMin} menit<br>Intensitas: ${item.intensity === 'low' ? 'Ringan' : item.intensity === 'medium' ? 'Sedang' : 'Tinggi'}`;
     }
     
     content.innerHTML = `
@@ -611,7 +696,31 @@ function closeWorkoutAiModal() {
 }
 
 function executeSaveActivity(item) {
-    saveActivity(item);
+    if (_editingActivityId) {
+        const acts = getActivities();
+        let updated = false;
+        for (const key in acts) {
+            const idx = acts[key].findIndex(a => a.id === _editingActivityId);
+            if (idx !== -1) {
+                item.id = _editingActivityId;
+                item.date = key; // Preserve original log date
+                acts[key][idx] = item;
+                updated = true;
+                break;
+            }
+        }
+        if (updated) {
+            setActivities(acts);
+            showToast('Aktivitas berhasil diperbarui!', 'success');
+        } else {
+            saveActivity(item);
+            showToast('Aktivitas berhasil disimpan!', 'success');
+        }
+        _editingActivityId = null;
+    } else {
+        saveActivity(item);
+        showToast('Aktivitas berhasil disimpan!', 'success');
+    }
     
     if (item.type === 'workout') {
         _workoutSession = [];
@@ -631,12 +740,87 @@ function executeSaveActivity(item) {
         document.querySelectorAll('.muscle-chip').forEach(c => c.classList.remove('active'));
         document.getElementById('gymMuscleInputs').innerHTML = '';
         document.getElementById('btnSaveGym').style.display = 'none';
+    } else if (item.type === 'cardio') {
+        document.getElementById('cardioName').value = '';
+        document.getElementById('cardioDuration').value = '';
+        document.getElementById('cardioDistance').value = '';
+        document.getElementById('cardioIntensity').value = 'medium';
+    } else if (item.type === 'other') {
+        document.getElementById('otherActName').value = '';
+        document.getElementById('otherActDuration').value = '';
+        document.getElementById('otherActIntensity').value = 'medium';
     }
     
     renderTodayActivities();
     renderDashboardActivityCard();
-    showToast('Aktivitas berhasil disimpan!', 'success');
     showPage('dashboard');
+}
+
+function editActivity(id) {
+    const acts = getActivities();
+    let act = null;
+    for (const key in acts) {
+        act = acts[key].find(i => i.id === id);
+        if (act) break;
+    }
+    if (!act) return;
+    
+    _editingActivityId = id;
+    
+    // Switch page to activity
+    showPage('activity');
+    
+    if (act.type === 'sleep') {
+        switchActivityTab('sleep');
+        document.getElementById('sleepStart').value = act.startTime || '';
+        document.getElementById('sleepEnd').value = act.endTime || '';
+        document.getElementById('sleepHoursManual').value = act.hours || '';
+        _sleepHours = act.hours || 0;
+        if (act.hours) {
+            document.getElementById('sleepDurationDisplay').textContent = `⏱ Durasi: ${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m`;
+        } else {
+            document.getElementById('sleepDurationDisplay').textContent = '';
+        }
+        selectSleepType(act.sleepType || 'malam');
+        selectSleepQuality(act.quality || 'lelap');
+    } else {
+        switchActivityTab('sport');
+        switchWorkoutTab(act.type);
+        
+        if (act.type === 'workout') {
+            _workoutSession = [...(act.exercises || [])];
+            renderWorkoutSessionList();
+        } else if (act.type === 'gym') {
+            _gymSelectedMuscles = {};
+            _gymRestTimes = {};
+            (act.muscles || []).forEach(m => {
+                _gymSelectedMuscles[m.muscle] = m.variations || [];
+                _gymRestTimes[m.muscle] = m.restTime || 60;
+            });
+            document.querySelectorAll('.muscle-chip').forEach(chip => {
+                const m = chip.getAttribute('data-muscle');
+                chip.classList.toggle('active', !!_gymSelectedMuscles[m]);
+            });
+            renderGymMuscleInputs();
+            document.getElementById('btnSaveGym').style.display = Object.keys(_gymSelectedMuscles).length > 0 ? 'block' : 'none';
+        } else if (act.type === 'cardio') {
+            document.getElementById('cardioName').value = act.name || '';
+            document.getElementById('cardioDuration').value = act.durationMin || '';
+            document.getElementById('cardioDistance').value = act.distanceKm || '';
+            document.getElementById('cardioIntensity').value = act.intensity || 'medium';
+        } else if (act.type === 'other') {
+            document.getElementById('otherActName').value = act.name || '';
+            document.getElementById('otherActDuration').value = act.durationMin || '';
+            document.getElementById('otherActIntensity').value = act.intensity || 'medium';
+        }
+    }
+    
+    setTimeout(() => {
+        const targetPanel = act.type === 'sleep' ? document.getElementById('actPanelSleep') : document.getElementById('actPanelSport');
+        if (targetPanel) {
+            targetPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 120);
 }
 
 // --- Gym Functions ---
@@ -777,14 +961,56 @@ function selectSleepQuality(quality) {
 function saveSleepLog() {
     const hours = _sleepHours || parseFloat(document.getElementById('sleepHoursManual').value) || 0;
     if (!hours || hours <= 0) { showToast('Isi durasi tidur dulu', 'error'); return; }
-    const item = {
-        id: uid(), date: todayKey(), type: 'sleep',
-        hours, sleepType: _sleepType, quality: _sleepQuality,
-        startTime: document.getElementById('sleepStart').value || '',
-        endTime: document.getElementById('sleepEnd').value || '',
-        createdAt: Date.now()
-    };
-    saveActivity(item);
+    
+    let item;
+    if (_editingActivityId) {
+        const acts = getActivities();
+        let origItem = null;
+        for (const key in acts) {
+            origItem = acts[key].find(a => a.id === _editingActivityId);
+            if (origItem) break;
+        }
+        item = {
+            id: _editingActivityId,
+            date: origItem ? origItem.date : todayKey(),
+            type: 'sleep',
+            hours,
+            sleepType: _sleepType,
+            quality: _sleepQuality,
+            startTime: document.getElementById('sleepStart').value || '',
+            endTime: document.getElementById('sleepEnd').value || '',
+            createdAt: origItem ? origItem.createdAt : Date.now()
+        };
+        
+        let updated = false;
+        for (const key in acts) {
+            const idx = acts[key].findIndex(a => a.id === _editingActivityId);
+            if (idx !== -1) {
+                acts[key][idx] = item;
+                updated = true;
+                break;
+            }
+        }
+        if (updated) {
+            setActivities(acts);
+            showToast('Data tidur berhasil diperbarui!', 'success');
+        } else {
+            saveActivity(item);
+            showToast('Data tidur berhasil disimpan!', 'success');
+        }
+        _editingActivityId = null;
+    } else {
+        item = {
+            id: uid(), date: todayKey(), type: 'sleep',
+            hours, sleepType: _sleepType, quality: _sleepQuality,
+            startTime: document.getElementById('sleepStart').value || '',
+            endTime: document.getElementById('sleepEnd').value || '',
+            createdAt: Date.now()
+        };
+        saveActivity(item);
+        showToast('Data tidur berhasil disimpan!', 'success');
+    }
+    
     // Reset
     document.getElementById('sleepStart').value = '';
     document.getElementById('sleepEnd').value = '';
@@ -792,7 +1018,7 @@ function saveSleepLog() {
     document.getElementById('sleepDurationDisplay').textContent = '';
     _sleepHours = 0;
     renderTodayActivities();
-    showToast('Data tidur berhasil disimpan!', 'success');
+    renderDashboardActivityCard();
 }
 
 // --- Render Today Activities ---
@@ -809,7 +1035,7 @@ function renderTodayActivities() {
         let typeLabel = act.type;
         let burnBadge = '';
 
-        if (act.burn && (act.type === 'workout' || act.type === 'gym')) {
+        if (act.burn && (act.type === 'workout' || act.type === 'gym' || act.type === 'cardio' || act.type === 'other')) {
             burnBadge = `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
                 <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.3);border-radius:12px;font-size:0.75rem;font-weight:700;color:var(--success);">
                     <i data-lucide="flame" style="width:12px;height:12px;"></i> ${act.burn.kcal} kcal terbakar
@@ -831,6 +1057,14 @@ function renderTodayActivities() {
                 `<b>${MUSCLE_LABELS[m.muscle] || m.muscle}:</b> ${m.variations.map(v => v.name || '(tanpa nama)').join(', ')}`
             ).join('<br>');
             typeLabel = 'Gym';
+        } else if (act.type === 'cardio') {
+            const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
+            detail = `<b>${act.name}</b> · ${act.durationMin} menit${act.distanceKm ? ` · ${act.distanceKm} km` : ''} · Intensitas: ${intensityText}`;
+            typeLabel = 'Kardio';
+        } else if (act.type === 'other') {
+            const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
+            detail = `<b>${act.name}</b> · ${act.durationMin} menit · Intensitas: ${intensityText}`;
+            typeLabel = 'Lainnya';
         } else if (act.type === 'sleep') {
             const sleepTypeLabel = { 
                 malam: '<i data-lucide="moon" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;"></i> Tidur Malam', 
@@ -848,9 +1082,14 @@ function renderTodayActivities() {
         return `<div class="activity-log-item">
             <div class="activity-log-header">
                 <span class="activity-log-type ${act.type}">${typeLabel}</span>
-                <button class="activity-log-delete" onclick="deleteActivity('${act.id}');renderTodayActivities();renderDashboardActivityCard();" title="Hapus">
-                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                </button>
+                <div style="display:flex; gap:6px;">
+                    <button class="activity-log-edit" onclick="editActivity('${act.id}')" title="Edit">
+                        <i data-lucide="edit-2" style="width:14px;height:14px;"></i>
+                    </button>
+                    <button class="activity-log-delete" onclick="deleteActivity('${act.id}');renderTodayActivities();renderDashboardActivityCard();" title="Hapus">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                    </button>
+                </div>
             </div>
             <div class="activity-log-detail">${detail}${burnBadge}</div>
         </div>`;
@@ -863,28 +1102,42 @@ function renderActivityHistory() {
     const fromEl = document.getElementById('dateFrom');
     const toEl = document.getElementById('dateTo');
     if (!fromEl || !toEl) return;
-    const from = new Date(fromEl.value);
-    const to = new Date(toEl.value);
+    const from = new Date(fromEl.value.replace(/-/g, '/'));
+    const to = new Date(toEl.value.replace(/-/g, '/'));
     const allActs = getActivitiesRange(from, to);
     const summaryEl = document.getElementById('activityHistorySummary');
     const listEl = document.getElementById('activityHistoryList');
     if (!summaryEl || !listEl) return;
     // Compute summary stats
-    let totalWorkoutSessions = 0, totalGymSessions = 0, totalSleepEntries = 0, totalSleepHours = 0;
+    let totalWorkoutSessions = 0, totalGymSessions = 0, totalCardioSessions = 0, totalOtherSessions = 0;
+    let totalSleepEntries = 0, totalSleepHours = 0;
+    let totalKcalBurned = 0, totalFatBurned = 0;
+    
     const allDates = Object.keys(allActs).sort().reverse();
     allDates.forEach(date => {
         allActs[date].forEach(a => {
             if (a.type === 'workout') totalWorkoutSessions++;
-            if (a.type === 'gym') totalGymSessions++;
-            if (a.type === 'sleep') { totalSleepEntries++; totalSleepHours += a.hours || 0; }
+            else if (a.type === 'gym') totalGymSessions++;
+            else if (a.type === 'cardio') totalCardioSessions++;
+            else if (a.type === 'other') totalOtherSessions++;
+            else if (a.type === 'sleep') { totalSleepEntries++; totalSleepHours += a.hours || 0; }
+            
+            if (a.burn) {
+                totalKcalBurned += parseFloat(a.burn.kcal) || 0;
+                totalFatBurned += parseFloat(a.burn.fatG) || 0;
+            }
         });
     });
     const avgSleep = totalSleepEntries > 0 ? (totalSleepHours / totalSleepEntries).toFixed(1) : '--';
     summaryEl.innerHTML = `
         <div class="act-stat-card"><div class="act-stat-value">${totalWorkoutSessions}</div><div class="act-stat-label">Sesi Workout</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${totalGymSessions}</div><div class="act-stat-label">Sesi Gym</div></div>
+        <div class="act-stat-card"><div class="act-stat-value">${totalCardioSessions}</div><div class="act-stat-label">Sesi Kardio</div></div>
+        <div class="act-stat-card"><div class="act-stat-value">${totalOtherSessions}</div><div class="act-stat-label">Sesi Lainnya</div></div>
+        <div class="act-stat-card"><div class="act-stat-value" style="color:var(--success);text-shadow:0 0 10px rgba(0,255,204,0.3);">${Math.round(totalKcalBurned)}</div><div class="act-stat-label">Kalori Terbakar (kcal)</div></div>
+        <div class="act-stat-card"><div class="act-stat-value" style="color:#ffab40;text-shadow:0 0 10px rgba(255,171,64,0.3);">${totalFatBurned.toFixed(1)}g</div><div class="act-stat-label">Lemak Terbakar</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${totalSleepHours.toFixed(1)}j</div><div class="act-stat-label">Total Tidur</div></div>
-        <div class="act-stat-card"><div class="act-stat-value">${avgSleep}j</div><div class="act-stat-label">Rata-rata Tidur/Hari</div></div>`;
+        <div class="act-stat-card"><div class="act-stat-value">${avgSleep}j</div><div class="act-stat-label">Rerata Tidur/Hari</div></div>`;
     // Build list by date
     const datesWithActs = allDates.filter(d => allActs[d].length > 0);
     if (datesWithActs.length === 0) {
@@ -915,10 +1168,25 @@ function renderActivityHistory() {
                     return `<strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>${restStr}: ${varStr}`;
                 }).join('<br>');
                 badge = '<i data-lucide="dumbbell" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Gym';
+            } else if (act.type === 'cardio') {
+                const distanceStr = act.distanceKm ? ` · ${act.distanceKm} km` : '';
+                const intensityStr = act.intensity === 'low' ? 'Ringan' : act.intensity === 'medium' ? 'Sedang' : 'Tinggi';
+                detail = `<b>${act.name}</b> · ${act.durationMin} menit${distanceStr} · Intensitas: ${intensityStr}`;
+                badge = '<i data-lucide="heart" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Kardio';
+            } else if (act.type === 'other') {
+                const intensityStr = act.intensity === 'low' ? 'Ringan' : act.intensity === 'medium' ? 'Sedang' : 'Tinggi';
+                detail = `<b>${act.name}</b> · ${act.durationMin} menit · Intensitas: ${intensityStr}`;
+                badge = '<i data-lucide="more-horizontal" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Lainnya';
             } else if (act.type === 'sleep') {
                 const h = parseFloat(act.hours || 0);
                 detail = `${Math.floor(h)}j ${Math.round((h%1)*60)}m — ${act.sleepType || 'malam'} — ${act.quality || 'biasa'}`;
                 badge = '<i data-lucide="moon" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Tidur';
+            }
+            if (act.burn) {
+                detail += `<br><span style="font-size:0.75rem;color:var(--success);font-weight:600;display:inline-flex;align-items:center;gap:3px;margin-top:4px;"><i data-lucide="flame" style="width:11px;height:11px;"></i> ${act.burn.kcal} kcal terbakar</span>`;
+                if (act.burn.fatG) {
+                    detail += ` <span style="font-size:0.75rem;color:#ffab40;">· Lemak ${act.burn.fatG}g</span>`;
+                }
             }
             return `<div style="padding:6px 10px;background:var(--bg);border-radius:6px;margin-top:6px;font-size:0.82rem;">
                 <span style="font-size:0.7rem;font-weight:700;color:var(--accent2);text-transform:uppercase;display:inline-flex;align-items:center;gap:3px;">${badge}</span><br>
@@ -1078,15 +1346,22 @@ async function updateHistoryAIAnalysis(foodStats, fromDate, toDate) {
 
     // Gather activity data for the period
     const allActs = getActivitiesRange(new Date(fromDate.replace(/-/g, '/')), new Date(toDate.replace(/-/g, '/')));
-    let workoutCount = 0, gymCount = 0, sleepData = [], musclesTrained = {};
+    let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], musclesTrained = {}, cardioDetails = [];
     Object.values(allActs).forEach(dayActs => {
         dayActs.forEach(a => {
             if (a.type === 'workout') { workoutCount++; }
-            if (a.type === 'gym') {
+            else if (a.type === 'gym') {
                 gymCount++;
                 a.muscles?.forEach(m => { musclesTrained[m.muscle] = (musclesTrained[m.muscle] || 0) + 1; });
             }
-            if (a.type === 'sleep') sleepData.push({ hours: a.hours, quality: a.quality, type: a.sleepType });
+            else if (a.type === 'cardio') {
+                cardioCount++;
+                cardioDetails.push(`${a.name} (${a.durationMin}m)`);
+            }
+            else if (a.type === 'other') {
+                otherCount++;
+            }
+            else if (a.type === 'sleep') sleepData.push({ hours: a.hours, quality: a.quality, type: a.sleepType });
         });
     });
     const avgSleepHours = sleepData.length > 0 ? (sleepData.reduce((s,x) => s+x.hours, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
@@ -1107,6 +1382,8 @@ Serat: ${foodStats.avgFiber.toFixed(1)}g/hari, Gula: ${foodStats.avgSugar.toFixe
 == DATA KEGIATAN (${totalDays} hari) ==
 Sesi workout: ${workoutCount} kali
 Sesi gym: ${gymCount} kali
+Sesi kardio: ${cardioCount} kali ${cardioDetails.length ? `(${cardioDetails.join(', ')})` : ''}
+Sesi aktivitas lainnya: ${otherCount} kali
 Otot yang dilatih: ${Object.keys(musclesTrained).map(m => `${MUSCLE_LABELS[m]||m} (${musclesTrained[m]}x)`).join(', ') || 'tidak tercatat'}
 
 == DATA TIDUR ==
@@ -1382,6 +1659,12 @@ function renderDashboardActivityCard() {
             } else if (act.type === 'gym') {
                 badge = '🏋️ Gym';
                 detail = (act.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+            } else if (act.type === 'cardio') {
+                badge = '❤️ Kardio';
+                detail = `${act.name} · ${act.durationMin}m${act.distanceKm ? ` · ${act.distanceKm}km` : ''}`;
+            } else if (act.type === 'other') {
+                badge = '🏃 Lainnya';
+                detail = `${act.name} · ${act.durationMin}m`;
             } else if (act.type === 'sleep') {
                 badge = '😴 Tidur';
                 const h = parseFloat(act.hours || 0);
@@ -1459,6 +1742,8 @@ async function updateDailyAIAnalysis(logs, profile, email) {
         if (todayActs.length > 0) {
             const workouts = todayActs.filter(a => a.type === 'workout');
             const gyms = todayActs.filter(a => a.type === 'gym');
+            const cardios = todayActs.filter(a => a.type === 'cardio');
+            const others = todayActs.filter(a => a.type === 'other');
             const sleeps = todayActs.filter(a => a.type === 'sleep');
             const lines = [];
             if (workouts.length > 0) {
@@ -1470,6 +1755,16 @@ async function updateDailyAIAnalysis(logs, profile, email) {
                 gyms.forEach(g => {
                     const muscleList = g.muscles.map(m => `${MUSCLE_LABELS[m.muscle]||m.muscle}: ${m.variations.map(v=>`${v.name}(${v.sets.length}set)`).join(', ')}`).join(' | ');
                     lines.push(`Gym: ${muscleList}`);
+                });
+            }
+            if (cardios.length > 0) {
+                cardios.forEach(c => {
+                    lines.push(`Kardio: ${c.name} · ${c.durationMin} menit${c.distanceKm ? ` · ${c.distanceKm} km` : ''} · Intensitas: ${c.intensity}`);
+                });
+            }
+            if (others.length > 0) {
+                others.forEach(o => {
+                    lines.push(`Aktivitas Lainnya: ${o.name} · ${o.durationMin} menit · Intensitas: ${o.intensity}`);
                 });
             }
             if (sleeps.length > 0) {
@@ -1882,6 +2177,14 @@ function setPeriod(periodDays) {
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - days + 1);
+    
+    // Format YYYY-MM-DD in local time
+    const formatDateLocal = (d) => {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    
+    document.getElementById('dateFrom').value = formatDateLocal(from);
+    document.getElementById('dateTo').value = formatDateLocal(to);
     
     loadHistoryData(from, to);
 }

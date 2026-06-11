@@ -87,6 +87,10 @@ function activityMenuKeyboard() {
         { text: '💪 Gym', callback_data: 'act_gym' }
       ],
       [
+        { text: '❤️ Kardio', callback_data: 'act_cardio' },
+        { text: '🏃 Lainnya', callback_data: 'act_other' }
+      ],
+      [
         { text: '😴 Tidur', callback_data: 'act_sleep' }
       ],
       [
@@ -142,6 +146,16 @@ async function handleMessage(msg) {
   if (state === 'AWAIT_GYM_EX_NAME') return onGymExNameInput(chatId, userId, text);
   if (state === 'AWAIT_GYM_SETS_REPS') return onGymSetsRepsInput(chatId, userId, text);
   if (state === 'AWAIT_GYM_DUR') return onGymDurationInput(chatId, userId, text);
+  
+  if (state === 'AWAIT_CARDIO_NAME') return onCardioNameInput(chatId, userId, text);
+  if (state === 'AWAIT_CARDIO_DUR') return onCardioDurInput(chatId, userId, text);
+  if (state === 'AWAIT_CARDIO_DUR_EDIT') return onCardioDurEditInput(chatId, userId, text);
+  if (state === 'AWAIT_CARDIO_DIST') return onCardioDistInput(chatId, userId, text);
+  if (state === 'AWAIT_CARDIO_DIST_EDIT') return onCardioDistEditInput(chatId, userId, text);
+  
+  if (state === 'AWAIT_OTHER_NAME') return onOtherNameInput(chatId, userId, text);
+  if (state === 'AWAIT_OTHER_DUR') return onOtherDurInput(chatId, userId, text);
+  if (state === 'AWAIT_OTHER_DUR_EDIT') return onOtherDurEditInput(chatId, userId, text);
 
   // Default: if logged in, treat as food name input (shortcut)
   const email = await getLinkedEmail(userId);
@@ -171,6 +185,8 @@ async function handleCallback(cb) {
   if (data === 'act_sleep') return email ? startSleepWizard(chatId, userId) : promptLogin(chatId, userId);
   if (data === 'act_workout') return email ? startWorkoutWizard(chatId, userId) : promptLogin(chatId, userId);
   if (data === 'act_gym') return email ? startGymWizard(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'act_cardio') return email ? startCardioWizard(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'act_other') return email ? startOtherWizard(chatId, userId) : promptLogin(chatId, userId);
   
   // Sleep wizard callbacks
   if (data.startsWith('sl_type_')) return saveSleepType(chatId, userId, data.replace('sl_type_', ''));
@@ -191,6 +207,19 @@ async function handleCallback(cb) {
   if (data.startsWith('gym_int_')) return saveGymIntensity(chatId, userId, data.replace('gym_int_', ''));
   if (data === 'gym_save') return saveGymSession(chatId, userId, email);
   if (data.startsWith('gym_sel_')) return saveGymMuscleSelection(chatId, userId, data.replace('gym_sel_', ''));
+
+  // Cardio wizard callbacks
+  if (data === 'cardio_edit_dur') return startCardioDuration(chatId, userId);
+  if (data === 'cardio_edit_dist') return startCardioDistance(chatId, userId);
+  if (data === 'cardio_edit_int') return promptCardioIntensity(chatId);
+  if (data.startsWith('cardio_int_')) return saveCardioIntensity(chatId, userId, data.replace('cardio_int_', ''));
+  if (data === 'cardio_save') return saveCardioSession(chatId, userId, email);
+
+  // Other wizard callbacks
+  if (data === 'other_edit_dur') return startOtherDuration(chatId, userId);
+  if (data === 'other_edit_int') return promptOtherIntensity(chatId);
+  if (data.startsWith('other_int_')) return saveOtherIntensity(chatId, userId, data.replace('other_int_', ''));
+  if (data === 'other_save') return saveOtherSession(chatId, userId, email);
 
   // History callbacks
   if (data === 'history') return email ? showHistory(chatId, email) : promptLogin(chatId, userId);
@@ -1487,6 +1516,8 @@ const MUSCLE_LABELS = {
 
 const MET_WORKOUT = { low: 3.5, medium: 5.5, high: 8.0 };
 const MET_GYM     = { low: 3.0, medium: 5.0, high: 6.5 };
+const MET_CARDIO  = { low: 4.5, medium: 7.0, high: 9.5 };
+const MET_OTHER   = { low: 3.5, medium: 5.5, high: 7.5 };
 const BURN_RATIO  = { fat: 0.30, carb: 0.60, protein: 0.10 };
 
 function calcBurnedCalories(met, durationMin, weight = 70) {
@@ -2064,6 +2095,8 @@ async function showActivityHistoryDays(chatId, email, days) {
 
     let totalWorkouts = 0;
     let totalGyms = 0;
+    let totalCardio = 0;
+    let totalOther = 0;
     let totalSleeps = 0;
     let totalSleepHours = 0;
     let totalBurned = 0;
@@ -2083,6 +2116,12 @@ async function showActivityHistoryDays(chatId, email, days) {
               muscles[m.muscle] = (muscles[m.muscle] || 0) + 1;
             });
           }
+        } else if (a.type === 'cardio') {
+          totalCardio++;
+          if (a.burn) totalBurned += a.burn.kcal || 0;
+        } else if (a.type === 'other') {
+          totalOther++;
+          if (a.burn) totalBurned += a.burn.kcal || 0;
         } else if (a.type === 'sleep') {
           totalSleeps++;
           totalSleepHours += a.hours || 0;
@@ -2091,7 +2130,7 @@ async function showActivityHistoryDays(chatId, email, days) {
       });
     });
 
-    if (totalWorkouts === 0 && totalGyms === 0 && totalSleeps === 0) {
+    if (totalWorkouts === 0 && totalGyms === 0 && totalCardio === 0 && totalOther === 0 && totalSleeps === 0) {
       return sendMessage(chatId, `Belum ada kegiatan olahraga atau tidur tercatat dalam ${days} hari terakhir.`, {
         inline_keyboard: [
           [{ text: '🏃 Catat Kegiatan Baru', callback_data: 'log_activity' }],
@@ -2101,12 +2140,15 @@ async function showActivityHistoryDays(chatId, email, days) {
     }
 
     const avgSleep = totalSleeps > 0 ? (totalSleepHours / totalSleeps).toFixed(1) : 0;
-    const avgBurn = totalWorkouts + totalGyms > 0 ? Math.round(totalBurned / (totalWorkouts + totalGyms)) : 0;
+    const totalSessions = totalWorkouts + totalGyms + totalCardio + totalOther;
+    const avgBurn = totalSessions > 0 ? Math.round(totalBurned / totalSessions) : 0;
 
     let msg = `🏃 *Riwayat Kegiatan ${days} Hari Terakhir*\n\n`;
     msg += `📝 *Statistik Ringkas:*\n`;
     msg += `• Total Workout: *${totalWorkouts}x sesi*\n`;
     msg += `• Total Gym: *${totalGyms}x sesi*\n`;
+    msg += `• Total Kardio: *${totalCardio}x sesi*\n`;
+    msg += `• Sesi Lainnya: *${totalOther}x sesi*\n`;
     msg += `• Total Tidur: *${totalSleepHours.toFixed(1)} jam* (${totalSleeps} entri, Rerata: *${avgSleep}j/hari*)\n`;
     if (totalSleeps > 0) {
       msg += `  _(Lelap: ${sleepQualities.lelap}x, Biasa: ${sleepQualities.biasa}x, Kurang: ${sleepQualities.kurang}x)_\n`;
@@ -2135,6 +2177,10 @@ async function showActivityHistoryDays(chatId, email, days) {
         } else if (a.type === 'gym') {
           const detail = (a.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
           msg += `  - 💪 Gym: ${escapeMarkdown(detail)} (${a.burn ? a.burn.kcal : 0} kcal)\n`;
+        } else if (a.type === 'cardio') {
+          msg += `  - ❤️ Kardio: ${escapeMarkdown(a.name)} · ${a.durationMin}m${a.distanceKm ? ` · ${a.distanceKm}km` : ''} (${a.burn ? a.burn.kcal : 0} kcal)\n`;
+        } else if (a.type === 'other') {
+          msg += `  - 🏃 Lainnya: ${escapeMarkdown(a.name)} · ${a.durationMin}m (${a.burn ? a.burn.kcal : 0} kcal)\n`;
         } else if (a.type === 'sleep') {
           msg += `  - 😴 Tidur: ${Math.floor(a.hours || 0)}j ${Math.round(((a.hours || 0) % 1) * 60)}m (${a.quality || 'biasa'})\n`;
         }
@@ -2235,6 +2281,8 @@ async function showAIHistoryDays(chatId, email, days) {
           if (a.type === 'sleep') return `Tidur ${a.hours.toFixed(1)}j (${a.quality})`;
           if (a.type === 'workout') return `Workout: ${(a.exercises || []).map(e => e.name).join(', ')}`;
           if (a.type === 'gym') return `Gym: ${(a.muscles || []).map(m => m.muscle).join(', ')}`;
+          if (a.type === 'cardio') return `Kardio: ${a.name} (${a.durationMin}m)`;
+          if (a.type === 'other') return `Aktivitas Lainnya: ${a.name} (${a.durationMin}m)`;
           return a.type;
         }).join(' · ')}`;
       }).join('\n');
@@ -2312,6 +2360,301 @@ Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan
       inline_keyboard: [[{ text: 'Kembali', callback_data: 'history' }]]
     });
   }
+}
+
+// CARDIO WIZARD
+async function startCardioWizard(chatId, userId) {
+  await setState(userId, 'AWAIT_CARDIO_NAME');
+  await setCache(`${userId}_activity`, { type: 'cardio', name: '', durationMin: 30, distanceKm: 0, intensity: 'medium' });
+  return sendMessage(chatId, '❤️ *Mencatat Sesi Kardio*\n\nMasukkan nama aktivitas kardio (contoh: Lari Pagi, Sepeda Santai, Renang):');
+}
+
+async function onCardioNameInput(chatId, userId, text) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.name = text;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_CARDIO_DUR');
+  return sendMessage(chatId, `Berapa menit durasi *${escapeMarkdown(text)}*?\n\nMasukkan angka durasi dalam menit (contoh: 30):`);
+}
+
+async function onCardioDurInput(chatId, userId, text) {
+  const dur = parseInt(text);
+  if (isNaN(dur) || dur <= 0) {
+    return sendMessage(chatId, '⚠️ Durasi harus berupa angka bulat positif. Coba masukkan lagi:');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.durationMin = dur;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_CARDIO_DIST');
+  return sendMessage(chatId, 'Masukkan jarak tempuh (dalam km, masukkan 0 jika tidak ada / tidak diukur, contoh: 5.2 atau 0):');
+}
+
+async function onCardioDistInput(chatId, userId, text) {
+  const dist = parseFloat(text.replace(',', '.'));
+  if (isNaN(dist) || dist < 0) {
+    return sendMessage(chatId, '⚠️ Jarak harus berupa angka desimal positif or 0. Coba masukkan lagi:');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.distanceKm = dist;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_CARDIO_MENU');
+  return showCardioDraftMenu(chatId, draft);
+}
+
+async function showCardioDraftMenu(chatId, draft) {
+  const intLabel = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[draft.intensity];
+  let msg = `❤️ *Ringkasan Kardio Harian*\n\n`;
+  msg += `• Nama Aktivitas: *${escapeMarkdown(draft.name)}*\n`;
+  msg += `• Durasi: *${draft.durationMin} menit*\n`;
+  msg += `• Jarak: *${draft.distanceKm ? `${draft.distanceKm} km` : 'Tidak dicatat'}*\n`;
+  msg += `• Intensitas: *${intLabel}*\n`;
+
+  return sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [
+        { text: '⏱️ Ubah Durasi', callback_data: 'cardio_edit_dur' },
+        { text: '🏃 Ubah Jarak', callback_data: 'cardio_edit_dist' }
+      ],
+      [
+        { text: '⚙️ Ubah Intensitas', callback_data: 'cardio_edit_int' },
+        { text: '💾 Simpan Sesi', callback_data: 'cardio_save' }
+      ],
+      [
+        { text: '❌ Batal', callback_data: 'menu' }
+      ]
+    ]
+  });
+}
+
+async function startCardioDuration(chatId, userId) {
+  await setState(userId, 'AWAIT_CARDIO_DUR_EDIT');
+  return sendMessage(chatId, 'Masukkan estimasi durasi kardio dalam menit (contoh: 45):');
+}
+
+async function onCardioDurEditInput(chatId, userId, text) {
+  const dur = parseInt(text);
+  if (isNaN(dur) || dur <= 0) {
+    return sendMessage(chatId, '⚠️ Durasi harus berupa angka bulat positif. Coba masukkan lagi:');
+  }
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.durationMin = dur;
+  await setCache(`${userId}_activity`, draft);
+  await setState(userId, 'AWAIT_CARDIO_MENU');
+  return showCardioDraftMenu(chatId, draft);
+}
+
+async function startCardioDistance(chatId, userId) {
+  await setState(userId, 'AWAIT_CARDIO_DIST_EDIT');
+  return sendMessage(chatId, 'Masukkan jarak tempuh (dalam km, contoh: 5.5):');
+}
+
+async function onCardioDistEditInput(chatId, userId, text) {
+  const dist = parseFloat(text.replace(',', '.'));
+  if (isNaN(dist) || dist < 0) {
+    return sendMessage(chatId, '⚠️ Jarak harus berupa angka desimal positif or 0. Coba masukkan lagi:');
+  }
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.distanceKm = dist;
+  await setCache(`${userId}_activity`, draft);
+  await setState(userId, 'AWAIT_CARDIO_MENU');
+  return showCardioDraftMenu(chatId, draft);
+}
+
+async function promptCardioIntensity(chatId) {
+  return sendMessage(chatId, 'Pilih intensitas latihan kardio:', {
+    inline_keyboard: [
+      [
+        { text: '🟢 Ringan (MET 4.5)', callback_data: 'cardio_int_low' },
+        { text: '🟡 Sedang (MET 7.0)', callback_data: 'cardio_int_medium' }
+      ],
+      [
+        { text: '🔴 Tinggi (MET 9.5)', callback_data: 'cardio_int_high' }
+      ]
+    ]
+  });
+}
+
+async function saveCardioIntensity(chatId, userId, val) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.intensity = val;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_CARDIO_MENU');
+  return showCardioDraftMenu(chatId, draft);
+}
+
+async function saveCardioSession(chatId, userId, email) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  await setState(userId, null);
+  await deleteCache(`${userId}_activity`);
+
+  const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+  const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
+  const burn = calcBurnedCalories(MET_CARDIO[draft.intensity], draft.durationMin, weight);
+
+  const today = todayKey();
+  const actId = generateId();
+  const cardioActivity = {
+    id: actId,
+    type: 'cardio',
+    name: draft.name,
+    durationMin: draft.durationMin,
+    distanceKm: draft.distanceKm || 0,
+    intensity: draft.intensity,
+    burn: burn,
+    date: today,
+    timestamp: Date.now()
+  };
+
+  await setFirebase(`users/${safe(email)}/lf_activities/${today}/${actId}`, cardioActivity);
+
+  // Invalidate AI cache for today
+  const safeEmail = safe(email);
+  await setFirebase(`users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`, null);
+
+  let msg = `✅ *Sesi Kardio Berhasil Disimpan!*\n\n`;
+  msg += `• Aktivitas: *${escapeMarkdown(draft.name)}*\n`;
+  msg += `• Durasi: *${draft.durationMin} menit*\n`;
+  if (draft.distanceKm) msg += `• Jarak: *${draft.distanceKm} km*\n`;
+  msg += `• Estimasi Kalori Terbakar: *${burn.kcal} kcal*\n`;
+  msg += `  _(Lemak: ${burn.fatG}g, Karbo: ${burn.carbG}g, Protein: ${burn.proteinG}g)_`;
+
+  return sendMessage(chatId, msg, mainMenuKeyboard());
+}
+
+// OTHER ACTIVITY WIZARD
+async function startOtherWizard(chatId, userId) {
+  await setState(userId, 'AWAIT_OTHER_NAME');
+  await setCache(`${userId}_activity`, { type: 'other', name: '', durationMin: 30, intensity: 'medium' });
+  return sendMessage(chatId, '🏃 *Mencatat Aktivitas Lainnya*\n\nMasukkan nama aktivitas (contoh: Badminton, Futsal, Yoga, Basket):');
+}
+
+async function onOtherNameInput(chatId, userId, text) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.name = text;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_OTHER_DUR');
+  return sendMessage(chatId, `Berapa menit durasi *${escapeMarkdown(text)}*?\n\nMasukkan angka durasi dalam menit (contoh: 45):`);
+}
+
+async function onOtherDurInput(chatId, userId, text) {
+  const dur = parseInt(text);
+  if (isNaN(dur) || dur <= 0) {
+    return sendMessage(chatId, '⚠️ Durasi harus berupa angka bulat positif. Coba masukkan lagi:');
+  }
+
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.durationMin = dur;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_OTHER_MENU');
+  return showOtherDraftMenu(chatId, draft);
+}
+
+async function showOtherDraftMenu(chatId, draft) {
+  const intLabel = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[draft.intensity];
+  let msg = `🏃 *Ringkasan Aktivitas Harian*\n\n`;
+  msg += `• Nama Aktivitas: *${escapeMarkdown(draft.name)}*\n`;
+  msg += `• Durasi: *${draft.durationMin} menit*\n`;
+  msg += `• Intensitas: *${intLabel}*\n`;
+
+  return sendMessage(chatId, msg, {
+    inline_keyboard: [
+      [
+        { text: '⏱️ Ubah Durasi', callback_data: 'other_edit_dur' },
+        { text: '⚙️ Ubah Intensitas', callback_data: 'other_edit_int' }
+      ],
+      [
+        { text: '💾 Simpan Sesi', callback_data: 'other_save' }
+      ],
+      [
+        { text: '❌ Batal', callback_data: 'menu' }
+      ]
+    ]
+  });
+}
+
+async function startOtherDuration(chatId, userId) {
+  await setState(userId, 'AWAIT_OTHER_DUR_EDIT');
+  return sendMessage(chatId, 'Masukkan estimasi durasi aktivitas dalam menit (contoh: 45):');
+}
+
+async function onOtherDurEditInput(chatId, userId, text) {
+  const dur = parseInt(text);
+  if (isNaN(dur) || dur <= 0) {
+    return sendMessage(chatId, '⚠️ Durasi harus berupa angka bulat positif. Coba masukkan lagi:');
+  }
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.durationMin = dur;
+  await setCache(`${userId}_activity`, draft);
+  await setState(userId, 'AWAIT_OTHER_MENU');
+  return showOtherDraftMenu(chatId, draft);
+}
+
+async function promptOtherIntensity(chatId) {
+  return sendMessage(chatId, 'Pilih intensitas latihan:', {
+    inline_keyboard: [
+      [
+        { text: '🟢 Ringan (MET 3.5)', callback_data: 'other_int_low' },
+        { text: '🟡 Sedang (MET 5.5)', callback_data: 'other_int_medium' }
+      ],
+      [
+        { text: '🔴 Tinggi (MET 7.5)', callback_data: 'other_int_high' }
+      ]
+    ]
+  });
+}
+
+async function saveOtherIntensity(chatId, userId, val) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  draft.intensity = val;
+  await setCache(`${userId}_activity`, draft);
+
+  await setState(userId, 'AWAIT_OTHER_MENU');
+  return showOtherDraftMenu(chatId, draft);
+}
+
+async function saveOtherSession(chatId, userId, email) {
+  const draft = await getCache(`${userId}_activity`) || {};
+  await setState(userId, null);
+  await deleteCache(`${userId}_activity`);
+
+  const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+  const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
+  const burn = calcBurnedCalories(MET_OTHER[draft.intensity], draft.durationMin, weight);
+
+  const today = todayKey();
+  const actId = generateId();
+  const otherActivity = {
+    id: actId,
+    type: 'other',
+    name: draft.name,
+    durationMin: draft.durationMin,
+    intensity: draft.intensity,
+    burn: burn,
+    date: today,
+    timestamp: Date.now()
+  };
+
+  await setFirebase(`users/${safe(email)}/lf_activities/${today}/${actId}`, otherActivity);
+
+  // Invalidate AI cache for today
+  const safeEmail = safe(email);
+  await setFirebase(`users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`, null);
+
+  let msg = `✅ *Sesi Aktivitas Berhasil Disimpan!*\n\n`;
+  msg += `• Aktivitas: *${escapeMarkdown(draft.name)}*\n`;
+  msg += `• Durasi: *${draft.durationMin} menit*\n`;
+  msg += `• Estimasi Kalori Terbakar: *${burn.kcal} kcal*\n`;
+  msg += `  _(Lemak: ${burn.fatG}g, Karbo: ${burn.carbG}g, Protein: ${burn.proteinG}g)_`;
+
+  return sendMessage(chatId, msg, mainMenuKeyboard());
 }
 
 module.exports = { handleMessage, handleCallback };

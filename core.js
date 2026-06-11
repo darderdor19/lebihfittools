@@ -331,10 +331,9 @@ Semua angka dalam satuan standar. Jawab HANYA dengan JSON valid.`;
 
 async function analyzeWorkoutAI(activity, profile) {
   const { tb, bb, usia, gender, aktivitas, target } = profile;
-  const isGym = activity.type === 'gym';
   
   let workoutDetails = '';
-  if (isGym) {
+  if (activity.type === 'gym') {
     workoutDetails = (activity.muscles || []).map(m => {
       const varDetails = (m.variations || []).map(v => {
         const setsDetails = (v.sets || []).map(s => `Set ${s.set}: ${s.reps} reps @ ${s.weight || 0} kg`).join(', ');
@@ -342,11 +341,15 @@ async function analyzeWorkoutAI(activity, profile) {
       }).join('\n');
       return `Otot: ${m.muscle} (Waktu istirahat per set: ${m.restTime || 60} detik)\n${varDetails}`;
     }).join('\n\n');
-  } else {
+  } else if (activity.type === 'workout') {
     workoutDetails = (activity.exercises || []).map(ex => {
       const setsDetails = (ex.sets || []).map(s => `Set ${s.set}: ${s.reps} reps @ ${s.weight || 0} kg`).join(', ');
       return `- ${ex.name} (Waktu istirahat per set: ${ex.restTime || 60} detik): ${setsDetails}`;
     }).join('\n');
+  } else if (activity.type === 'cardio') {
+    workoutDetails = `- Nama Kardio: ${activity.name}\n- Durasi: ${activity.durationMin} menit\n- Jarak: ${activity.distanceKm || '--'} km\n- Intensitas: ${activity.intensity}`;
+  } else if (activity.type === 'other') {
+    workoutDetails = `- Nama Aktivitas: ${activity.name}\n- Durasi: ${activity.durationMin} menit\n- Intensitas: ${activity.intensity}`;
   }
 
   const prompt = `Kamu adalah ahli gizi, olahraga, dan pelatih fitness profesional. Berdasarkan profil pengguna dan rincian latihan berikut, lakukan analisis mendalam tentang pembakaran kalori, pembagian energi (karbohidrat, lemak, protein), intensitas latihan, dan berikan feedback pemulihan (recovery):
