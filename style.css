@@ -1404,30 +1404,49 @@ a{color:var(--accent);text-decoration:none}
 
 /* ===== PROGRESS ANALYSIS CARDS ===== */
 .progress-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
 }
 .progress-card:hover {
   background: rgba(255, 255, 255, 0.05) !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
-  transform: translateY(-1px);
 }
-.progress-card.active.food-card {
-  border-color: #6c63ff !important;
-  background: rgba(108, 99, 255, 0.05) !important;
-  box-shadow: 0 0 15px rgba(108, 99, 255, 0.1);
+.progress-card span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
 }
-.progress-card.active.act-card {
-  border-color: #ff4d6d !important;
-  background: rgba(255, 77, 109, 0.05) !important;
-  box-shadow: 0 0 15px rgba(255, 77, 109, 0.1);
+.progress-card-icon {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff !important;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
 }
-.progress-card.active.sleep-card {
-  border-color: #a78bfa !important;
-  background: rgba(167, 139, 250, 0.05) !important;
-  box-shadow: 0 0 15px rgba(167, 139, 250, 0.1);
+.progress-card-icon i {
+  color: #ffffff !important;
+}
+
+/* Active State: Stroke putih tipis dan glow tipis */
+.progress-card.active {
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15) !important;
 }
 .progress-card.active .progress-card-icon {
+  background: rgba(255, 255, 255, 0.15);
   transform: scale(1.05);
 }
 .form-group input[type="checkbox"] {
