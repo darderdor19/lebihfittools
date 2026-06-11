@@ -1316,9 +1316,13 @@ function renderTodayActivities() {
             typeLabel = 'Workout';
         } else if (act.type === 'gym') {
             detail = act.muscles.map(m => {
-                const varList = (m.variations || []).map(v => `&nbsp;&nbsp;• ${v.name || '(tanpa nama)'}`).join('<br>');
-                return `<b>${MUSCLE_LABELS[m.muscle] || m.muscle}</b>${m.restTime ? ` <span style="font-size:0.75rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : ''}<br>${varList}`;
-            }).join('<br><br>');
+                const restLabel = m.restTime ? ` <span style="font-size:0.72rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
+                const varList = (m.variations || []).map(v => {
+                    const setsStr = (v.sets || []).map(s => `${s.reps}${s.weight ? `×${s.weight}kg` : ''}`).join(' / ');
+                    return `<span style="display:block;padding:1px 0 1px 10px;color:var(--text2);font-size:0.82rem;">• <b style="color:var(--text);">${v.name || '(tanpa nama)'}</b>${v.sets && v.sets.length ? ` — ${v.sets.length} set: ${setsStr}` : ''}</span>`;
+                }).join('');
+                return `<span style="display:block;margin-top:6px;"><b style="color:var(--text);">${MUSCLE_LABELS[m.muscle] || m.muscle}</b>${restLabel}</span>${varList}`;
+            }).join('<div style="height:4px;"></div>');
             typeLabel = 'Gym';
         } else if (act.type === 'cardio') {
             const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
@@ -1423,13 +1427,13 @@ function renderActivityHistory() {
                 badge = '<i data-lucide="zap" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Workout';
             } else if (act.type === 'gym') {
                 detail = (act.muscles || []).map(m => {
-                    const varStr = (m.variations || []).map(v => {
-                        const setsStr = (v.sets || []).map(s => `${s.reps}${s.weight ? `x${s.weight}kg` : ''}`).join('/');
-                        return `${v.name} (${v.sets.length} set: ${setsStr})`;
-                    }).join(', ');
-                    const restStr = m.restTime ? ` (⏱ ${m.restTime}s rest)` : '';
-                    return `<strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>${restStr}: ${varStr}`;
-                }).join('<br>');
+                    const restLabel = m.restTime ? ` <span style="font-size:0.7rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
+                    const varList = (m.variations || []).map(v => {
+                        const setsStr = (v.sets || []).map(s => `${s.reps}${s.weight ? `×${s.weight}kg` : ''}`).join(' / ');
+                        return `<span style="display:block;padding:1px 0 1px 12px;font-size:0.8rem;">• <b>${v.name || '(tanpa nama)'}</b>${v.sets && v.sets.length ? ` — ${v.sets.length} set: ${setsStr}` : ''}</span>`;
+                    }).join('');
+                    return `<span style="display:block;margin-top:5px;"><strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>${restLabel}</span>${varList}`;
+                }).join('<div style="height:3px;"></div>');
                 badge = '<i data-lucide="dumbbell" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Gym';
             } else if (act.type === 'cardio') {
                 const distanceStr = act.distanceKm ? ` · ${act.distanceKm} km` : '';
