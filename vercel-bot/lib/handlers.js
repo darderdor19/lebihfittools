@@ -551,7 +551,7 @@ async function showDashboard(chatId, email) {
 
       const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(total.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${total.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((total.protein/targetProtein)*100)}%)\n- Karbohidrat: ${total.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((total.carbs/targetCarbs)*100)}%)\n- Lemak: ${total.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((total.fat/targetFat)*100)}%)\n- Serat: ${total.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${total.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(total.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
 
-      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 800);
+      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 2500);
       if (rawHtml) {
         const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
         html = `
@@ -1519,7 +1519,7 @@ function parseSetsReps(str) {
 }
 
 const GROQ_KEY = process.env.GROQ_API_KEY;
-async function callGroqAPI(messages, maxTokens = 800) {
+async function callGroqAPI(messages, maxTokens = 2500) {
   if (!GROQ_KEY) throw new Error('GROQ_API_KEY env variable is not set');
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -2269,7 +2269,7 @@ Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Struktur waj
 
 Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. Gunakan warna/gaya CSS yang cocok dengan format cetakan PDF putih/terang. HANYA respons HTML VALID tanpa teks pembuka/penutup.`;
 
-      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 800);
+      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 2500);
       if (rawHtml) {
         const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
         html = `

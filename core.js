@@ -219,7 +219,7 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
     endpoint = 'https://openrouter.ai/api/v1/chat/completions';
   }
 
-  const body = { model: model, messages, max_tokens: 800 };
+  const body = { model: model, messages, max_tokens: 2500 };
   if (json && !isVision) body.response_format = { type: 'json_object' };
   
   const res = await fetch(endpoint, {
