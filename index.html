@@ -599,12 +599,18 @@
           <h3 class="section-title"><i data-lucide="sliders" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Filter Analisis</h3>
           <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
             <div class="form-group">
-              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text2);">Tipe Analisis</label>
-              <select id="progressType" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);" onchange="onProgressFilterChange()">
-                <option value="food">🍽️ Makanan & Gizi</option>
-                <option value="activity">🏃 Kegiatan & Tidur</option>
-                <option value="all">📊 Keseluruhan</option>
-              </select>
+              <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--text2);">Tipe Analisis (Bisa Centang Banyak)</label>
+              <div style="display: flex; flex-direction: column; gap: 8px; background: var(--surface2); border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-sm);">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text);">
+                  <input type="checkbox" id="progressTypeFood" value="food" checked onchange="onProgressFilterChange()"> 🍽️ Makanan & Gizi
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text);">
+                  <input type="checkbox" id="progressTypeAct" value="activity" checked onchange="onProgressFilterChange()"> 🏃 Kegiatan & Olahraga
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text);">
+                  <input type="checkbox" id="progressTypeSleep" value="sleep" checked onchange="onProgressFilterChange()"> 😴 Istirahat & Tidur
+                </label>
+              </div>
             </div>
             <div class="form-group">
               <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text2);">Periode Waktu</label>

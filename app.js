@@ -3318,7 +3318,9 @@ function renderEnergyComparisonChart(intake, burned) {
 // ============================================================
 
 function initProgressPage() {
-    document.getElementById('progressType').value = 'food';
+    document.getElementById('progressTypeFood').checked = true;
+    document.getElementById('progressTypeAct').checked = true;
+    document.getElementById('progressTypeSleep').checked = true;
     document.getElementById('progressPeriod').value = '7';
     document.getElementById('progressCustomDates').classList.add('hidden');
     document.getElementById('progressResultCard').style.display = 'none';
@@ -3351,7 +3353,21 @@ function onProgressPeriodSelect() {
 
 function onProgressFilterChange() {
     const period = document.getElementById('progressPeriod').value;
-    const type = document.getElementById('progressType').value;
+    const foodChecked = document.getElementById('progressTypeFood').checked;
+    const actChecked = document.getElementById('progressTypeAct').checked;
+    const sleepChecked = document.getElementById('progressTypeSleep').checked;
+    
+    const btn = document.getElementById('btnRunProgressAnalysis');
+    const msg = document.getElementById('progressValidationMsg');
+    
+    if (!foodChecked && !actChecked && !sleepChecked) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        msg.style.display = 'block';
+        msg.textContent = '⚠️ Silakan centang minimal satu tipe analisis.';
+        return;
+    }
     
     let fromDate, toDate;
     const today = new Date();
@@ -3373,30 +3389,32 @@ function onProgressFilterChange() {
     const allActs = getActivitiesRange(fromDate, toDate);
     
     let hasData = false;
-    if (type === 'food') {
-        hasData = logs.length > 0;
-    } else if (type === 'activity') {
-        let actCount = 0;
-        Object.values(allActs).forEach(dayActs => {
-            actCount += dayActs.length;
-        });
-        hasData = actCount > 0;
-    } else {
-        let actCount = 0;
-        Object.values(allActs).forEach(dayActs => {
-            actCount += dayActs.length;
-        });
-        hasData = logs.length > 0 || actCount > 0;
+    if (foodChecked && logs.length > 0) {
+        hasData = true;
     }
     
-    const btn = document.getElementById('btnRunProgressAnalysis');
-    const msg = document.getElementById('progressValidationMsg');
+    if (actChecked) {
+        let actCount = 0;
+        Object.values(allActs).forEach(dayActs => {
+            dayActs.forEach(a => { if (a.type !== 'sleep') actCount++; });
+        });
+        if (actCount > 0) hasData = true;
+    }
+    
+    if (sleepChecked) {
+        let sleepCount = 0;
+        Object.values(allActs).forEach(dayActs => {
+            dayActs.forEach(a => { if (a.type === 'sleep') sleepCount++; });
+        });
+        if (sleepCount > 0) hasData = true;
+    }
     
     if (!hasData) {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
         msg.style.display = 'block';
+        msg.textContent = '⚠️ Tidak ada data makanan/kegiatan/tidur pada periode ini.';
     } else {
         btn.disabled = false;
         btn.style.opacity = '1';
@@ -3417,7 +3435,9 @@ async function startProgressAnalysis() {
     }
     
     const period = document.getElementById('progressPeriod').value;
-    const type = document.getElementById('progressType').value;
+    const foodChecked = document.getElementById('progressTypeFood').checked;
+    const actChecked = document.getElementById('progressTypeAct').checked;
+    const sleepChecked = document.getElementById('progressTypeSleep').checked;
     
     let fromDate, toDate;
     const today = new Date();
@@ -3454,81 +3474,57 @@ async function startProgressAnalysis() {
         const profile = getProfile() || {};
         const totalDays = Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
         
-        let prompt = "";
+        let prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Analisis data LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
+                     `== PROFIL USER ==\n` +
+                     `Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'}kg, TB: ${profile.tb||'?'}cm, Usia: ${profile.usia||'?'}th, Goal: ${profile.target || 'maintenance'}, Aktivitas: ${profile.aktivitas || '?'}\n\n`;
         
-        if (type === 'food') {
-            const dataLen = logs.length || 1;
+        if (foodChecked) {
             const avgCal = logs.reduce((s, d) => s + (d.cal || 0), 0) / totalDays;
             const avgProtein = logs.reduce((s, d) => s + (d.protein || 0), 0) / totalDays;
             const avgCarbs = logs.reduce((s, d) => s + (d.carbs || 0), 0) / totalDays;
             const avgFat = logs.reduce((s, d) => s + (d.fat || 0), 0) / totalDays;
+            const avgFiber = logs.reduce((s, d) => s + (d.fiber || 0), 0) / totalDays;
+            const avgSugar = logs.reduce((s, d) => s + (d.sugar || 0), 0) / totalDays;
             
-            prompt = `Kamu adalah ahli gizi profesional. Analisis data asupan makanan & gizi LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
-                     `== PROFIL USER ==\n` +
-                     `Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'}kg, Goal: ${profile.target || 'maintenance'}\n\n` +
-                     `== STATISTIK RATA-RATA HARIAN (${totalDays} hari) ==\n` +
-                     `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
-                     `- Protein: ${avgProtein.toFixed(1)}g/hari (target: ${profile.targets?.protein || 120}g)\n` +
-                     `- Karbohidrat: ${avgCarbs.toFixed(1)}g/hari\n` +
-                     `- Lemak: ${avgFat.toFixed(1)}g/hari\n\n` +
-                     `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Berikan analisis kualitas makanan, konsistensi asupan, dan prioritas perbaikan gizi ke depan.`;
-        } else if (type === 'activity') {
-            let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
-            Object.values(allActs).forEach(dayActs => {
-                dayActs.forEach(a => {
-                    if (a.type === 'workout') { workoutCount++; }
-                    else if (a.type === 'gym') { gymCount++; }
-                    else if (a.type === 'cardio') { cardioCount++; }
-                    else if (a.type === 'other') { otherCount++; }
-                    else if (a.type === 'sleep') { sleepData.push(a.hours); }
-                    if (a.burn && a.burn.kcal) {
-                        totalBurnedKcal += parseFloat(a.burn.kcal);
-                    }
-                });
-            });
-            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
-            const avgBurn = (totalBurnedKcal / totalDays).toFixed(0);
-            
-            prompt = `Kamu adalah pelatih fitness profesional. Analisis data kegiatan olahraga & tidur LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
-                     `== PROFIL USER ==\n` +
-                     `BB: ${profile.bb||'?'}kg, Goal: ${profile.target || 'maintenance'}, Aktivitas: ${profile.aktivitas || '?'}\n\n` +
-                     `== AKTIVITAS SELAMA ${totalDays} HARI ==\n` +
-                     `- Total Latihan: ${workoutCount + gymCount} sesi (Workout: ${workoutCount}, Gym: ${gymCount})\n` +
-                     `- Sesi Kardio: ${cardioCount} kali, Lainnya: ${otherCount} kali\n` +
-                     `- Rata-rata Kalori Terbakar: ${avgBurn} kcal/hari\n` +
-                     `- Rata-rata Tidur: ${avgSleep} jam/hari\n\n` +
-                     `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Berikan analisis tentang konsistensi latihan, pembakaran kalori, dan kualitas istirahat (recovery).`;
-        } else {
-            let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
-            Object.values(allActs).forEach(dayActs => {
-                dayActs.forEach(a => {
-                    if (a.type === 'workout') { workoutCount++; }
-                    else if (a.type === 'gym') { gymCount++; }
-                    else if (a.type === 'cardio') { cardioCount++; }
-                    else if (a.type === 'other') { otherCount++; }
-                    else if (a.type === 'sleep') { sleepData.push(a.hours); }
-                    if (a.burn && a.burn.kcal) {
-                        totalBurnedKcal += parseFloat(a.burn.kcal);
-                    }
-                });
-            });
-            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
-            const avgBurn = (totalBurnedKcal / totalDays).toFixed(0);
-            
-            const avgCal = logs.reduce((s, d) => s + (d.cal || 0), 0) / totalDays;
-            const avgProtein = logs.reduce((s, d) => s + (d.protein || 0), 0) / totalDays;
-            
-            prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Analisis data gizi, latihan, dan tidur LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
-                     `== PROFIL USER ==\n` +
-                     `BB: ${profile.bb||'?'}kg, TB: ${profile.tb||'?'}cm, Goal: ${profile.target || 'maintenance'}\n\n` +
-                     `== RIWAYAT PROGRESS HARI (${totalDays} hari) ==\n` +
-                     `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
-                     `- Asupan Protein: ${avgProtein.toFixed(1)}g/hari\n` +
-                     `- Kalori Terbakar: ${avgBurn} kcal/hari\n` +
-                     `- Istirahat Tidur: ${avgSleep} jam/hari\n` +
-                     `- Total Olahraga: ${workoutCount + gymCount + cardioCount} kali sesi\n\n` +
-                     `Tulis evaluasi komprehensif dalam HTML VALID (TANPA markdown, TANPA code block). Evaluasi apakah asupan kalori & protein mendukung program olahraga, recovery otot, dan pencapaian goal user.`;
+            prompt += `== DATA ASUPAN MAKANAN & GIZI (Rata-rata Harian) ==\n` +
+                      `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
+                      `- Protein: ${avgProtein.toFixed(1)}g/hari (target: ${profile.targets?.protein || 120}g)\n` +
+                      `- Karbohidrat: ${avgCarbs.toFixed(1)}g/hari\n` +
+                      `- Lemak: ${avgFat.toFixed(1)}g/hari\n` +
+                      `- Serat: ${avgFiber.toFixed(1)}g/hari\n` +
+                      `- Gula: ${avgSugar.toFixed(1)}g/hari\n\n`;
         }
+        
+        if (actChecked || sleepChecked) {
+            let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
+            Object.values(allActs).forEach(dayActs => {
+                dayActs.forEach(a => {
+                    if (a.type === 'workout') { workoutCount++; }
+                    else if (a.type === 'gym') { gymCount++; }
+                    else if (a.type === 'cardio') { cardioCount++; }
+                    else if (a.type === 'other') { otherCount++; }
+                    else if (a.type === 'sleep') { sleepData.push(a.hours); }
+                    if (a.burn && a.burn.kcal) {
+                        totalBurnedKcal += parseFloat(a.burn.kcal);
+                    }
+                });
+            });
+            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+            const avgBurn = (totalBurnedKcal / totalDays).toFixed(0);
+            
+            if (actChecked) {
+                prompt += `== DATA OLAHRAGA & KEGIATAN ==\n` +
+                          `- Total Latihan: ${workoutCount + gymCount} sesi (Workout: ${workoutCount}, Gym: ${gymCount})\n` +
+                          `- Sesi Kardio: ${cardioCount} kali, Aktivitas Lainnya: ${otherCount} kali\n` +
+                          `- Rata-rata Kalori Terbakar: ${avgBurn} kcal/hari dari kegiatan olahraga\n\n`;
+            }
+            if (sleepChecked) {
+                prompt += `== DATA ISTIRAHAT & TIDUR ==\n` +
+                          `- Rata-rata Tidur: ${avgSleep} jam/hari\n\n`;
+            }
+        }
+        
+        prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Fokuskan analisis pada tipe data yang disediakan di atas (jangan bahas data yang tidak ada). Berikan prioritas tindakan konkret untuk memperbaiki pola hidup pengguna.`;
         
         const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
         if (rawHtml) {
@@ -3541,7 +3537,7 @@ async function startProgressAnalysis() {
                 tempDate.setDate(tempDate.getDate() + 1);
             }
             
-            renderProgressAnalysisChart(type, dateSeries, logs, allActs);
+            renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, dateSeries, logs, allActs);
         } else {
             resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;
         }
@@ -3551,7 +3547,7 @@ async function startProgressAnalysis() {
     }
 }
 
-function renderProgressAnalysisChart(type, dateSeries, logs, allActs) {
+function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, dateSeries, logs, allActs) {
     const canvas = document.getElementById('progressAnalysisChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -3571,7 +3567,7 @@ function renderProgressAnalysisChart(type, dateSeries, logs, allActs) {
     
     const datasets = [];
     
-    if (type === 'food') {
+    if (foodChecked) {
         const calorieData = dateSeries.map(d => {
             const key = d.toISOString().slice(0, 10);
             const dayLogs = logsByDate[key] || [];
@@ -3604,29 +3600,33 @@ function renderProgressAnalysisChart(type, dateSeries, logs, allActs) {
             tension: 0.3,
             yAxisID: 'y1'
         });
-    } else if (type === 'activity') {
+    }
+    
+    if (actChecked) {
         const burnData = dateSeries.map(d => {
             const key = d.toISOString().slice(0, 10);
             const dayActs = allActs[key] || [];
             return dayActs.reduce((sum, item) => sum + ((item.burn && item.burn.kcal) ? parseFloat(item.burn.kcal) : 0), 0);
         });
         
+        datasets.push({
+            label: 'Kalori Terbakar (kcal)',
+            data: burnData,
+            borderColor: '#ff4d6d',
+            backgroundColor: 'rgba(255, 77, 109, 0.15)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'y'
+        });
+    }
+    
+    if (sleepChecked) {
         const sleepData = dateSeries.map(d => {
             const key = d.toISOString().slice(0, 10);
             const dayActs = allActs[key] || [];
             const sleepAct = dayActs.find(a => a.type === 'sleep');
             return sleepAct ? parseFloat(sleepAct.hours || 0) : 0;
-        });
-        
-        datasets.push({
-            label: 'Kalori Terbakar (kcal)',
-            data: burnData,
-            borderColor: '#ff4d6d',
-            backgroundColor: 'rgba(255, 77, 109, 0.2)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true,
-            yAxisID: 'y'
         });
         
         datasets.push({
@@ -3637,36 +3637,6 @@ function renderProgressAnalysisChart(type, dateSeries, logs, allActs) {
             borderWidth: 2,
             tension: 0.3,
             yAxisID: 'y1'
-        });
-    } else {
-        const calorieIntake = dateSeries.map(d => {
-            const key = d.toISOString().slice(0, 10);
-            const dayLogs = logsByDate[key] || [];
-            return dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
-        });
-        
-        const calorieBurned = dateSeries.map(d => {
-            const key = d.toISOString().slice(0, 10);
-            const dayActs = allActs[key] || [];
-            return dayActs.reduce((sum, item) => sum + ((item.burn && item.burn.kcal) ? parseFloat(item.burn.kcal) : 0), 0);
-        });
-        
-        datasets.push({
-            label: 'Kalori Masuk (kcal)',
-            data: calorieIntake,
-            borderColor: '#6c63ff',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            tension: 0.3
-        });
-        
-        datasets.push({
-            label: 'Kalori Keluar (kcal)',
-            data: calorieBurned,
-            borderColor: '#ff4d6d',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            tension: 0.3
         });
     }
     
@@ -3684,23 +3654,14 @@ function renderProgressAnalysisChart(type, dateSeries, logs, allActs) {
         }
     };
     
-    if (type === 'food') {
+    if (foodChecked || sleepChecked) {
         scales.y1 = {
             type: 'linear',
             display: true,
             position: 'right',
             grid: { drawOnChartArea: false },
             ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } },
-            title: { display: true, text: 'Protein (g)', color: '#00d9a6' }
-        };
-    } else if (type === 'activity') {
-        scales.y1 = {
-            type: 'linear',
-            display: true,
-            position: 'right',
-            grid: { drawOnChartArea: false },
-            ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } },
-            title: { display: true, text: 'Tidur (jam)', color: '#a78bfa' }
+            title: { display: true, text: 'Protein (g) / Tidur (jam)', color: '#00d9a6' }
         };
     }
     

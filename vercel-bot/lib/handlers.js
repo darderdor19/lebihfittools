@@ -2,7 +2,7 @@
 // BOT HANDLERS — All logic ported from GAS
 // ====================================================
 const { getFirebase, setFirebase, toArray, safe, getState, setState, getCache, setCache, deleteCache, getLinkedEmail } = require('./firebase');
-const { sendMessage, sendChatAction, answerCallback } = require('./telegram');
+const { sendMessage, sendChatAction, answerCallback, editMessageText } = require('./telegram');
 const { analyzeFood, sumNutrients } = require('./groq');
 const crypto = require('crypto');
 
@@ -72,7 +72,10 @@ function mainMenuKeyboard() {
         { text: '📈 History', callback_data: 'history' }
       ],
       [
-        { text: '⚙️ Settings', callback_data: 'settings' },
+        { text: '✨ Analisis Progress', callback_data: 'progress_menu' },
+        { text: '⚙️ Settings', callback_data: 'settings' }
+      ],
+      [
         { text: '🌐 Buka Web App', url: 'https://darderdor19.github.io/lebihfittools/' }
       ]
     ]
@@ -124,6 +127,10 @@ async function handleMessage(msg) {
 
   if (text === '/menu') return showMainMenu(chatId, userId);
   if (text === '/help') return sendHelp(chatId);
+  if (text === '/progress') {
+    const email = await getLinkedEmail(userId);
+    return email ? showProgressMenu(chatId, userId, email) : promptLogin(chatId, userId);
+  }
 
   if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text);
   if (state === 'AWAIT_OTP') return onOtpInput(chatId, userId, text);
@@ -230,6 +237,14 @@ async function handleCallback(cb) {
   if (data.startsWith('hist_food_')) return showFoodHistoryDays(chatId, email, parseInt(data.replace('hist_food_', '')));
   if (data.startsWith('hist_activity_')) return showActivityHistoryDays(chatId, email, parseInt(data.replace('hist_activity_', '')));
   if (data.startsWith('hist_ai_')) return showAIHistoryDays(chatId, email, parseInt(data.replace('hist_ai_', '')));
+
+  // Progress Analysis callbacks
+  if (data === 'progress_menu') return email ? showProgressMenu(chatId, userId, email, cb.message.message_id) : promptLogin(chatId, userId);
+  if (data === 'prog_toggle_food') return email ? toggleProgressConfig(chatId, userId, email, 'food', cb.message.message_id) : promptLogin(chatId, userId);
+  if (data === 'prog_toggle_act') return email ? toggleProgressConfig(chatId, userId, email, 'activity', cb.message.message_id) : promptLogin(chatId, userId);
+  if (data === 'prog_toggle_sleep') return email ? toggleProgressConfig(chatId, userId, email, 'sleep', cb.message.message_id) : promptLogin(chatId, userId);
+  if (data === 'prog_cycle_period') return email ? toggleProgressConfig(chatId, userId, email, 'period', cb.message.message_id) : promptLogin(chatId, userId);
+  if (data === 'prog_run_analysis') return email ? runProgressAnalysis(chatId, userId, email) : promptLogin(chatId, userId);
 
   if (data === 'settings') return showSettings(chatId, userId, email);
   if (data === 'logout') return doLogout(chatId, userId);
@@ -542,74 +557,6 @@ async function showDashboard(chatId, email) {
         msg += `${idx + 1}. 😴 *Tidur:* ${Math.floor(act.hours || 0)}j ${Math.round(((act.hours || 0) % 1) * 60)}m (${act.quality || 'biasa'})\n`;
       }
     });
-  }
-
-  try {
-    const safeEmail = safe(email);
-    const signature = getDailyDataSignatureLocal(email, today, logs, todayActs, profile || {});
-    const cachePath = `users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`;
-    const cache = await getFirebase(cachePath);
-    let html = '';
-    
-    if (cache && cache.signature === signature && cache.html) {
-      html = cache.html;
-    } else {
-      // Generate daily AI analysis on the fly
-      const foodList = logs.map(item => `- ${item.name}: ${item.cal} kcal (P: ${item.protein}g, K: ${item.carbs}g, L: ${item.fat}g)`).join('\n') || 'Tidak ada makanan tercatat.';
-      
-      let activityContext = 'Tidak ada kegiatan tercatat hari ini.';
-      if (todayActs.length > 0) {
-        const workouts = todayActs.filter(a => a.type === 'workout');
-        const gyms = todayActs.filter(a => a.type === 'gym');
-        const sleeps = todayActs.filter(a => a.type === 'sleep');
-        const lines = [];
-        if (workouts.length > 0) {
-          workouts.forEach(w => {
-            lines.push(`Workout: ${w.exercises.map(e => `${e.name} (${e.sets.length} set)`).join(', ')}`);
-          });
-        }
-        if (gyms.length > 0) {
-          gyms.forEach(g => {
-            const muscleList = g.muscles.map(m => `${MUSCLE_LABELS[m.muscle]||m.muscle}: ${g.variations ? g.variations.map(v=>v.name).join(', ') : m.variations.map(v=>v.name).join(', ')}`).join(' | ');
-            lines.push(`Gym: ${muscleList}`);
-          });
-        }
-        if (sleeps.length > 0) {
-          sleeps.forEach(s => {
-            lines.push(`Tidur: ${Math.floor(s.hours)}j${Math.round((s.hours%1)*60)}m · ${s.sleepType} · ${s.quality}`);
-          });
-        }
-        activityContext = lines.join('\n');
-      }
-
-      const calStatus = remaining >= 0 ? 'Surplus' : 'Defisit';
-      
-      const targetProtein = (profile && profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
-      const targetCarbs = (profile && profile.targets && profile.targets.carbs) ? profile.targets.carbs : Math.round((calTarget * 0.50) / 4);
-      const targetFat = (profile && profile.targets && profile.targets.fat) ? profile.targets.fat : Math.round((calTarget * 0.25) / 9);
-
-      const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(total.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${total.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((total.protein/targetProtein)*100)}%)\n- Karbohidrat: ${total.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((total.carbs/targetCarbs)*100)}%)\n- Lemak: ${total.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((total.fat/targetFat)*100)}%)\n- Serat: ${total.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${total.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(total.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
-
-      const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 2500);
-      if (rawHtml) {
-        const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
-        html = `
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              <b>Dianalisis AI Groq</b> · llama-3.3-70b · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
-          </div>
-          ${cleanHtml}`;
-        // Save cache to Firebase
-        await setFirebase(cachePath, { signature, html, timestamp: Date.now() });
-      }
-    }
-
-    if (html) {
-      msg += '\n🤖 *Analisis AI:* \n';
-      msg += cleanHtmlToMarkdown(html) + '\n';
-    }
-  } catch(e) {
-    console.error('Dashboard AI Analysis error:', e);
   }
 
   return sendMessage(chatId, msg, {
@@ -2790,6 +2737,257 @@ async function saveOtherSession(chatId, userId, email) {
   msg += `  _(Lemak: ${burn.fatG}g, Karbo: ${burn.carbG}g, Protein: ${burn.proteinG}g)_`;
 
   return sendMessage(chatId, msg, mainMenuKeyboard());
+}
+
+// ====================================================
+// PROGRESS ANALYSIS AI FUNCTIONS
+// ====================================================
+async function getProgressConfig(userId) {
+  let cfg = await getFirebase(`telegram_progress_config/${userId}`);
+  if (!cfg) {
+    cfg = { food: true, activity: true, sleep: true, period: 7 };
+    await setFirebase(`telegram_progress_config/${userId}`, cfg);
+  }
+  if (cfg.food === undefined) cfg.food = true;
+  if (cfg.activity === undefined) cfg.activity = true;
+  if (cfg.sleep === undefined) cfg.sleep = true;
+  if (cfg.period === undefined) cfg.period = 7;
+  return cfg;
+}
+
+async function setProgressConfig(userId, config) {
+  await setFirebase(`telegram_progress_config/${userId}`, config);
+}
+
+async function showProgressMenu(chatId, userId, email, editMessageId = null) {
+  const config = await getProgressConfig(userId);
+  
+  let msg = `✨ *Analisis Progress AI LebihFit* ✨\n\n` +
+            `Pilih tipe data yang ingin lu analisis (lu bisa pilih satu-satu, kombinasi, atau sekaligus semua):\n\n` +
+            `• Makanan & Gizi: ${config.food ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n` +
+            `• Kegiatan & Olahraga: ${config.activity ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n` +
+            `• Istirahat & Tidur: ${config.sleep ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n\n` +
+            `Periode Analisis: *${config.period} Hari Terakhir*\n\n` +
+            `Silakan tekan tombol di bawah untuk toggle pilihan atau langsung mulai analisis AI.`;
+            
+  const keyboard = {
+    inline_keyboard: [
+      [
+        { text: `${config.food ? '✅' : '❌'} Makanan & Gizi`, callback_data: 'prog_toggle_food' }
+      ],
+      [
+        { text: `${config.activity ? '✅' : '❌'} Kegiatan & Olahraga`, callback_data: 'prog_toggle_act' }
+      ],
+      [
+        { text: `${config.sleep ? '✅' : '❌'} Istirahat & Tidur`, callback_data: 'prog_toggle_sleep' }
+      ],
+      [
+        { text: `📅 Periode: ${config.period} Hari`, callback_data: 'prog_cycle_period' }
+      ],
+      [
+        { text: '✨ Mulai Analisis Progress AI', callback_data: 'prog_run_analysis' }
+      ],
+      [
+        { text: '🏠 Menu Utama', callback_data: 'menu' }
+      ]
+    ]
+  };
+
+  if (editMessageId) {
+    return editMessageText(chatId, editMessageId, msg, keyboard);
+  } else {
+    return sendMessage(chatId, msg, keyboard);
+  }
+}
+
+async function toggleProgressConfig(chatId, userId, email, field, messageId) {
+  const config = await getProgressConfig(userId);
+  if (field === 'period') {
+    if (config.period === 7) config.period = 14;
+    else if (config.period === 14) config.period = 30;
+    else config.period = 7;
+  } else {
+    config[field] = !config[field];
+  }
+  await setProgressConfig(userId, config);
+  return showProgressMenu(chatId, userId, email, messageId);
+}
+
+async function runProgressAnalysis(chatId, userId, email) {
+  const config = await getProgressConfig(userId);
+  
+  if (!config.food && !config.activity && !config.sleep) {
+    return sendMessage(chatId, '⚠️ *Perhatian:* Silakan pilih minimal satu tipe analisis (Makanan, Kegiatan, atau Tidur) sebelum memulai analisis.');
+  }
+
+  await sendChatAction(chatId, 'typing');
+  
+  const days = config.period;
+  const dates = getPastWibDates(days);
+  const toDate = dates[0];
+  const fromDate = dates[dates.length - 1];
+  const safeEmail = safe(email);
+  const profile = await getFirebase(`users/${safeEmail}/lf_profile`);
+
+  try {
+    // Fetch logs and acts in parallel
+    const promises = dates.map(async (key) => {
+      const rawLogs = await getFirebase(`users/${safeEmail}/lf_logs/${key}`);
+      const rawActs = await getFirebase(`users/${safeEmail}/lf_activities/${key}`);
+      return {
+        date: key,
+        logs: toArray(rawLogs),
+        acts: toArray(rawActs)
+      };
+    });
+
+    const results = await Promise.all(promises);
+
+    // Validate if data exists for the selected configurations
+    let hasData = false;
+    if (config.food) {
+      const foodCount = results.reduce((acc, r) => acc + r.logs.length, 0);
+      if (foodCount > 0) hasData = true;
+    }
+    if (config.activity) {
+      const actCount = results.reduce((acc, r) => acc + r.acts.filter(a => a.type !== 'sleep').length, 0);
+      if (actCount > 0) hasData = true;
+    }
+    if (config.sleep) {
+      const sleepCount = results.reduce((acc, r) => acc + r.acts.filter(a => a.type === 'sleep').length, 0);
+      if (sleepCount > 0) hasData = true;
+    }
+
+    if (!hasData) {
+      return sendMessage(chatId, `⚠️ *Tidak ada data* pada periode *${days} hari terakhir* untuk tipe analisis yang lu pilih.\n\nCoba catat makanan/kegiatan lu dulu atau ubah rentang periodenya.`);
+    }
+
+    // Show loading message
+    const loadingMsg = await sendMessage(chatId, `🤖 *Menghubungi Groq AI...*\nMemproses data progress lu selama ${days} hari terakhir untuk membuat analisis progress AI. Harap tunggu sebentar...`);
+    const loadingMsgId = loadingMsg && loadingMsg.result ? loadingMsg.result.message_id : null;
+
+    // Build the AI Prompt based on selected types
+    let prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Analisis data LebihFit berikut selama ${days} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
+                 `== PROFIL USER ==\n` +
+                 `Gender: ${(profile && profile.gender) || '?'}, BB: ${(profile && profile.bb) || '?'}kg, TB: ${(profile && profile.tb) || '?'}cm, Usia: ${(profile && profile.usia) || '?'}th, Goal: ${(profile && profile.target) || 'maintenance'}, Aktivitas: ${(profile && profile.aktivitas) || '?'}\n\n`;
+
+    const activeDays = results.filter(d => d.logs.length > 0).length || 1;
+
+    if (config.food) {
+      const totalCal = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.cal || 0), 0), 0);
+      const totalProtein = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.protein || 0), 0), 0);
+      const totalCarbs = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.carbs || 0), 0), 0);
+      const totalFat = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.fat || 0), 0), 0);
+      const totalFiber = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.fiber || 0), 0), 0);
+      const totalSugar = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.sugar || 0), 0), 0);
+      const totalSodium = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.sodium || 0), 0), 0);
+
+      const avgCal = totalCal / activeDays;
+      const avgProtein = totalProtein / activeDays;
+      const avgCarbs = totalCarbs / activeDays;
+      const avgFat = totalFat / activeDays;
+      const avgFiber = totalFiber / activeDays;
+      const avgSugar = totalSugar / activeDays;
+      const avgSodium = totalSodium / activeDays;
+
+      const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+      const targetProtein = (profile && profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
+      const targetCarbs = (profile && profile.targets && profile.targets.carbs) ? profile.targets.carbs : Math.round((calTarget * 0.50) / 4);
+      const targetFat = (profile && profile.targets && profile.targets.fat) ? profile.targets.fat : Math.round((calTarget * 0.25) / 9);
+
+      prompt += `== DATA ASUPAN MAKANAN & GIZI (Rata-rata Harian) ==\n` +
+                `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${calTarget} kcal)\n` +
+                `- Protein: ${avgProtein.toFixed(1)}g/hari (target: ${targetProtein}g)\n` +
+                `- Karbohidrat: ${avgCarbs.toFixed(1)}g/hari\n` +
+                `- Lemak: ${avgFat.toFixed(1)}g/hari\n` +
+                `- Serat: ${avgFiber.toFixed(1)}g/hari\n` +
+                `- Gula: ${avgSugar.toFixed(1)}g/hari\n` +
+                `- Sodium: ${Math.round(avgSodium)}mg/hari\n\n`;
+    }
+
+    if (config.activity || config.sleep) {
+      let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
+      results.forEach(d => {
+        d.acts.forEach(a => {
+          if (a.type === 'workout') workoutCount++;
+          else if (a.type === 'gym') gymCount++;
+          else if (a.type === 'cardio') cardioCount++;
+          else if (a.type === 'other') otherCount++;
+          else if (a.type === 'sleep') sleepData.push(a.hours);
+
+          if (a.burn && a.burn.kcal) {
+            totalBurnedKcal += parseFloat(a.burn.kcal);
+          }
+        });
+      });
+      const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+      const avgBurn = (totalBurnedKcal / days).toFixed(0);
+
+      if (config.activity) {
+        prompt += `== DATA OLAHRAGA & KEGIATAN ==\n` +
+                  `- Total Latihan: ${workoutCount + gymCount} sesi (Workout: ${workoutCount}, Gym: ${gymCount})\n` +
+                  `- Sesi Kardio: ${cardioCount} kali, Aktivitas Lainnya: ${otherCount} kali\n` +
+                  `- Rata-rata Kalori Terbakar: ${avgBurn} kcal/hari dari kegiatan olahraga\n\n`;
+      }
+      if (config.sleep) {
+        prompt += `== DATA ISTIRAHAT & TIDUR ==\n` +
+                  `- Rata-rata Tidur: ${avgSleep} jam/hari\n\n`;
+      }
+    }
+
+    prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Fokuskan analisis pada tipe data yang disediakan di atas (jangan bahas data yang tidak ada). Berikan prioritas tindakan konkret untuk memperbaiki pola hidup pengguna.`;
+
+    const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 2500);
+    let html = '';
+    if (rawHtml) {
+      const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
+      html = `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.08);border:1px solid rgba(94,92,230,0.2);border-radius:8px;font-size:0.75rem;color:#5e5ce6;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <b>Analisis Progress AI LebihFit</b> · Periode ${days} Hari · ${new Date().toLocaleDateString('id-ID')}
+        </div>
+        ${cleanHtml}
+      `;
+    }
+
+    if (loadingMsgId) {
+      let msg = `✨ *Hasil Analisis Progress AI (${days} Hari)* ✨\n\n`;
+      if (html) {
+        msg += cleanHtmlToMarkdown(html);
+      } else {
+        msg += `Gagal membuat analisis AI. Coba beberapa saat lagi.`;
+      }
+      return editMessageText(chatId, loadingMsgId, msg, {
+        inline_keyboard: [
+          [
+            { text: '🔙 Kembali', callback_data: 'progress_menu' },
+            { text: '🏠 Menu Utama', callback_data: 'menu' }
+          ]
+        ]
+      });
+    } else {
+      let msg = `✨ *Hasil Analisis Progress AI (${days} Hari)* ✨\n\n`;
+      if (html) {
+        msg += cleanHtmlToMarkdown(html);
+      } else {
+        msg += `Gagal membuat analisis AI. Coba beberapa saat lagi.`;
+      }
+      return sendMessage(chatId, msg, {
+        inline_keyboard: [
+          [
+            { text: '🔙 Kembali', callback_data: 'progress_menu' },
+            { text: '🏠 Menu Utama', callback_data: 'menu' }
+          ]
+        ]
+      });
+    }
+
+  } catch (err) {
+    console.error('runProgressAnalysis error:', err);
+    return sendMessage(chatId, 'Gagal memuat analisis AI: ' + err.message, {
+      inline_keyboard: [[{ text: 'Kembali', callback_data: 'progress_menu' }]]
+    });
+  }
 }
 
 module.exports = { handleMessage, handleCallback };

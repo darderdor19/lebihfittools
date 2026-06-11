@@ -47,4 +47,15 @@ async function setWebhook(url) {
   });
 }
 
-module.exports = { sendMessage, sendChatAction, answerCallback, setWebhook };
+async function editMessageText(chatId, messageId, text, keyboard = null, parseMode = 'Markdown') {
+  const payload = {
+    chat_id: chatId,
+    message_id: messageId,
+    text: text,
+    parse_mode: parseMode
+  };
+  if (keyboard) payload.reply_markup = keyboard;
+  return callTelegram('editMessageText', payload);
+}
+
+module.exports = { sendMessage, sendChatAction, answerCallback, setWebhook, editMessageText };
