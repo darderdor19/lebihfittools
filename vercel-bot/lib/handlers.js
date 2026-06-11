@@ -199,7 +199,7 @@ async function handleCallback(cb) {
   if (data === 'hist_panel_ai') return showHistoryPanelOptions(chatId, 'ai');
   
   if (data.startsWith('hist_food_')) return showFoodHistoryDays(chatId, email, parseInt(data.replace('hist_food_', '')));
-  if (data.startsWith('hist_act_')) return showActivityHistoryDays(chatId, email, parseInt(data.replace('hist_act_', '')));
+  if (data.startsWith('hist_activity_')) return showActivityHistoryDays(chatId, email, parseInt(data.replace('hist_activity_', '')));
   if (data.startsWith('hist_ai_')) return showAIHistoryDays(chatId, email, parseInt(data.replace('hist_ai_', '')));
 
   if (data === 'settings') return showSettings(chatId, userId, email);
