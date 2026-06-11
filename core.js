@@ -93,24 +93,48 @@ function setLogs(logs) { DB.set('lf_logs', logs); }
 function getActivities() { return DB.get('lf_activities') || {}; }
 function setActivities(acts) { DB.set('lf_activities', acts); }
 
+function getDayActivitiesArray(actsObj, dateStr) {
+  const dayData = actsObj[dateStr];
+  if (!dayData) return [];
+  if (Array.isArray(dayData)) return dayData;
+  if (typeof dayData === 'object') return Object.values(dayData);
+  return [];
+}
+
 function getTodayActivities() {
-  const acts = getActivities();
-  return acts[todayKey()] || [];
+  return getDayActivitiesArray(getActivities(), todayKey());
 }
 
 function saveActivity(item) {
   const acts = getActivities();
   const key = item.date || todayKey();
-  if (!acts[key]) acts[key] = [];
-  acts[key].push(item);
+  let dayData = acts[key];
+  if (!dayData) {
+      acts[key] = [];
+      dayData = acts[key];
+  } else if (!Array.isArray(dayData)) {
+      acts[key] = Object.values(dayData);
+      dayData = acts[key];
+  }
+  dayData.push(item);
   setActivities(acts);
 }
 
 function deleteActivity(id) {
   const acts = getActivities();
   for (const key in acts) {
-    const idx = acts[key].findIndex(i => i.id === id);
-    if (idx !== -1) { acts[key].splice(idx, 1); break; }
+    let dayData = acts[key];
+    if (dayData && !Array.isArray(dayData)) {
+        dayData = Object.values(dayData);
+        acts[key] = dayData;
+    }
+    if (Array.isArray(dayData)) {
+      const idx = dayData.findIndex(i => i.id === id);
+      if (idx !== -1) {
+        dayData.splice(idx, 1);
+        break;
+      }
+    }
   }
   setActivities(acts);
 }
@@ -125,7 +149,7 @@ function getActivitiesRange(from, to) {
   const cur = new Date(start);
   while (cur <= end) {
     const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-    result[k] = acts[k] || [];
+    result[k] = getDayActivitiesArray(acts, k);
     cur.setDate(cur.getDate() + 1);
   }
   return result;
@@ -427,7 +451,7 @@ async function deleteUserAccount() {
 // ===== DATA SIGNATURES FOR AI CACHING =====
 function getDailyDataSignature(email, dateStr) {
   const logs = (getLogs() || {})[dateStr] || [];
-  const acts = (getActivities() || {})[dateStr] || [];
+  const acts = getDayActivitiesArray(getActivities() || {}, dateStr);
   
   const foodSignature = logs.map(l => `${l.id}-${l.cal}-${l.protein}-${l.carbs}-${l.fat}`).join('|');
   const actSignature = acts.map(a => {

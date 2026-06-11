@@ -901,13 +901,20 @@ function executeSaveActivity(item) {
         const acts = getActivities();
         let updated = false;
         for (const key in acts) {
-            const idx = acts[key].findIndex(a => a.id === _editingActivityId);
-            if (idx !== -1) {
-                item.id = _editingActivityId;
-                item.date = key; // Preserve original log date
-                acts[key][idx] = item;
-                updated = true;
-                break;
+            let dayData = acts[key];
+            if (dayData && !Array.isArray(dayData)) {
+                dayData = Object.values(dayData);
+                acts[key] = dayData;
+            }
+            if (Array.isArray(dayData)) {
+                const idx = dayData.findIndex(a => a.id === _editingActivityId);
+                if (idx !== -1) {
+                    item.id = _editingActivityId;
+                    item.date = key; // Preserve original log date
+                    dayData[idx] = item;
+                    updated = true;
+                    break;
+                }
             }
         }
         if (updated) {
@@ -973,8 +980,15 @@ function editActivity(id) {
     const acts = getActivities();
     let act = null;
     for (const key in acts) {
-        act = acts[key].find(i => i.id === id);
-        if (act) break;
+        let dayData = acts[key];
+        if (dayData && !Array.isArray(dayData)) {
+            dayData = Object.values(dayData);
+            acts[key] = dayData;
+        }
+        if (Array.isArray(dayData)) {
+            act = dayData.find(i => i.id === id);
+            if (act) break;
+        }
     }
     if (!act) return;
     
@@ -1196,8 +1210,15 @@ function saveSleepLog() {
         const acts = getActivities();
         let origItem = null;
         for (const key in acts) {
-            origItem = acts[key].find(a => a.id === _editingActivityId);
-            if (origItem) break;
+            let dayData = acts[key];
+            if (dayData && !Array.isArray(dayData)) {
+                dayData = Object.values(dayData);
+                acts[key] = dayData;
+            }
+            if (Array.isArray(dayData)) {
+                origItem = dayData.find(a => a.id === _editingActivityId);
+                if (origItem) break;
+            }
         }
         item = {
             id: _editingActivityId,
@@ -1213,11 +1234,18 @@ function saveSleepLog() {
         
         let updated = false;
         for (const key in acts) {
-            const idx = acts[key].findIndex(a => a.id === _editingActivityId);
-            if (idx !== -1) {
-                acts[key][idx] = item;
-                updated = true;
-                break;
+            let dayData = acts[key];
+            if (dayData && !Array.isArray(dayData)) {
+                dayData = Object.values(dayData);
+                acts[key] = dayData;
+            }
+            if (Array.isArray(dayData)) {
+                const idx = dayData.findIndex(a => a.id === _editingActivityId);
+                if (idx !== -1) {
+                    dayData[idx] = item;
+                    updated = true;
+                    break;
+                }
             }
         }
         if (updated) {
