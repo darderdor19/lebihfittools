@@ -3534,6 +3534,42 @@ async function startProgressAnalysis() {
     const logs = getLogsRange(fromDate, toDate);
     const allActs = getActivitiesRange(fromDate, toDate);
     
+    // Check Cache
+    const cacheParams = {
+        from: fromDate.getTime(),
+        to: toDate.getTime(),
+        food: foodChecked,
+        act: actChecked,
+        sleep: sleepChecked
+    };
+    const cachedData = typeof DB !== 'undefined' ? DB.get('lf_analysis_cache') : null;
+    if (cachedData && cachedData.params) {
+        const p = cachedData.params;
+        if (p.from === cacheParams.from && p.to === cacheParams.to && 
+            p.food === cacheParams.food && p.act === cacheParams.act && p.sleep === cacheParams.sleep) {
+            
+            resultCard.style.display = 'block';
+            resultTextEl.innerHTML = cachedData.html;
+            
+            const msg = document.getElementById('progressValidationMsg');
+            if (msg) {
+                msg.style.display = 'block';
+                msg.style.color = 'var(--success)';
+                msg.textContent = '⚡ Menampilkan hasil analisis terakhir (Cache). Tambah/ubah log untuk analisis ulang.';
+                setTimeout(() => { msg.style.display='none'; msg.style.color=''; }, 5000);
+            }
+            
+            const dateSeries = [];
+            const tempDate = new Date(fromDate);
+            while (tempDate <= toDate) {
+                dateSeries.push(new Date(tempDate));
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+            renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, dateSeries, logs, allActs);
+            return; // Stop here, use cache
+        }
+    }
+    
     resultCard.style.display = 'block';
     resultTextEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="19.07"/></svg>
@@ -3605,7 +3641,15 @@ async function startProgressAnalysis() {
         
         const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
         if (rawHtml) {
-            resultTextEl.innerHTML = styleAIHtml(rawHtml);
+            const finalHtml = styleAIHtml(rawHtml);
+            resultTextEl.innerHTML = finalHtml;
+            
+            if (typeof DB !== 'undefined') {
+                DB.set('lf_analysis_cache', {
+                    params: cacheParams,
+                    html: finalHtml
+                });
+            }
             
             const dateSeries = [];
             const tempDate = new Date(fromDate);

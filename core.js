@@ -67,7 +67,7 @@ const DB = {
 };
 
 const getProfile = () => DB.get('lf_profile');
-const setProfile = p => DB.set('lf_profile', p);
+const setProfile = p => { DB.set('lf_profile', p); invalidateAnalysisCache(); };
 const getApiKey = () => DB.get('lf_apikey');
 const setApiKey = k => DB.set('lf_apikey', k);
 const getVisionKey = () => DB.get('lf_visionkey');
@@ -87,11 +87,15 @@ const clearAuthUser = () => {
 };
 
 function getLogs() { return DB.get('lf_logs') || {}; }
-function setLogs(logs) { DB.set('lf_logs', logs); }
+function setLogs(logs) { DB.set('lf_logs', logs); invalidateAnalysisCache(); }
 
 // ===== ACTIVITIES (Olahraga & Tidur) =====
 function getActivities() { return DB.get('lf_activities') || {}; }
-function setActivities(acts) { DB.set('lf_activities', acts); }
+function setActivities(acts) { DB.set('lf_activities', acts); invalidateAnalysisCache(); }
+
+function invalidateAnalysisCache() {
+    DB.del('lf_analysis_cache');
+}
 
 function getDayActivitiesArray(actsObj, dateStr) {
   const dayData = actsObj[dateStr];
