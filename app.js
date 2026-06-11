@@ -1318,11 +1318,14 @@ function renderTodayActivities() {
             detail = act.muscles.map(m => {
                 const restLabel = m.restTime ? ` <span style="font-size:0.72rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
                 const varList = (m.variations || []).map(v => {
-                    const setsStr = (v.sets || []).map(s => `${s.reps}${s.weight ? `×${s.weight}kg` : ''}`).join(' / ');
-                    return `<span style="display:block;padding:1px 0 1px 10px;color:var(--text2);font-size:0.82rem;">• <b style="color:var(--text);">${v.name || '(tanpa nama)'}</b>${v.sets && v.sets.length ? ` — ${v.sets.length} set: ${setsStr}` : ''}</span>`;
+                    const setsStr = (v.sets || []).map((s, idx) => `<span style="display:inline-block; padding:2px 6px; margin:2px 3px 2px 0; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; font-size:0.75rem; color:var(--text2);">Set ${idx+1}: <b style="color:var(--text);">${s.reps}</b>${s.weight ? `<span style="opacity:0.7;font-size:0.7rem;">×${s.weight}kg</span>` : ''}</span>`).join('');
+                    return `<div style="margin-top:6px; padding-left:10px; border-left:2px solid rgba(255,255,255,0.1);">
+                              <div style="font-size:0.85rem; margin-bottom:2px;"><b style="color:var(--text);">${v.name || '(tanpa nama)'}</b></div>
+                              <div style="display:flex; flex-wrap:wrap;">${setsStr}</div>
+                            </div>`;
                 }).join('');
-                return `<span style="display:block;margin-top:6px;"><b style="color:var(--text);">${MUSCLE_LABELS[m.muscle] || m.muscle}</b>${restLabel}</span>${varList}`;
-            }).join('<div style="height:4px;"></div>');
+                return `<div style="margin-top:10px;"><b style="color:var(--text); font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;">${MUSCLE_LABELS[m.muscle] || m.muscle}</b>${restLabel}</div>${varList}`;
+            }).join('<div style="height:8px;"></div>');
             typeLabel = 'Gym';
         } else if (act.type === 'cardio') {
             const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
@@ -1427,13 +1430,16 @@ function renderActivityHistory() {
                 badge = '<i data-lucide="zap" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Workout';
             } else if (act.type === 'gym') {
                 detail = (act.muscles || []).map(m => {
-                    const restLabel = m.restTime ? ` <span style="font-size:0.7rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
+                    const restLabel = m.restTime ? ` <span style="font-size:0.72rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
                     const varList = (m.variations || []).map(v => {
-                        const setsStr = (v.sets || []).map(s => `${s.reps}${s.weight ? `×${s.weight}kg` : ''}`).join(' / ');
-                        return `<span style="display:block;padding:1px 0 1px 12px;font-size:0.8rem;">• <b>${v.name || '(tanpa nama)'}</b>${v.sets && v.sets.length ? ` — ${v.sets.length} set: ${setsStr}` : ''}</span>`;
+                        const setsStr = (v.sets || []).map((s, idx) => `<span style="display:inline-block; padding:2px 6px; margin:2px 3px 2px 0; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; font-size:0.75rem; color:var(--text2);">Set ${idx+1}: <b style="color:var(--text);">${s.reps}</b>${s.weight ? `<span style="opacity:0.7;font-size:0.7rem;">×${s.weight}kg</span>` : ''}</span>`).join('');
+                        return `<div style="margin-top:6px; padding-left:10px; border-left:2px solid rgba(255,255,255,0.1);">
+                                  <div style="font-size:0.85rem; margin-bottom:2px;"><b style="color:var(--text);">${v.name || '(tanpa nama)'}</b></div>
+                                  <div style="display:flex; flex-wrap:wrap;">${setsStr}</div>
+                                </div>`;
                     }).join('');
-                    return `<span style="display:block;margin-top:5px;"><strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>${restLabel}</span>${varList}`;
-                }).join('<div style="height:3px;"></div>');
+                    return `<div style="margin-top:10px;"><b style="color:var(--text); font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;">${MUSCLE_LABELS[m.muscle] || m.muscle}</b>${restLabel}</div>${varList}`;
+                }).join('<div style="height:8px;"></div>');
                 badge = '<i data-lucide="dumbbell" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Gym';
             } else if (act.type === 'cardio') {
                 const distanceStr = act.distanceKm ? ` · ${act.distanceKm} km` : '';
