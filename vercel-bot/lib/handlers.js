@@ -2936,7 +2936,13 @@ async function runProgressAnalysis(chatId, userId, email) {
       }
     }
 
-    prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Fokuskan analisis pada tipe data yang disediakan di atas (jangan bahas data yang tidak ada). Berikan prioritas tindakan konkret untuk memperbaiki pola hidup pengguna.`;
+    prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). 
+ATURAN FORMATTING WAJIB:
+1. Jangan tulis paragraf panjang yang membosankan. Gunakan poin-poin pendek yang mudah dibaca.
+2. Gunakan tag <h3> dengan emoji untuk judul bagian (contoh: <h3>🔥 Kalori & Makro</h3>).
+3. Gunakan tag <ul> dan <li> untuk menjabarkan poin-poin penting atau tindakan konkret.
+4. Gunakan tag <strong> untuk menekankan angka atau pesan penting.
+5. Gunakan gaya bahasa gaul (lu/gue) yang asik dan menyemangati. Fokus pada data yang ada saja.`;
 
     const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 2500);
     let html = '';

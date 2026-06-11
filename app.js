@@ -3652,7 +3652,13 @@ async function startProgressAnalysis() {
             }
         }
         
-        prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Fokuskan analisis pada tipe data yang disediakan di atas (jangan bahas data yang tidak ada). Berikan prioritas tindakan konkret untuk memperbaiki pola hidup pengguna.`;
+        prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). 
+ATURAN FORMATTING WAJIB:
+1. Jangan tulis paragraf panjang yang membosankan. Gunakan poin-poin pendek yang mudah dibaca.
+2. Gunakan tag <h3> dengan emoji untuk judul bagian (contoh: <h3>🔥 Kalori & Makro</h3>).
+3. Gunakan tag <ul> dan <li> untuk menjabarkan poin-poin penting atau tindakan konkret.
+4. Gunakan tag <strong> untuk menekankan angka atau pesan penting.
+5. Gunakan gaya bahasa gaul (lu/gue) yang asik dan menyemangati. Fokus pada data yang ada saja.`;
         
         const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
         if (rawHtml) {
@@ -3724,6 +3730,7 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
             borderWidth: 2,
             tension: 0.3,
             fill: true,
+            pointRadius: labels.length === 1 ? 0 : 3,
             yAxisID: 'y'
         });
         
@@ -3731,9 +3738,10 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
             label: 'Protein (g)',
             data: proteinData,
             borderColor: '#00d9a6',
-            backgroundColor: 'transparent',
+            backgroundColor: labels.length === 1 ? 'rgba(0, 217, 166, 0.5)' : 'transparent',
             borderWidth: 2,
             tension: 0.3,
+            pointRadius: labels.length === 1 ? 0 : 3,
             yAxisID: 'y1'
         });
     }
@@ -3753,6 +3761,7 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
             borderWidth: 2,
             tension: 0.3,
             fill: true,
+            pointRadius: labels.length === 1 ? 0 : 3,
             yAxisID: 'y'
         });
     }
@@ -3769,9 +3778,10 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
             label: 'Tidur (jam)',
             data: sleepData,
             borderColor: '#a78bfa',
-            backgroundColor: 'transparent',
+            backgroundColor: labels.length === 1 ? 'rgba(167, 139, 250, 0.5)' : 'transparent',
             borderWidth: 2,
             tension: 0.3,
+            pointRadius: labels.length === 1 ? 0 : 3,
             yAxisID: 'y1'
         });
     }
@@ -3801,8 +3811,10 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
         };
     }
     
+    const chartType = labels.length === 1 ? 'bar' : 'line';
+    
     progressAnalysisChart = new Chart(ctx, {
-        type: 'line',
+        type: chartType,
         data: {
             labels: labels,
             datasets: datasets
