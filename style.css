@@ -1401,3 +1401,39 @@ a{color:var(--accent);text-decoration:none}
   .calburn-input-row { flex-direction: column; gap: 8px; }
   .calburn-kcal { font-size: 1.6rem; }
 }
+
+/* ===== PROGRESS ANALYSIS CARDS ===== */
+.progress-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.progress-card:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px);
+}
+.progress-card.active.food-card {
+  border-color: #6c63ff !important;
+  background: rgba(108, 99, 255, 0.05) !important;
+  box-shadow: 0 0 15px rgba(108, 99, 255, 0.1);
+}
+.progress-card.active.act-card {
+  border-color: #ff4d6d !important;
+  background: rgba(255, 77, 109, 0.05) !important;
+  box-shadow: 0 0 15px rgba(255, 77, 109, 0.1);
+}
+.progress-card.active.sleep-card {
+  border-color: #a78bfa !important;
+  background: rgba(167, 139, 250, 0.05) !important;
+  box-shadow: 0 0 15px rgba(167, 139, 250, 0.1);
+}
+.progress-card.active .progress-card-icon {
+  transform: scale(1.05);
+}
+.form-group input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+  padding: 0;
+}
+

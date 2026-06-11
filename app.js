@@ -3357,6 +3357,23 @@ function onProgressFilterChange() {
     const actChecked = document.getElementById('progressTypeAct').checked;
     const sleepChecked = document.getElementById('progressTypeSleep').checked;
     
+    // Toggle active class on card labels
+    const foodLabel = document.querySelector('.progress-card.food-card');
+    if (foodLabel) {
+        if (foodChecked) foodLabel.classList.add('active');
+        else foodLabel.classList.remove('active');
+    }
+    const actLabel = document.querySelector('.progress-card.act-card');
+    if (actLabel) {
+        if (actChecked) actLabel.classList.add('active');
+        else actLabel.classList.remove('active');
+    }
+    const sleepLabel = document.querySelector('.progress-card.sleep-card');
+    if (sleepLabel) {
+        if (sleepChecked) sleepLabel.classList.add('active');
+        else sleepLabel.classList.remove('active');
+    }
+    
     const btn = document.getElementById('btnRunProgressAnalysis');
     const msg = document.getElementById('progressValidationMsg');
     

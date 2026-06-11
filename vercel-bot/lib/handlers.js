@@ -2762,33 +2762,33 @@ async function setProgressConfig(userId, config) {
 async function showProgressMenu(chatId, userId, email, editMessageId = null) {
   const config = await getProgressConfig(userId);
   
-  let msg = `✨ *Analisis Progress AI LebihFit* ✨\n\n` +
+  let msg = `*Analisis Progress AI LebihFit*\n\n` +
             `Pilih tipe data yang ingin lu analisis (lu bisa pilih satu-satu, kombinasi, atau sekaligus semua):\n\n` +
-            `• Makanan & Gizi: ${config.food ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n` +
-            `• Kegiatan & Olahraga: ${config.activity ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n` +
-            `• Istirahat & Tidur: ${config.sleep ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n\n` +
+            `• Makanan & Gizi: ${config.food ? '*Aktif*' : '*Nonaktif*'}\n` +
+            `• Kegiatan & Olahraga: ${config.activity ? '*Aktif*' : '*Nonaktif*'}\n` +
+            `• Istirahat & Tidur: ${config.sleep ? '*Aktif*' : '*Nonaktif*'}\n\n` +
             `Periode Analisis: *${config.period} Hari Terakhir*\n\n` +
             `Silakan tekan tombol di bawah untuk toggle pilihan atau langsung mulai analisis AI.`;
             
   const keyboard = {
     inline_keyboard: [
       [
-        { text: `${config.food ? '✅' : '❌'} Makanan & Gizi`, callback_data: 'prog_toggle_food' }
+        { text: `${config.food ? '[X]' : '[ ]'} Makanan & Gizi`, callback_data: 'prog_toggle_food' }
       ],
       [
-        { text: `${config.activity ? '✅' : '❌'} Kegiatan & Olahraga`, callback_data: 'prog_toggle_act' }
+        { text: `${config.activity ? '[X]' : '[ ]'} Kegiatan & Olahraga`, callback_data: 'prog_toggle_act' }
       ],
       [
-        { text: `${config.sleep ? '✅' : '❌'} Istirahat & Tidur`, callback_data: 'prog_toggle_sleep' }
+        { text: `${config.sleep ? '[X]' : '[ ]'} Istirahat & Tidur`, callback_data: 'prog_toggle_sleep' }
       ],
       [
-        { text: `📅 Periode: ${config.period} Hari`, callback_data: 'prog_cycle_period' }
+        { text: `Periode: ${config.period} Hari`, callback_data: 'prog_cycle_period' }
       ],
       [
-        { text: '✨ Mulai Analisis Progress AI', callback_data: 'prog_run_analysis' }
+        { text: 'Mulai Analisis Progress AI', callback_data: 'prog_run_analysis' }
       ],
       [
-        { text: '🏠 Menu Utama', callback_data: 'menu' }
+        { text: 'Kembali ke Menu Utama', callback_data: 'menu' }
       ]
     ]
   };

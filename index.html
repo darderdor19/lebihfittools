@@ -597,24 +597,39 @@
         
         <div class="section-card">
           <h3 class="section-title"><i data-lucide="sliders" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Filter Analisis</h3>
-          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-grid" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
             <div class="form-group">
-              <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--text2);">Tipe Analisis (Bisa Centang Banyak)</label>
-              <div style="display: flex; flex-direction: column; gap: 8px; background: var(--surface2); border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-sm);">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text);">
-                  <input type="checkbox" id="progressTypeFood" value="food" checked onchange="onProgressFilterChange()"> 🍽️ Makanan & Gizi
+              <label style="display:block;margin-bottom:12px;font-size:0.85rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Tipe Analisis (Bisa Centang Banyak)</label>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                <label class="progress-card food-card active" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.25s ease;">
+                  <input type="checkbox" id="progressTypeFood" value="food" checked onchange="onProgressFilterChange()" style="display: none;">
+                  <div class="progress-card-icon" style="background: rgba(108, 99, 255, 0.15); color: #6c63ff; width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all 0.25s ease;">
+                    <i data-lucide="utensils" style="width: 16px; height: 16px;"></i>
+                  </div>
+                  <span style="font-size: 0.9rem; font-weight: 600; color: var(--text);">Makanan & Gizi</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text);">
-                  <input type="checkbox" id="progressTypeAct" value="activity" checked onchange="onProgressFilterChange()"> 🏃 Kegiatan & Olahraga
+                
+                <label class="progress-card act-card active" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.25s ease;">
+                  <input type="checkbox" id="progressTypeAct" value="activity" checked onchange="onProgressFilterChange()" style="display: none;">
+                  <div class="progress-card-icon" style="background: rgba(255, 77, 109, 0.15); color: #ff4d6d; width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all 0.25s ease;">
+                    <i data-lucide="dumbbell" style="width: 16px; height: 16px;"></i>
+                  </div>
+                  <span style="font-size: 0.9rem; font-weight: 600; color: var(--text);">Kegiatan & Olahraga</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--text);">
-                  <input type="checkbox" id="progressTypeSleep" value="sleep" checked onchange="onProgressFilterChange()"> 😴 Istirahat & Tidur
+                
+                <label class="progress-card sleep-card active" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.25s ease;">
+                  <input type="checkbox" id="progressTypeSleep" value="sleep" checked onchange="onProgressFilterChange()" style="display: none;">
+                  <div class="progress-card-icon" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa; width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all 0.25s ease;">
+                    <i data-lucide="moon" style="width: 16px; height: 16px;"></i>
+                  </div>
+                  <span style="font-size: 0.9rem; font-weight: 600; color: var(--text);">Istirahat & Tidur</span>
                 </label>
               </div>
             </div>
+            
             <div class="form-group">
-              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text2);">Periode Waktu</label>
-              <select id="progressPeriod" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);" onchange="onProgressPeriodSelect()">
+              <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Periode Waktu</label>
+              <select id="progressPeriod" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);outline:none;font-size:0.95rem;transition:border-color 0.2s;" onchange="onProgressPeriodSelect()">
                 <option value="7">7 Hari Terakhir</option>
                 <option value="14">14 Hari Terakhir</option>
                 <option value="30">30 Hari Terakhir</option>
