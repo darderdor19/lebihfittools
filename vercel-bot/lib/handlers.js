@@ -1551,6 +1551,7 @@ function cleanHtmlToMarkdown(html) {
   if (!html) return '';
   let str = html;
   str = str.replace(/<div style="display:flex;[^>]*>[\s\S]*?<\/div>/gi, '');
+  str = str.replace(/[*_`\[]/g, '\\$&');
   str = str.replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '\n\n*$1*\n');
   str = str.replace(/<li>(.*?)<\/li>/gi, '• $1\n');
   str = str.replace(/<ul>/gi, '').replace(/<\/ul>/gi, '\n');
