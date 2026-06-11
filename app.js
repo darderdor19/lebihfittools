@@ -1,6 +1,7 @@
 // State and Initialization
 let currentChart = null;
 let currentMacroChart = null;
+let currentActivityChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -745,7 +746,120 @@ function renderActivityHistory() {
             ${actHtml}
         </div>`;
     }).join('');
+    
+    // Render the dual-axis activity and sleep chart
+    renderActivityChart(allDates, allActs);
+    
     if (window.lucide) lucide.createIcons();
+}
+
+function renderActivityChart(dates, allActs) {
+    const canvas = document.getElementById('activityChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Sort dates ascending for the chart (past to present)
+    const sortedDates = [...dates].sort();
+    
+    const labels = sortedDates.map(date => {
+        const d = new Date(date.replace(/-/g, '/'));
+        return `${d.getDate()}/${d.getMonth()+1}`;
+    });
+    
+    const burnedCals = sortedDates.map(date => {
+        const dayActs = allActs[date] || [];
+        return dayActs.reduce((sum, a) => sum + ((a.burn && a.burn.kcal) ? parseFloat(a.burn.kcal) : 0), 0);
+    });
+    
+    const sleepHours = sortedDates.map(date => {
+        const dayActs = allActs[date] || [];
+        const sleepAct = dayActs.find(a => a.type === 'sleep');
+        return sleepAct ? parseFloat(sleepAct.hours || 0) : 0;
+    });
+    
+    if (currentActivityChart) currentActivityChart.destroy();
+    
+    currentActivityChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Kalori Terbakar (kcal)',
+                    data: burnedCals,
+                    backgroundColor: 'rgba(0, 240, 255, 0.15)',
+                    borderColor: '#00f0ff',
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    type: 'bar',
+                    order: 2
+                },
+                {
+                    label: 'Durasi Tidur (jam)',
+                    data: sleepHours,
+                    borderColor: '#a78bfa',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#a78bfa',
+                    pointBorderColor: '#0b121c',
+                    pointBorderWidth: 2,
+                    pointRadius: 3,
+                    fill: false,
+                    yAxisID: 'y1',
+                    type: 'line',
+                    tension: 0.4,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(11, 18, 28, 0.95)',
+                    titleColor: '#e0f7fa',
+                    bodyColor: '#e0f7fa',
+                    borderColor: 'rgba(0, 240, 255, 0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12,
+                    titleFont: { family: '"Inter", sans-serif', weight: 'bold', size: 12 },
+                    bodyFont: { family: '"Inter", sans-serif', size: 12 }
+                }
+            },
+            scales: {
+                y: { 
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.03)', 
+                        drawBorder: false 
+                    }, 
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } },
+                    title: { display: true, text: 'Kcal Terbakar', color: '#00f0ff', font: { family: '"Inter", sans-serif', size: 10, weight: 'bold' } }
+                },
+                y1: { 
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false }, 
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } },
+                    title: { display: true, text: 'Tidur (jam)', color: '#a78bfa', font: { family: '"Inter", sans-serif', size: 10, weight: 'bold' } }
+                },
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } } 
+                }
+            }
+        }
+    });
 }
 
 // --- History Comprehensive AI Analysis (food + activity + sleep) ---
