@@ -639,12 +639,25 @@
             
             <div class="form-group">
               <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Periode Waktu</label>
-              <select id="progressPeriod" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);outline:none;font-size:0.95rem;transition:border-color 0.2s;" onchange="onProgressPeriodSelect()">
-                <option value="7">7 Hari Terakhir</option>
-                <option value="14">14 Hari Terakhir</option>
-                <option value="30">30 Hari Terakhir</option>
-                <option value="custom">Custom Tanggal</option>
-              </select>
+              
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <label class="period-card active">
+                  <input type="radio" name="progressPeriod" value="7" checked onchange="onProgressPeriodSelect()" style="display: none;">
+                  <span>7 Hari</span>
+                </label>
+                <label class="period-card">
+                  <input type="radio" name="progressPeriod" value="14" onchange="onProgressPeriodSelect()" style="display: none;">
+                  <span>14 Hari</span>
+                </label>
+                <label class="period-card">
+                  <input type="radio" name="progressPeriod" value="30" onchange="onProgressPeriodSelect()" style="display: none;">
+                  <span>30 Hari</span>
+                </label>
+                <label class="period-card">
+                  <input type="radio" name="progressPeriod" value="custom" onchange="onProgressPeriodSelect()" style="display: none;">
+                  <span>Custom</span>
+                </label>
+              </div>
             </div>
           </div>
           

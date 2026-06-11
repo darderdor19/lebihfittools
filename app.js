@@ -3381,7 +3381,10 @@ function initProgressPage() {
     document.getElementById('progressTypeFood').checked = true;
     document.getElementById('progressTypeAct').checked = true;
     document.getElementById('progressTypeSleep').checked = true;
-    document.getElementById('progressPeriod').value = '7';
+    
+    const defaultRadio = document.querySelector('input[name="progressPeriod"][value="7"]');
+    if (defaultRadio) defaultRadio.checked = true;
+    
     document.getElementById('progressCustomDates').classList.add('hidden');
     document.getElementById('progressResultCard').style.display = 'none';
     
@@ -3396,12 +3399,22 @@ function initProgressPage() {
     document.getElementById('progressDateFrom').value = formatDateLocal(sevenDaysAgo);
     document.getElementById('progressDateTo').value = formatDateLocal(today);
     
-    onProgressFilterChange();
+    onProgressPeriodSelect(); // This will update active classes and call onProgressFilterChange
     if (window.lucide) lucide.createIcons();
 }
 
 function onProgressPeriodSelect() {
-    const period = document.getElementById('progressPeriod').value;
+    const radio = document.querySelector('input[name="progressPeriod"]:checked');
+    const period = radio ? radio.value : '7';
+    
+    // Update active class on period cards
+    document.querySelectorAll('.period-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    if (radio) {
+        radio.closest('.period-card').classList.add('active');
+    }
+    
     const customDiv = document.getElementById('progressCustomDates');
     if (period === 'custom') {
         customDiv.classList.remove('hidden');
@@ -3412,7 +3425,8 @@ function onProgressPeriodSelect() {
 }
 
 function onProgressFilterChange() {
-    const period = document.getElementById('progressPeriod').value;
+    const radio = document.querySelector('input[name="progressPeriod"]:checked');
+    const period = radio ? radio.value : '7';
     const foodChecked = document.getElementById('progressTypeFood').checked;
     const actChecked = document.getElementById('progressTypeAct').checked;
     const sleepChecked = document.getElementById('progressTypeSleep').checked;
@@ -3511,7 +3525,8 @@ async function startProgressAnalysis() {
         return;
     }
     
-    const period = document.getElementById('progressPeriod').value;
+    const radio = document.querySelector('input[name="progressPeriod"]:checked');
+    const period = radio ? radio.value : '7';
     const foodChecked = document.getElementById('progressTypeFood').checked;
     const actChecked = document.getElementById('progressTypeAct').checked;
     const sleepChecked = document.getElementById('progressTypeSleep').checked;

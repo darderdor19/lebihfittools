@@ -1191,11 +1191,14 @@ a{color:var(--accent);text-decoration:none}
 
 /* ===== TODAY ACTIVITY ITEMS ===== */
 .activity-log-item {
-  padding: 12px 14px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  margin-bottom: 8px;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  transform: translateZ(0); /* Fix Android visual glitch */
+  will-change: transform;
+
   position: relative;
 }
 .activity-log-header {
@@ -1457,3 +1460,33 @@ a{color:var(--accent);text-decoration:none}
   padding: 0;
 }
 
+/* ===== PERIOD CARDS ===== */
+.period-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.period-card span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text2);
+  transition: color 0.2s;
+}
+.period-card:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+.period-card.active {
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15) !important;
+}
+.period-card.active span {
+  color: #ffffff;
+}
