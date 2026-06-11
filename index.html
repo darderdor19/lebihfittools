@@ -335,17 +335,6 @@
           </div>
         </div>
 
-        <!-- Today's Activity Card -->
-        <div class="section-card" id="dashboardActivityCard">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h3 class="section-title" style="margin-bottom:0;"><i data-lucide="dumbbell" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Kegiatan Hari Ini</h3>
-            <button class="btn-secondary" style="padding:6px 12px;font-size:0.75rem;" onclick="showPage('activity')">+ Tambah</button>
-          </div>
-          <div id="dashActivityContent">
-            <p style="color:var(--text2);font-size:0.88rem;">Belum ada kegiatan tercatat. <span style="color:var(--accent);cursor:pointer;" onclick="showPage('activity')">Catat sekarang →</span></p>
-          </div>
-        </div>
-
         <!-- Micronutrients -->
         <div class="section-card">
           <h3 class="section-title"><i data-lucide="flask-conical" style="display:inline-block;vertical-align:text-bottom;"></i> Mikronutrisi Hari Ini</h3>
@@ -360,6 +349,17 @@
           </div>
           <div id="foodList" class="food-list">
             <div class="empty-state">Belum ada makanan hari ini. <br>Klik "+ Tambah Makanan" untuk mulai!</div>
+          </div>
+        </div>
+
+        <!-- Today's Activity Card -->
+        <div class="section-card" id="dashboardActivityCard">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 class="section-title" style="margin-bottom:0;"><i data-lucide="dumbbell" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Kegiatan Hari Ini</h3>
+            <button class="btn-secondary" style="padding:6px 12px;font-size:0.75rem;" onclick="showPage('activity')">+ Tambah</button>
+          </div>
+          <div id="dashActivityContent">
+            <p style="color:var(--text2);font-size:0.88rem;">Belum ada kegiatan tercatat. <span style="color:var(--accent);cursor:pointer;" onclick="showPage('activity')">Catat sekarang →</span></p>
           </div>
         </div>
       </div>
