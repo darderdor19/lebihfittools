@@ -329,6 +329,68 @@ Semua angka dalam satuan standar. Jawab HANYA dengan JSON valid.`;
   }
 }
 
+async function analyzeWorkoutAI(activity, profile) {
+  const { tb, bb, usia, gender, aktivitas, target } = profile;
+  const isGym = activity.type === 'gym';
+  
+  let workoutDetails = '';
+  if (isGym) {
+    workoutDetails = (activity.muscles || []).map(m => {
+      const varDetails = (m.variations || []).map(v => {
+        const setsDetails = (v.sets || []).map(s => `Set ${s.set}: ${s.reps} reps @ ${s.weight || 0} kg`).join(', ');
+        return `- ${v.name}: ${setsDetails}`;
+      }).join('\n');
+      return `Otot: ${m.muscle} (Waktu istirahat per set: ${m.restTime || 60} detik)\n${varDetails}`;
+    }).join('\n\n');
+  } else {
+    workoutDetails = (activity.exercises || []).map(ex => {
+      const setsDetails = (ex.sets || []).map(s => `Set ${s.set}: ${s.reps} reps @ ${s.weight || 0} kg`).join(', ');
+      return `- ${ex.name} (Waktu istirahat per set: ${ex.restTime || 60} detik): ${setsDetails}`;
+    }).join('\n');
+  }
+
+  const prompt = `Kamu adalah ahli gizi, olahraga, dan pelatih fitness profesional. Berdasarkan profil pengguna dan rincian latihan berikut, lakukan analisis mendalam tentang pembakaran kalori, pembagian energi (karbohidrat, lemak, protein), intensitas latihan, dan berikan feedback pemulihan (recovery):
+
+== PROFIL PENGGUNA ==
+- Jenis Kelamin: ${gender || 'Laki-laki'}
+- Tinggi Badan: ${tb || 170} cm
+- Berat Badan: ${bb || 70} kg
+- Usia: ${usia || 25} tahun
+- Aktivitas Harian: ${aktivitas || 'sedang'}
+- Target: ${target || 'fat loss'}
+
+== DATA LATIHAN (${activity.type.toUpperCase()}) ==
+${workoutDetails}
+
+== TUGAS ==
+Hitung estimasi:
+1. Total kalori yang terbakar (kcal) secara logis berdasarkan beban, reps, set, dan durasi istirahat.
+2. Gram lemak yang terbakar (g).
+3. Gram karbohidrat yang terbakar (g).
+4. Gram protein yang terbakar (g).
+5. Berikan feedback analisis singkat (maksimal 3 kalimat dalam bahasa Indonesia gaul/santai yang bersahabat, gunakan 'lu/kamu'). Jelaskan efektivitas latihan ini terhadap target pengguna, kualitas istirahat/rest time yang digunakan, dan saran pemulihan otot.
+
+Jawab HANYA dengan JSON valid format berikut tanpa markdown/teks lain:
+{"kcal":0,"fatG":0,"carbG":0,"proteinG":0,"analysis":"isi feedback di sini"}`;
+
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'meta-llama/llama-3.3-70b-versatile');
+  
+  if (!raw) throw new Error("AI tidak mengembalikan data.");
+  try {
+    if (typeof raw === 'string') {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) {
+        return JSON.parse(match[0]);
+      }
+      return JSON.parse(raw);
+    }
+    return raw;
+  } catch (e) {
+    console.error("Parse Error. Raw data:", raw);
+    throw new Error("Gagal membaca hasil analisis AI (Format JSON tidak valid).");
+  }
+}
+
 // ===== TOAST =====
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');

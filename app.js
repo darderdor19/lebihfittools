@@ -281,7 +281,8 @@ function addWorkoutSet() {
     row.id = `workoutSet_${_workoutSetCount}`;
     row.innerHTML = `
         <div class="set-label">Set ${_workoutSetCount}</div>
-        <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_${_workoutSetCount}">
+        <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_${_workoutSetCount}" style="max-width:85px;">
+        <input type="number" class="set-input" placeholder="Beban (kg)" min="0" id="wWeight_${_workoutSetCount}" style="max-width:95px;">
         <button class="set-remove-btn" onclick="removeWorkoutSet(${_workoutSetCount})"><i data-lucide="x" style="width:14px;height:14px;"></i></button>`;
     container.appendChild(row);
     if (window.lucide) lucide.createIcons();
@@ -309,17 +310,24 @@ function removeWorkoutSet(n) {
 function addWorkoutExercise() {
     const name = document.getElementById('workoutExName').value.trim();
     if (!name) { showToast('Masukkan nama gerakan dulu', 'error'); return; }
-    // Collect per-set reps
+    const restTime = parseInt(document.getElementById('workoutRestTime').value) || 60;
+    // Collect per-set reps and weight
     const setRows = document.querySelectorAll('#workoutSetsContainer .workout-set-row');
     const sets = [];
     setRows.forEach((row, i) => {
-        const repsEl = row.querySelector('.set-input');
-        sets.push({ set: i + 1, reps: parseInt(repsEl.value) || 0 });
+        const repsEl = row.querySelector('input[id^="wReps_"]');
+        const weightEl = row.querySelector('input[id^="wWeight_"]');
+        sets.push({ 
+            set: i + 1, 
+            reps: parseInt(repsEl.value) || 0,
+            weight: parseFloat(weightEl ? weightEl.value : 0) || 0
+        });
     });
-    _workoutSession.push({ name, sets });
+    _workoutSession.push({ name, restTime, sets });
     renderWorkoutSessionList();
     // Reset inputs
     document.getElementById('workoutExName').value = '';
+    document.getElementById('workoutRestTime').value = '';
     document.querySelectorAll('.set-input').forEach(el => el.value = '');
 }
 
@@ -376,32 +384,34 @@ function previewGymBurn() {
     renderBurnPreview('gymBurnPreview', burn, dur, intensity);
 }
 
+
+// --- Gym & Workout State ---
+let _gymSelectedMuscles = {}; // { muscle: [{ name, sets: [{set, reps, weight}] }] }
+let _gymRestTimes = {}; // { muscle: seconds }
+let _tempPendingActivity = null;
+
 function renderWorkoutSessionList() {
     const list = document.getElementById('workoutSessionList');
     const saveBtn = document.getElementById('btnSaveWorkout');
-    const burnSection = document.getElementById('workoutBurnSection');
     if (_workoutSession.length === 0) {
         list.innerHTML = '';
         saveBtn.style.display = 'none';
-        if (burnSection) burnSection.style.display = 'none';
         return;
     }
     saveBtn.style.display = 'block';
-    if (burnSection) burnSection.style.display = 'block';
     list.innerHTML = `<div style="font-size:0.8rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Sesi Workout (${_workoutSession.length} gerakan)</div>` +
         _workoutSession.map((ex, idx) => `
             <div class="workout-exercise-item">
                 <div>
                     <div class="exercise-item-name">${ex.name}</div>
                     <div class="exercise-item-sets">
-                        ${ex.sets.map(s => `<span class="exercise-set-badge">Set ${s.set}: ${s.reps} reps</span>`).join('')}
+                        ${ex.sets.map(s => `<span class="exercise-set-badge">Set ${s.set}: ${s.reps} reps${s.weight ? ` @ ${s.weight} kg` : ''}</span>`).join('')}
+                        ${ex.restTime ? `<span class="exercise-set-badge" style="background:rgba(94,92,230,0.15);color:#8b8ff0;"><i data-lucide="timer" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> ${ex.restTime}s rest</span>` : ''}
                     </div>
                 </div>
                 <button class="exercise-remove-btn" onclick="removeWorkoutExercise(${idx})"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
             </div>`).join('');
     if (window.lucide) lucide.createIcons();
-    // Refresh burn preview
-    previewWorkoutBurn();
 }
 
 function removeWorkoutExercise(idx) {
@@ -410,60 +420,243 @@ function removeWorkoutExercise(idx) {
 }
 
 function saveWorkoutSession() {
-    if (_workoutSession.length === 0) { showToast('Tambah minimal 1 gerakan', 'error'); return; }
-    const durationMin = parseFloat(document.getElementById('workoutDuration').value) || 0;
-    const intensity = document.getElementById('workoutIntensity')?.value || 'medium';
-    const burn = durationMin > 0 ? calcBurnedCalories(MET_WORKOUT[intensity], durationMin) : null;
-    const item = {
-        id: uid(), date: todayKey(), type: 'workout',
-        exercises: [..._workoutSession],
-        durationMin: durationMin || null,
-        intensity: durationMin ? intensity : null,
-        burn: burn,
-        createdAt: Date.now()
-    };
-    saveActivity(item);
-    _workoutSession = [];
-    _workoutSetCount = 1;
-    // Reset UI
-    document.getElementById('workoutSessionList').innerHTML = '';
-    document.getElementById('btnSaveWorkout').style.display = 'none';
-    document.getElementById('workoutBurnSection').style.display = 'none';
-    document.getElementById('workoutDuration').value = '';
-    document.getElementById('workoutBurnPreview').innerHTML = '';
-    document.getElementById('workoutSetsContainer').innerHTML = `
-        <div class="workout-set-row" id="workoutSet_1">
-            <div class="set-label">Set 1</div>
-            <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_1">
-            <button class="set-remove-btn" onclick="removeWorkoutSet(1)" style="opacity:0;pointer-events:none;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
-        </div>`;
+    handleWorkoutOrGymSave('workout');
+}
+
+function saveGymSession() {
+    handleWorkoutOrGymSave('gym');
+}
+
+async function handleWorkoutOrGymSave(type) {
+    let item = null;
+    const profile = getProfile() || {};
+    
+    if (type === 'workout') {
+        if (_workoutSession.length === 0) { showToast('Tambah minimal 1 gerakan', 'error'); return; }
+        
+        let estimatedDuration = 0;
+        _workoutSession.forEach(ex => {
+            const numSets = ex.sets.length;
+            estimatedDuration += numSets * (0.5 + (ex.restTime || 60) / 60);
+        });
+        estimatedDuration = Math.max(10, Math.round(estimatedDuration));
+        
+        item = {
+            id: uid(),
+            date: todayKey(),
+            type: 'workout',
+            exercises: [..._workoutSession],
+            durationMin: estimatedDuration,
+            intensity: 'medium',
+            burn: null,
+            createdAt: Date.now()
+        };
+    } else if (type === 'gym') {
+        const muscles = Object.keys(_gymSelectedMuscles);
+        if (muscles.length === 0) { showToast('Pilih minimal 1 otot', 'error'); return; }
+        
+        const muscleData = muscles.map(muscle => ({
+            muscle,
+            restTime: _gymRestTimes[muscle] || 60,
+            variations: _gymSelectedMuscles[muscle].map(v => ({
+                name: v.name || '(tanpa nama)',
+                sets: v.sets.map(s => ({
+                    set: s.set,
+                    reps: s.reps || 0,
+                    weight: s.weight || 0
+                }))
+            }))
+        }));
+        
+        let estimatedDuration = 0;
+        muscleData.forEach(m => {
+            const rest = m.restTime || 60;
+            m.variations.forEach(v => {
+                estimatedDuration += v.sets.length * (0.5 + rest / 60);
+            });
+        });
+        estimatedDuration = Math.max(10, Math.round(estimatedDuration));
+        
+        item = {
+            id: uid(),
+            date: todayKey(),
+            type: 'gym',
+            muscles: muscleData,
+            durationMin: estimatedDuration,
+            intensity: 'medium',
+            burn: null,
+            createdAt: Date.now()
+        };
+    }
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        showToast('Menggunakan kalkulasi standar (API Key tidak ditemukan)', 'info');
+        const intensity = 'medium';
+        const met = type === 'workout' ? MET_WORKOUT[intensity] : MET_GYM[intensity];
+        const burn = calcBurnedCalories(met, item.durationMin || 30);
+        item.burn = burn;
+        executeSaveActivity(item);
+        return;
+    }
+    
+    const saveBtnId = type === 'workout' ? 'btnSaveWorkout' : 'btnSaveGym';
+    const saveBtn = document.getElementById(saveBtnId);
+    if (!saveBtn) return;
+    const origText = saveBtn.innerHTML;
+    
+    try {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i data-lucide="loader" class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Menganalisis...';
+        if (window.lucide) lucide.createIcons();
+        
+        const aiRes = await analyzeWorkoutAI(item, profile);
+        
+        item.burn = {
+            kcal: aiRes.kcal || 0,
+            fatG: aiRes.fatG || 0,
+            carbG: aiRes.carbG || 0,
+            proteinG: aiRes.proteinG || 0
+        };
+        item.aiAnalysis = aiRes.analysis || '';
+        
+        _tempPendingActivity = item;
+        showWorkoutAiModal(item);
+        
+    } catch (error) {
+        console.error(error);
+        showToast('AI Error: ' + error.message + '. Menyimpan dengan kalkulasi standar.', 'error');
+        const intensity = 'medium';
+        const met = type === 'workout' ? MET_WORKOUT[intensity] : MET_GYM[intensity];
+        const burn = calcBurnedCalories(met, item.durationMin || 30);
+        item.burn = burn;
+        executeSaveActivity(item);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = origText;
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+function showWorkoutAiModal(item) {
+    const modal = document.getElementById('workoutAiModal');
+    const content = document.getElementById('workoutAiContent');
+    if (!modal || !content) return;
+    
+    const isGym = item.type === 'gym';
+    let activitySummary = '';
+    
+    if (isGym) {
+        activitySummary = (item.muscles || []).map(m => {
+            const vars = m.variations.map(v => `${v.name} (${v.sets.length} set)`).join(', ');
+            return `<strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>: ${vars}`;
+        }).join('<br>');
+    } else {
+        activitySummary = (item.exercises || []).map(ex => `<strong>${ex.name}</strong> (${ex.sets.length} set)`).join('<br>');
+    }
+    
+    content.innerHTML = `
+        <div style="background:var(--bg3); border-radius:12px; padding:16px; border:1px solid var(--border); margin-bottom:14px;">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:var(--text3); font-weight:700; letter-spacing:0.5px; margin-bottom:6px;">Ringkasan Latihan</div>
+            <div style="font-size:0.88rem; color:var(--text1); margin-bottom:12px; line-height:1.4;">${activitySummary}</div>
+            
+            <div style="font-size:0.75rem; text-transform:uppercase; color:var(--text3); font-weight:700; letter-spacing:0.5px; margin-bottom:6px;">Estimasi Pembakaran Kalori</div>
+            <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:14px;">
+                <span style="font-size:2rem; font-weight:800; color:var(--accent); line-height:1;">${item.burn.kcal}</span>
+                <span style="font-size:0.95rem; font-weight:600; color:var(--text2);">kcal</span>
+            </div>
+            
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px;">
+                <div style="background:rgba(255,59,48,0.08); border-radius:8px; padding:8px; text-align:center;">
+                    <div style="font-size:0.68rem; color:#ff453a; font-weight:700; text-transform:uppercase; margin-bottom:2px;">Karbo</div>
+                    <div style="font-size:0.95rem; font-weight:700; color:#ff453a;">${item.burn.carbG}g</div>
+                </div>
+                <div style="background:rgba(255,159,10,0.08); border-radius:8px; padding:8px; text-align:center;">
+                    <div style="font-size:0.68rem; color:#ff9f0a; font-weight:700; text-transform:uppercase; margin-bottom:2px;">Lemak</div>
+                    <div style="font-size:0.95rem; font-weight:700; color:#ff9f0a;">${item.burn.fatG}g</div>
+                </div>
+                <div style="background:rgba(10,132,255,0.08); border-radius:8px; padding:8px; text-align:center;">
+                    <div style="font-size:0.68rem; color:#0a84ff; font-weight:700; text-transform:uppercase; margin-bottom:2px;">Protein</div>
+                    <div style="font-size:0.95rem; font-weight:700; color:#0a84ff;">${item.burn.proteinG}g</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="background:rgba(94,92,230,0.05); border-radius:12px; padding:16px; border:1px solid rgba(94,92,230,0.15);">
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; text-transform:uppercase; color:#8b8ff0; font-weight:700; letter-spacing:0.5px; margin-bottom:6px;">
+                <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Analisis & Tips Recovery
+            </div>
+            <div style="font-size:0.88rem; color:var(--text1); line-height:1.5; font-style:italic;">
+                "${item.aiAnalysis || 'Latihan yang bagus! Jaga hidrasi dan konsumsi protein yang cukup.'}"
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+    
+    const confirmBtn = document.getElementById('btnConfirmSaveWorkout');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            executeSaveActivity(item);
+            closeWorkoutAiModal();
+        };
+    }
+    
     if (window.lucide) lucide.createIcons();
+}
+
+function closeWorkoutAiModal() {
+    const modal = document.getElementById('workoutAiModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function executeSaveActivity(item) {
+    saveActivity(item);
+    
+    if (item.type === 'workout') {
+        _workoutSession = [];
+        _workoutSetCount = 1;
+        document.getElementById('workoutSessionList').innerHTML = '';
+        document.getElementById('btnSaveWorkout').style.display = 'none';
+        document.getElementById('workoutSetsContainer').innerHTML = `
+            <div class="workout-set-row" id="workoutSet_1">
+                <div class="set-label">Set 1</div>
+                <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_1" style="max-width:85px;">
+                <input type="number" class="set-input" placeholder="Beban (kg)" min="0" id="wWeight_1" style="max-width:95px;">
+                <button class="set-remove-btn" onclick="removeWorkoutSet(1)" style="opacity:0;pointer-events:none;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+            </div>`;
+    } else if (item.type === 'gym') {
+        _gymSelectedMuscles = {};
+        _gymRestTimes = {};
+        document.querySelectorAll('.muscle-chip').forEach(c => c.classList.remove('active'));
+        document.getElementById('gymMuscleInputs').innerHTML = '';
+        document.getElementById('btnSaveGym').style.display = 'none';
+    }
+    
     renderTodayActivities();
     renderDashboardActivityCard();
-    const burnMsg = burn ? ` (Estimasi ${burn.kcal} kcal terbakar)` : '';
-    showToast(`Sesi workout disimpan!${burnMsg}`, 'success');
+    showToast('Aktivitas berhasil disimpan!', 'success');
+    showPage('dashboard');
 }
 
 // --- Gym Functions ---
-let _gymSelectedMuscles = {}; // { muscle: [{ name, sets: [{set, reps}] }] }
+const MUSCLE_LABELS = { chest:'Chest', back:'Back', shoulder:'Shoulder', bicep:'Bicep', tricep:'Tricep', forearm:'Forearm', abs:'Abs', traps:'Traps', leg:'Leg' };
 
 function toggleGymMuscle(muscle) {
     const chip = document.querySelector(`.muscle-chip[data-muscle="${muscle}"]`);
     if (_gymSelectedMuscles[muscle]) {
         delete _gymSelectedMuscles[muscle];
+        if (_gymRestTimes[muscle]) delete _gymRestTimes[muscle];
         if (chip) chip.classList.remove('active');
     } else {
-        _gymSelectedMuscles[muscle] = [{ name: '', sets: [{ set: 1, reps: 0 }] }];
+        _gymSelectedMuscles[muscle] = [{ name: '', sets: [{ set: 1, reps: 0, weight: 0 }] }];
+        _gymRestTimes[muscle] = 60; // default 60 seconds rest
         if (chip) chip.classList.add('active');
     }
     renderGymMuscleInputs();
     const hasMuscles = Object.keys(_gymSelectedMuscles).length > 0;
     document.getElementById('btnSaveGym').style.display = hasMuscles ? 'block' : 'none';
-    const burnSection = document.getElementById('gymBurnSection');
-    if (burnSection) burnSection.style.display = hasMuscles ? 'block' : 'none';
 }
-
-const MUSCLE_LABELS = { chest:'Chest', back:'Back', shoulder:'Shoulder', bicep:'Bicep', tricep:'Tricep', forearm:'Forearm', abs:'Abs', traps:'Traps', leg:'Leg' };
 
 function renderGymMuscleInputs() {
     const container = document.getElementById('gymMuscleInputs');
@@ -473,6 +666,14 @@ function renderGymMuscleInputs() {
         const variations = _gymSelectedMuscles[muscle];
         return `<div class="gym-muscle-section" id="gymSection_${muscle}">
             <div class="gym-muscle-title">${MUSCLE_LABELS[muscle] || muscle}</div>
+            
+            <div class="gym-rest-time-row" style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <label style="font-size:0.8rem; color:var(--text2); font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                  <i data-lucide="timer" style="width:14px;height:14px;"></i> Istirahat per Set (detik):
+                </label>
+                <input type="number" class="set-input" style="max-width:80px; padding: 4px 8px; font-size:0.82rem;" placeholder="Detik" value="${_gymRestTimes[muscle] || ''}" min="0" oninput="updateGymRestTime('${muscle}', this.value)">
+            </div>
+
             ${variations.map((v, vi) => `
                 <div class="gym-variation-row" id="gymVar_${muscle}_${vi}">
                     <input type="text" class="gym-variation-input" placeholder="Nama gerakan (mis: Bench Press)" value="${v.name}" oninput="updateGymVarName('${muscle}',${vi},this.value)">
@@ -480,33 +681,42 @@ function renderGymMuscleInputs() {
                 </div>
                 <div class="gym-sets-per-var">
                     ${v.sets.map((s, si) => `
-                    <div class="gym-per-set-row">
+                    <div class="gym-per-set-row" style="margin-bottom: 4px;">
                         <span class="gym-per-set-label">Set ${si + 1}</span>
                         <input type="number" class="set-input" style="max-width:80px;" placeholder="Reps" value="${s.reps || ''}" min="1" oninput="updateGymSetReps('${muscle}',${vi},${si},this.value)">
+                        <input type="number" class="set-input" style="max-width:90px;" placeholder="Beban (kg)" value="${s.weight || ''}" min="0" oninput="updateGymSetWeight('${muscle}',${vi},${si},this.value)">
                         ${si > 0 ? `<button class="gym-remove-set" onclick="removeGymSet('${muscle}',${vi},${si})" title="Hapus set">✕</button>` : ''}
                     </div>`).join('')}
                     <button class="gym-add-set-btn" onclick="addGymSet('${muscle}',${vi})">+ Set</button>
                 </div>`).join('')}
-            <button class="gym-add-var-btn" onclick="addGymVariation('${muscle}')">+ Tambah Variasi Gerakan</button>
+            <button class="gym-add-var-btn" style="margin-top: 10px;" onclick="addGymVariation('${muscle}')">+ Tambah Variasi Gerakan</button>
         </div>`;
     }).join('');
+    if (window.lucide) lucide.createIcons();
 }
 
 function updateGymVarName(muscle, vi, val) {
     if (_gymSelectedMuscles[muscle] && _gymSelectedMuscles[muscle][vi]) _gymSelectedMuscles[muscle][vi].name = val;
 }
+function updateGymRestTime(muscle, val) {
+    _gymRestTimes[muscle] = parseInt(val) || 0;
+}
 function updateGymSetReps(muscle, vi, si, val) {
     if (_gymSelectedMuscles[muscle]?.[vi]?.sets?.[si]) _gymSelectedMuscles[muscle][vi].sets[si].reps = parseInt(val) || 0;
 }
+function updateGymSetWeight(muscle, vi, si, val) {
+    if (_gymSelectedMuscles[muscle]?.[vi]?.sets?.[si]) _gymSelectedMuscles[muscle][vi].sets[si].weight = parseFloat(val) || 0;
+}
 function addGymVariation(muscle) {
     if (!_gymSelectedMuscles[muscle]) return;
-    _gymSelectedMuscles[muscle].push({ name: '', sets: [{ set: 1, reps: 0 }] });
+    _gymSelectedMuscles[muscle].push({ name: '', sets: [{ set: 1, reps: 0, weight: 0 }] });
     renderGymMuscleInputs();
 }
 function removeGymVariation(muscle, vi) {
     if (_gymSelectedMuscles[muscle]) _gymSelectedMuscles[muscle].splice(vi, 1);
     if (_gymSelectedMuscles[muscle] && _gymSelectedMuscles[muscle].length === 0) {
         delete _gymSelectedMuscles[muscle];
+        if (_gymRestTimes[muscle]) delete _gymRestTimes[muscle];
         document.querySelector(`.muscle-chip[data-muscle="${muscle}"]`)?.classList.remove('active');
     }
     renderGymMuscleInputs();
@@ -515,51 +725,14 @@ function removeGymVariation(muscle, vi) {
 function addGymSet(muscle, vi) {
     if (!_gymSelectedMuscles[muscle]?.[vi]) return;
     const setNum = _gymSelectedMuscles[muscle][vi].sets.length + 1;
-    _gymSelectedMuscles[muscle][vi].sets.push({ set: setNum, reps: 0 });
+    _gymSelectedMuscles[muscle][vi].sets.push({ set: setNum, reps: 0, weight: 0 });
     renderGymMuscleInputs();
 }
 function removeGymSet(muscle, vi, si) {
     if (!_gymSelectedMuscles[muscle]?.[vi]) return;
     _gymSelectedMuscles[muscle][vi].sets.splice(si, 1);
-    // Re-number sets
     _gymSelectedMuscles[muscle][vi].sets.forEach((s, i) => s.set = i + 1);
     renderGymMuscleInputs();
-}
-
-function saveGymSession() {
-    const muscles = Object.keys(_gymSelectedMuscles);
-    if (muscles.length === 0) { showToast('Pilih minimal 1 otot', 'error'); return; }
-    const muscleData = muscles.map(muscle => ({
-        muscle,
-        variations: _gymSelectedMuscles[muscle].map(v => ({
-            name: v.name || '(tanpa nama)',
-            sets: v.sets
-        }))
-    }));
-    const durationMin = parseFloat(document.getElementById('gymDuration').value) || 0;
-    const intensity = document.getElementById('gymIntensity')?.value || 'medium';
-    const burn = durationMin > 0 ? calcBurnedCalories(MET_GYM[intensity], durationMin) : null;
-    const item = {
-        id: uid(), date: todayKey(), type: 'gym',
-        muscles: muscleData,
-        durationMin: durationMin || null,
-        intensity: durationMin ? intensity : null,
-        burn: burn,
-        createdAt: Date.now()
-    };
-    saveActivity(item);
-    // Reset gym state
-    _gymSelectedMuscles = {};
-    document.querySelectorAll('.muscle-chip').forEach(c => c.classList.remove('active'));
-    document.getElementById('gymMuscleInputs').innerHTML = '';
-    document.getElementById('btnSaveGym').style.display = 'none';
-    document.getElementById('gymBurnSection').style.display = 'none';
-    document.getElementById('gymDuration').value = '';
-    document.getElementById('gymBurnPreview').innerHTML = '';
-    renderTodayActivities();
-    renderDashboardActivityCard();
-    const burnMsg = burn ? ` (Estimasi ${burn.kcal} kcal terbakar)` : '';
-    showToast(`Sesi gym disimpan!${burnMsg}`, 'success');
 }
 
 // --- Sleep Functions ---
@@ -726,10 +899,21 @@ function renderActivityHistory() {
             let detail = '';
             let badge = act.type;
             if (act.type === 'workout') {
-                detail = (act.exercises || []).map(ex => `${ex.name} (${(ex.sets || []).length} set)`).join(' · ');
+                detail = (act.exercises || []).map(ex => {
+                    const setsStr = (ex.sets || []).map(s => `${s.reps}${s.weight ? `x${s.weight}kg` : ''}`).join('/');
+                    const restStr = ex.restTime ? ` · ⏱ ${ex.restTime}s rest` : '';
+                    return `<strong>${ex.name}</strong> (${ex.sets.length} set: ${setsStr}${restStr})`;
+                }).join('<br>');
                 badge = '<i data-lucide="zap" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Workout';
             } else if (act.type === 'gym') {
-                detail = (act.muscles || []).map(m => `${MUSCLE_LABELS[m.muscle] || m.muscle}: ${(m.variations || []).map(v=>v.name||'?').join(', ')}`).join(' | ');
+                detail = (act.muscles || []).map(m => {
+                    const varStr = (m.variations || []).map(v => {
+                        const setsStr = (v.sets || []).map(s => `${s.reps}${s.weight ? `x${s.weight}kg` : ''}`).join('/');
+                        return `${v.name} (${v.sets.length} set: ${setsStr})`;
+                    }).join(', ');
+                    const restStr = m.restTime ? ` (⏱ ${m.restTime}s rest)` : '';
+                    return `<strong>${MUSCLE_LABELS[m.muscle] || m.muscle}</strong>${restStr}: ${varStr}`;
+                }).join('<br>');
                 badge = '<i data-lucide="dumbbell" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Gym';
             } else if (act.type === 'sleep') {
                 const h = parseFloat(act.hours || 0);
