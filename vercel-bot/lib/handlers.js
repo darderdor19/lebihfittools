@@ -494,13 +494,13 @@ async function showDashboard(chatId, email) {
     msg += '\n*Kegiatan Hari Ini:*\n';
     todayActs.forEach((act, idx) => {
       if (act.type === 'workout') {
-        const detail = act.exercises.map(e => `${e.name} (${e.sets.length}s)`).join(', ');
+        const detail = (act.exercises || []).map(e => `${e.name} (${(e.sets || []).length}s)`).join(', ');
         msg += `${idx + 1}. 🏋️ *Workout:* ${escapeMarkdown(detail)} (${act.burn ? act.burn.kcal : 0} kcal)\n`;
       } else if (act.type === 'gym') {
-        const detail = act.muscles.map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+        const detail = (act.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
         msg += `${idx + 1}. 💪 *Gym:* ${escapeMarkdown(detail)} (${act.burn ? act.burn.kcal : 0} kcal)\n`;
       } else if (act.type === 'sleep') {
-        msg += `${idx + 1}. 😴 *Tidur:* ${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m (${act.quality})\n`;
+        msg += `${idx + 1}. 😴 *Tidur:* ${Math.floor(act.hours || 0)}j ${Math.round(((act.hours || 0) % 1) * 60)}m (${act.quality || 'biasa'})\n`;
       }
     });
   }
@@ -785,14 +785,20 @@ function renderAsciiBar(cal, target) {
 }
 
 async function showHistory(chatId, email) {
-  return sendMessage(chatId, '*History*\n\nPilih rentang waktu:', {
+  return sendMessage(chatId, '📈 *Riwayat & Analisis LebihFit*\n\nPilih kategori riwayat yang ingin lu lihat:', {
     inline_keyboard: [
       [
-        { text: '7 Hari', callback_data: 'hist_7' },
-        { text: '14 Hari', callback_data: 'hist_14' },
-        { text: '30 Hari', callback_data: 'hist_30' }
+        { text: '🍽️ Riwayat Makanan', callback_data: 'hist_panel_food' }
       ],
-      [{ text: 'Menu Utama', callback_data: 'menu' }]
+      [
+        { text: '🏃 Riwayat Kegiatan', callback_data: 'hist_panel_act' }
+      ],
+      [
+        { text: '🤖 Analisis AI Komprehensif', callback_data: 'hist_panel_ai' }
+      ],
+      [
+        { text: '🏠 Menu Utama', callback_data: 'menu' }
+      ]
     ]
   });
 }
@@ -1562,14 +1568,14 @@ function cleanHtmlToMarkdown(html) {
 
 // Signature builders
 function getDailyDataSignatureLocal(email, dateStr, logs, acts, profile) {
-  const foodSignature = logs.map(l => `${l.id}-${l.cal}-${l.protein}-${l.carbs}-${l.fat}`).join('|');
-  const actSignature = acts.map(a => {
-    if (a.type === 'sleep') return `${a.id}-${a.hours}-${a.quality}-${a.sleepType}`;
-    if (a.type === 'workout') return `${a.id}-${a.exercises.map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
+  const foodSignature = (logs || []).map(l => `${l.id}-${l.cal}-${l.protein}-${l.carbs}-${l.fat}`).join('|');
+  const actSignature = (acts || []).map(a => {
+    if (a.type === 'sleep') return `${a.id}-${a.hours || 0}-${a.quality || 'biasa'}-${a.sleepType || 'malam'}`;
+    if (a.type === 'workout') return `${a.id}-${(a.exercises || []).map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
     if (a.type === 'gym') return `${a.id}-${(a.muscles || []).map(m => `${m.muscle}-${(m.variations || []).map(v => `${v.name}-${(v.sets || []).map(s=>s.reps).join('/')}`).join(',')}`).join(',')}`;
     return a.id;
   }).join('|');
-  const profileSig = `${profile.bb || ''}-${profile.tb || ''}-${profile.target || ''}`;
+  const profileSig = `${(profile && profile.bb) || ''}-${(profile && profile.tb) || ''}-${(profile && profile.target) || ''}`;
   return `${email}_${dateStr}_[${foodSignature}]_[${actSignature}]_[${profileSig}]`;
 }
 
@@ -1587,8 +1593,8 @@ function getRangeDataSignatureLocal(email, fromDate, toDate, logs, acts, profile
     const dayActs = acts[key] || [];
     if (dayActs.length > 0) {
       const daySigs = dayActs.map(a => {
-        if (a.type === 'sleep') return `${a.id}-${a.hours}-${a.quality}-${a.sleepType}`;
-        if (a.type === 'workout') return `${a.id}-${a.exercises.map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
+        if (a.type === 'sleep') return `${a.id}-${a.hours || 0}-${a.quality || 'biasa'}-${a.sleepType || 'malam'}`;
+        if (a.type === 'workout') return `${a.id}-${(a.exercises || []).map(e => `${e.name}-${(e.sets || []).map(s=>s.reps).join('/')}`).join(',')}`;
         if (a.type === 'gym') return `${a.id}-${(a.muscles || []).map(m => `${m.muscle}-${(m.variations || []).map(v => `${v.name}-${(v.sets || []).map(s=>s.reps).join('/')}`).join(',')}`).join(',')}`;
         return a.id;
       }).join(',');
@@ -2123,13 +2129,13 @@ async function showActivityHistoryDays(chatId, email, days) {
       msg += `*${parts[2]}/${parts[1]}:*\n`;
       acts.forEach(a => {
         if (a.type === 'workout') {
-          const detail = a.exercises.map(e => `${e.name} (${e.sets.length}s)`).join(', ');
+          const detail = (a.exercises || []).map(e => `${e.name} (${(e.sets || []).length}s)`).join(', ');
           msg += `  - 🏋️ Workout: ${escapeMarkdown(detail)} (${a.burn ? a.burn.kcal : 0} kcal)\n`;
         } else if (a.type === 'gym') {
-          const detail = a.muscles.map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+          const detail = (a.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
           msg += `  - 💪 Gym: ${escapeMarkdown(detail)} (${a.burn ? a.burn.kcal : 0} kcal)\n`;
         } else if (a.type === 'sleep') {
-          msg += `  - 😴 Tidur: ${Math.floor(a.hours)}j ${Math.round((a.hours % 1) * 60)}m (${a.quality})\n`;
+          msg += `  - 😴 Tidur: ${Math.floor(a.hours || 0)}j ${Math.round(((a.hours || 0) % 1) * 60)}m (${a.quality || 'biasa'})\n`;
         }
       });
       itemsCount++;

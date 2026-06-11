@@ -725,13 +725,14 @@ function renderActivityHistory() {
             let detail = '';
             let badge = act.type;
             if (act.type === 'workout') {
-                detail = act.exercises.map(ex => `${ex.name} (${ex.sets.length} set)`).join(' · ');
+                detail = (act.exercises || []).map(ex => `${ex.name} (${(ex.sets || []).length} set)`).join(' · ');
                 badge = '<i data-lucide="zap" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Workout';
             } else if (act.type === 'gym') {
-                detail = act.muscles.map(m => `${MUSCLE_LABELS[m.muscle] || m.muscle}: ${m.variations.map(v=>v.name||'?').join(', ')}`).join(' | ');
+                detail = (act.muscles || []).map(m => `${MUSCLE_LABELS[m.muscle] || m.muscle}: ${(m.variations || []).map(v=>v.name||'?').join(', ')}`).join(' | ');
                 badge = '<i data-lucide="dumbbell" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Gym';
             } else if (act.type === 'sleep') {
-                detail = `${Math.floor(act.hours)}j ${Math.round((act.hours%1)*60)}m — ${act.sleepType} — ${act.quality}`;
+                const h = parseFloat(act.hours || 0);
+                detail = `${Math.floor(h)}j ${Math.round((h%1)*60)}m — ${act.sleepType || 'malam'} — ${act.quality || 'biasa'}`;
                 badge = '<i data-lucide="moon" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Tidur';
             }
             return `<div style="padding:6px 10px;background:var(--bg);border-radius:6px;margin-top:6px;font-size:0.82rem;">
@@ -1079,13 +1080,14 @@ function renderDashboardActivityCard() {
             let badge = '', detail = '';
             if (act.type === 'workout') {
                 badge = '💪 Workout';
-                detail = act.exercises.map(e => `${e.name} (${e.sets.length}s)`).join(' · ');
+                detail = (act.exercises || []).map(e => `${e.name} (${(e.sets || []).length}s)`).join(' · ');
             } else if (act.type === 'gym') {
                 badge = '🏋️ Gym';
-                detail = act.muscles.map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
+                detail = (act.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(', ');
             } else if (act.type === 'sleep') {
                 badge = '😴 Tidur';
-                detail = `${Math.floor(act.hours)}j ${Math.round((act.hours % 1) * 60)}m · ${act.quality === 'lelap' ? '🌙 Lelap' : act.quality === 'biasa' ? '💤 Biasa' : '😵 Kurang'}`;
+                const h = parseFloat(act.hours || 0);
+                detail = `${Math.floor(h)}j ${Math.round((h % 1) * 60)}m · ${act.quality === 'lelap' ? '🌙 Lelap' : act.quality === 'biasa' ? '💤 Biasa' : '😵 Kurang'}`;
             }
             return `<div class="dash-activity-item">
                 <div class="type-badge">${badge}</div>
@@ -2312,8 +2314,8 @@ function styleAIHtml(rawHtml) {
         div.style.padding = '14px 16px';
         div.style.borderRadius = '8px';
         div.style.marginBottom = '14px';
-        div.style.fontSize = '0.82rem';
-        div.style.lineHeight = '1.5';
+        div.style.fontSize = '0.9rem';
+        div.style.lineHeight = '1.6';
         div.style.border = '1px solid rgba(255, 255, 255, 0.08)'; // thin white/gray border
         
         if (borderLeftColor) {
@@ -2350,7 +2352,7 @@ function styleAIHtml(rawHtml) {
 
     const lis = doc.querySelectorAll('li');
     lis.forEach(li => {
-        li.style.fontSize = '0.82rem';
+        li.style.fontSize = '0.9rem';
         li.style.color = '#e2e8f0';
         li.style.marginBottom = '6px';
     });
@@ -2358,7 +2360,7 @@ function styleAIHtml(rawHtml) {
     // Style headings if present
     const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
     headings.forEach(h => {
-        h.style.fontSize = '0.9rem';
+        h.style.fontSize = '1.02rem';
         h.style.fontWeight = '700';
         h.style.color = '#fff';
         h.style.marginTop = '18px';
