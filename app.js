@@ -3613,12 +3613,12 @@ async function startProgressAnalysis() {
                      `Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'}kg, TB: ${profile.tb||'?'}cm, Usia: ${profile.usia||'?'}th, Goal: ${profile.target || 'maintenance'}, Aktivitas: ${profile.aktivitas || '?'}\n\n`;
         
         if (foodChecked) {
-            const avgCal = logs.reduce((s, d) => s + (d.cal || 0), 0) / totalDays;
-            const avgProtein = logs.reduce((s, d) => s + (d.protein || 0), 0) / totalDays;
-            const avgCarbs = logs.reduce((s, d) => s + (d.carbs || 0), 0) / totalDays;
-            const avgFat = logs.reduce((s, d) => s + (d.fat || 0), 0) / totalDays;
-            const avgFiber = logs.reduce((s, d) => s + (d.fiber || 0), 0) / totalDays;
-            const avgSugar = logs.reduce((s, d) => s + (d.sugar || 0), 0) / totalDays;
+            const avgCal = logs.reduce((s, d) => s + (d.totals ? d.totals.cal || 0 : 0), 0) / totalDays;
+            const avgProtein = logs.reduce((s, d) => s + (d.totals ? d.totals.protein || 0 : 0), 0) / totalDays;
+            const avgCarbs = logs.reduce((s, d) => s + (d.totals ? d.totals.carbs || 0 : 0), 0) / totalDays;
+            const avgFat = logs.reduce((s, d) => s + (d.totals ? d.totals.fat || 0 : 0), 0) / totalDays;
+            const avgFiber = logs.reduce((s, d) => s + (d.totals ? d.totals.fiber || 0 : 0), 0) / totalDays;
+            const avgSugar = logs.reduce((s, d) => s + (d.totals ? d.totals.sugar || 0 : 0), 0) / totalDays;
             
             prompt += `== DATA ASUPAN MAKANAN & GIZI (Rata-rata Harian) ==\n` +
                       `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
@@ -3706,9 +3706,13 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
     
     const labels = dateSeries.map(d => `${d.getDate()}/${d.getMonth()+1}`);
     
+    const formatDateLocal = (d) => {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    
     const logsByDate = {};
     logs.forEach(l => {
-        const key = l.date || new Date(l.loggedAt).toISOString().slice(0, 10);
+        const key = l.date;
         if (!logsByDate[key]) logsByDate[key] = [];
         logsByDate[key].push(l);
     });
@@ -3717,15 +3721,15 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
     
     if (foodChecked) {
         const calorieData = dateSeries.map(d => {
-            const key = d.toISOString().slice(0, 10);
+            const key = formatDateLocal(d);
             const dayLogs = logsByDate[key] || [];
-            return dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
+            return dayLogs.reduce((sum, item) => sum + (item.totals ? item.totals.cal || 0 : 0), 0);
         });
         
         const proteinData = dateSeries.map(d => {
-            const key = d.toISOString().slice(0, 10);
+            const key = formatDateLocal(d);
             const dayLogs = logsByDate[key] || [];
-            return dayLogs.reduce((sum, item) => sum + (item.protein || 0), 0);
+            return dayLogs.reduce((sum, item) => sum + (item.totals ? item.totals.protein || 0 : 0), 0);
         });
         
         datasets.push({
@@ -3754,7 +3758,7 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
     
     if (actChecked) {
         const burnData = dateSeries.map(d => {
-            const key = d.toISOString().slice(0, 10);
+            const key = formatDateLocal(d);
             const dayActs = allActs[key] || [];
             return dayActs.reduce((sum, item) => sum + ((item.burn && item.burn.kcal) ? parseFloat(item.burn.kcal) : 0), 0);
         });
@@ -3774,7 +3778,7 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
     
     if (sleepChecked) {
         const sleepData = dateSeries.map(d => {
-            const key = d.toISOString().slice(0, 10);
+            const key = formatDateLocal(d);
             const dayActs = allActs[key] || [];
             const sleepAct = dayActs.find(a => a.type === 'sleep');
             return sleepAct ? parseFloat(sleepAct.hours || 0) : 0;
