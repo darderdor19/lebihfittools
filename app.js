@@ -284,6 +284,13 @@ function clearActivityAiPreview(type) {
         p.style.display = 'none';
         p.innerHTML = '';
     }
+    
+    // Reset buttons: show Analisa AI, hide Simpan Sesi
+    const typeUpper = type.charAt(0).toUpperCase() + type.slice(1);
+    const btnAnalyze = document.getElementById(`btnAnalyze${typeUpper}AI`);
+    const btnSave = document.getElementById(`btnSave${typeUpper}`);
+    if (btnAnalyze) btnAnalyze.style.setProperty('display', 'block', 'important');
+    if (btnSave) btnSave.style.setProperty('display', 'none', 'important');
 }
 
 function renderActivityAiPreview(type, res) {
@@ -427,7 +434,6 @@ async function triggerActivityAI(type) {
             createdAt: Date.now()
         };
     }
-    
     const apiKey = getApiKey();
     if (!apiKey) {
         showToast('API Key tidak ditemukan. Menggunakan kalkulasi standar.', 'info');
@@ -445,6 +451,12 @@ async function triggerActivityAI(type) {
             analysis: 'Kalkulasi standar digunakan karena API Key Groq tidak ditemukan di pengaturan.'
         };
         renderActivityAiPreview(type, _currentActivityAiResult);
+        
+        const typeUpper = type.charAt(0).toUpperCase() + type.slice(1);
+        const btnAnalyze = document.getElementById(`btnAnalyze${typeUpper}AI`);
+        const btnSave = document.getElementById(`btnSave${typeUpper}`);
+        if (btnAnalyze) btnAnalyze.style.setProperty('display', 'none', 'important');
+        if (btnSave) btnSave.style.setProperty('display', 'block', 'important');
         return;
     }
     
@@ -472,6 +484,13 @@ async function triggerActivityAI(type) {
         };
         
         renderActivityAiPreview(type, _currentActivityAiResult);
+        
+        const typeUpper = type.charAt(0).toUpperCase() + type.slice(1);
+        const btnAnalyze = document.getElementById(`btnAnalyze${typeUpper}AI`);
+        const btnSave = document.getElementById(`btnSave${typeUpper}`);
+        if (btnAnalyze) btnAnalyze.style.setProperty('display', 'none', 'important');
+        if (btnSave) btnSave.style.setProperty('display', 'block', 'important');
+        
         showToast('Analisis AI berhasil!', 'success');
     } catch (err) {
         console.error(err);
