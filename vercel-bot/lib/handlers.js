@@ -2767,7 +2767,7 @@ async function showProgressMenu(chatId, userId, email, editMessageId = null) {
             `🍽️ Makanan & Gizi: ${config.food ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n` +
             `🏃 Kegiatan & Olahraga: ${config.activity ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n` +
             `😴 Istirahat & Tidur: ${config.sleep ? '✅ *Aktif*' : '❌ *Nonaktif*'}\n\n` +
-            `📅 Periode Analisis: *${config.period} Hari Terakhir*\n\n` +
+            `📅 Periode Analisis: *${config.period === 1 ? 'Hari Ini' : config.period + ' Hari Terakhir'}*\n\n` +
             `Tekan tombol di bawah untuk toggle pilihan atau langsung mulai analisis AI.`;
             
   const keyboard = {
@@ -2782,7 +2782,7 @@ async function showProgressMenu(chatId, userId, email, editMessageId = null) {
         { text: `${config.sleep ? '✅' : '❌'} Istirahat & Tidur`, callback_data: 'prog_toggle_sleep' }
       ],
       [
-        { text: `📅 Periode: ${config.period} Hari`, callback_data: 'prog_cycle_period' }
+        { text: `📅 Periode: ${config.period === 1 ? 'Hari Ini' : config.period + ' Hari'}`, callback_data: 'prog_cycle_period' }
       ],
       [
         { text: '✨ Mulai Analisis Progress AI', callback_data: 'prog_run_analysis' }
@@ -2803,9 +2803,10 @@ async function showProgressMenu(chatId, userId, email, editMessageId = null) {
 async function toggleProgressConfig(chatId, userId, email, field, messageId) {
   const config = await getProgressConfig(userId);
   if (field === 'period') {
-    if (config.period === 7) config.period = 14;
+    if (config.period === 1) config.period = 7;
+    else if (config.period === 7) config.period = 14;
     else if (config.period === 14) config.period = 30;
-    else config.period = 7;
+    else config.period = 1;
   } else {
     config[field] = !config[field];
   }
@@ -2944,7 +2945,7 @@ async function runProgressAnalysis(chatId, userId, email) {
       html = `
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.08);border:1px solid rgba(94,92,230,0.2);border-radius:8px;font-size:0.75rem;color:#5e5ce6;">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          <b>Analisis Progress AI LebihFit</b> · Periode ${days} Hari · ${new Date().toLocaleDateString('id-ID')}
+          <b>Analisis Progress AI LebihFit</b> · Periode ${days === 1 ? 'Hari Ini' : days + ' Hari'} · ${new Date().toLocaleDateString('id-ID')}
         </div>
         ${cleanHtml}
       `;
