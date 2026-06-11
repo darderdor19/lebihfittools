@@ -142,6 +142,9 @@
         <button class="nav-btn" data-page="history" onclick="showPage('history')">
           <span class="nav-icon"><i data-lucide="line-chart"></i></span><span class="nav-label">History</span>
         </button>
+        <button class="nav-btn" data-page="progress" onclick="showPage('progress')">
+          <span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Analisis Progress</span>
+        </button>
         <button class="nav-btn" data-page="calculator" onclick="showPage('calculator')">
           <span class="nav-icon"><i data-lucide="calculator"></i></span><span class="nav-label">Kalkulator</span>
         </button>
@@ -312,11 +315,23 @@
           </div>
         </div>
 
-        <!-- Today's AI Analysis Card -->
-        <div class="section-card ai-analysis-card" id="aiAnalysisCard" style="display:none;">
-          <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Analisis Nutrisi AI Hari Ini</h3>
-          <div class="ai-analysis-content" id="aiAnalysisContent">
-            <div class="loading-dots">Menganalisis nutrisi hari ini</div>
+        <!-- Today's Energy Comparison Card -->
+        <div class="section-card" id="energyComparisonCard">
+          <h3 class="section-title"><i data-lucide="scale" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Perbandingan Energi Hari Ini</h3>
+          <div class="comparison-layout" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="comparison-chart-container" style="position: relative; height: 180px; width: 100%;">
+              <canvas id="energyComparisonChart"></canvas>
+            </div>
+            <div class="comparison-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: center;">
+              <div class="comp-stat-box" style="background: var(--surface2); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm);">
+                <div style="font-size: 0.78rem; color: var(--text2);">Total Kalori Keluar</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--danger); margin-top: 4px;" id="totalCalBurnedToday">0 kcal</div>
+              </div>
+              <div class="comp-stat-box" style="background: var(--surface2); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm);">
+                <div style="font-size: 0.78rem; color: var(--text2);">Total Lemak Terbakar</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: #ffab40; margin-top: 4px;" id="totalFatBurnedToday">0 g</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -542,13 +557,9 @@
             <h3 class="section-title"><i data-lucide="clipboard-list" style="display:inline-block;vertical-align:text-bottom;"></i> Rata-rata Harian</h3>
             <div class="history-avg-grid" id="historyAvgGrid"></div>
           </div>
-          <!-- AI Analysis combined (food + activity + sleep) -->
-          <div class="section-card ai-analysis-card">
-            <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Analisis AI Komprehensif</h3>
-            <p style="font-size:0.82rem;color:var(--text2);margin-bottom:12px;">Mencakup makanan, kegiatan olahraga, dan tidur selama periode yang dipilih.</p>
-            <div id="historyAiContent">
-              <div class="loading-dots">Memuat analisis AI...</div>
-            </div>
+          <!-- AI Analysis combined (food + activity + sleep) [HIDDEN/REMOVED] -->
+          <div class="section-card ai-analysis-card" style="display: none;">
+            <div id="historyAiContent"></div>
           </div>
           <div class="section-card">
             <h3 class="section-title"><i data-lucide="calendar" style="display:inline-block;vertical-align:text-bottom;"></i> Riwayat Per Hari</h3>
@@ -571,6 +582,64 @@
           <div class="section-card">
             <h3 class="section-title"><i data-lucide="calendar" style="display:inline-block;vertical-align:text-bottom;"></i> Riwayat Kegiatan Per Hari</h3>
             <div id="activityHistoryList" class="history-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ANALISIS PROGRESS PAGE ===== -->
+      <div id="page-progress" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Analisis Progress</h2>
+            <p class="page-subtitle">Evaluasi AI komprehensif & grafik perkembangan Anda</p>
+          </div>
+        </div>
+        
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="sliders" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Filter Analisis</h3>
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text2);">Tipe Analisis</label>
+              <select id="progressType" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);" onchange="onProgressFilterChange()">
+                <option value="food">🍽️ Makanan & Gizi</option>
+                <option value="activity">🏃 Kegiatan & Tidur</option>
+                <option value="all">📊 Keseluruhan</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:var(--text2);">Periode Waktu</label>
+              <select id="progressPeriod" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);" onchange="onProgressPeriodSelect()">
+                <option value="7">7 Hari Terakhir</option>
+                <option value="14">14 Hari Terakhir</option>
+                <option value="30">30 Hari Terakhir</option>
+                <option value="custom">Custom Tanggal</option>
+              </select>
+            </div>
+          </div>
+          
+          <div id="progressCustomDates" class="custom-date-range hidden" style="margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+            <input type="date" id="progressDateFrom" onchange="onProgressFilterChange()" style="padding:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);">
+            <span style="color:var(--text2);font-size:0.85rem;">sampai</span>
+            <input type="date" id="progressDateTo" onchange="onProgressFilterChange()" style="padding:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);">
+          </div>
+
+          <div id="progressValidationMsg" style="color:var(--danger);font-size:0.82rem;margin-bottom:12px;display:none;">
+            ⚠️ Tidak ada data makanan/kegiatan pada periode ini. Tombol analisis dinonaktifkan.
+          </div>
+          
+          <button id="btnRunProgressAnalysis" class="btn-primary" onclick="startProgressAnalysis()" style="width:100%;padding:12px;font-weight:700;">
+            ✨ Mulai Analisis Progress AI
+          </button>
+        </div>
+
+        <!-- Result Card -->
+        <div class="section-card" id="progressResultCard" style="display:none;margin-top:20px;">
+          <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Hasil Analisis AI</h3>
+          <div id="progressAiResultText" style="line-height:1.6;font-size:0.92rem;color:var(--text);margin-bottom:24px;"></div>
+          
+          <h3 class="section-title" id="progressChartTitle" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px;"><i data-lucide="line-chart" style="display:inline-block;vertical-align:text-bottom;"></i> Grafik Progress</h3>
+          <div class="chart-container" style="position: relative; height: 300px; width: 100%; margin-top: 15px;">
+            <canvas id="progressAnalysisChart"></canvas>
           </div>
         </div>
       </div>

@@ -2,6 +2,8 @@
 let currentChart = null;
 let currentMacroChart = null;
 let currentActivityChart = null;
+let energyComparisonChart = null;
+let progressAnalysisChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -226,6 +228,9 @@ function showPage(pageId) {
     if (pageId === 'dashboard') renderDashboard();
     if (pageId === 'history') {
         setPeriod('7');
+    }
+    if (pageId === 'progress') {
+        initProgressPage();
     }
     if (pageId === 'activity') {
         renderTodayActivities();
@@ -1782,12 +1787,20 @@ function renderDashboard() {
     // Sum today's burned calories
     const todayActs = getTodayActivities();
     const totalBurned = todayActs.reduce((acc, act) => acc + ((act.burn && act.burn.kcal) ? parseFloat(act.burn.kcal) : 0), 0);
+    const totalFatBurned = todayActs.reduce((acc, act) => acc + ((act.burn && act.burn.fatG) ? parseFloat(act.burn.fatG) : 0), 0);
     const elBurned = document.getElementById('calBurned');
     if (elBurned) elBurned.textContent = Math.round(totalBurned);
+    
+    const elCalBurnedToday = document.getElementById('totalCalBurnedToday');
+    if (elCalBurnedToday) elCalBurnedToday.textContent = `${Math.round(totalBurned)} kcal`;
+    const elFatBurnedToday = document.getElementById('totalFatBurnedToday');
+    if (elFatBurnedToday) elFatBurnedToday.textContent = `${totalFatBurned.toFixed(1)} g`;
     
     document.getElementById('calConsumed').textContent = Math.round(calConsumed);
     document.getElementById('calTarget').textContent = calTarget;
     document.getElementById('calRemaining').textContent = Math.max(0, calTarget - Math.round(calConsumed) + Math.round(totalBurned));
+    
+    renderEnergyComparisonChart(calConsumed, totalBurned);
     
     const calRing = document.getElementById('calRing');
     const circumference = 2 * Math.PI * 50; // r=50
@@ -1894,9 +1907,6 @@ function renderDashboard() {
     
     // Render today's activity card on dashboard
     renderDashboardActivityCard();
-
-    // Call daily AI Analysis (pass today's activities for enriched prompt)
-    updateDailyAIAnalysis(logs, profile, authUser ? authUser.email : null);
 }
 
 function renderDashboardActivityCard() {
@@ -2478,7 +2488,7 @@ function loadHistoryData(from, to) {
         calTarget,
         targetProtein
     };
-    updateHistoryAIAnalysis(foodStats, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
+    // updateHistoryAIAnalysis(foodStats, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10)); // Disabled to save tokens
     // Also refresh activity history if that tab is active
     if (document.getElementById('histPanelActivity') && document.getElementById('histPanelActivity').style.display !== 'none') {
         renderActivityHistory();
@@ -3238,4 +3248,478 @@ function styleAIHtml(rawHtml) {
     });
 
     return doc.body.innerHTML;
+}
+
+function renderEnergyComparisonChart(intake, burned) {
+    const canvas = document.getElementById('energyComparisonChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    if (energyComparisonChart) {
+        energyComparisonChart.destroy();
+    }
+    
+    energyComparisonChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Energi Hari Ini'],
+            datasets: [
+                {
+                    label: 'Asupan (Intake)',
+                    data: [Math.round(intake)],
+                    backgroundColor: 'rgba(108, 99, 255, 0.85)',
+                    borderColor: '#6c63ff',
+                    borderWidth: 1,
+                    borderRadius: 6
+                },
+                {
+                    label: 'Terbakar (Out)',
+                    data: [Math.round(burned)],
+                    backgroundColor: 'rgba(255, 77, 109, 0.85)',
+                    borderColor: '#ff4d6d',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.dataset.label}: ${context.raw} kcal`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 11 } }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================
+// ANALISIS PROGRESS — Progress Analysis Page
+// ============================================================
+
+function initProgressPage() {
+    document.getElementById('progressType').value = 'food';
+    document.getElementById('progressPeriod').value = '7';
+    document.getElementById('progressCustomDates').classList.add('hidden');
+    document.getElementById('progressResultCard').style.display = 'none';
+    
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    
+    const formatDateLocal = (d) => {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    
+    document.getElementById('progressDateFrom').value = formatDateLocal(sevenDaysAgo);
+    document.getElementById('progressDateTo').value = formatDateLocal(today);
+    
+    onProgressFilterChange();
+    if (window.lucide) lucide.createIcons();
+}
+
+function onProgressPeriodSelect() {
+    const period = document.getElementById('progressPeriod').value;
+    const customDiv = document.getElementById('progressCustomDates');
+    if (period === 'custom') {
+        customDiv.classList.remove('hidden');
+    } else {
+        customDiv.classList.add('hidden');
+    }
+    onProgressFilterChange();
+}
+
+function onProgressFilterChange() {
+    const period = document.getElementById('progressPeriod').value;
+    const type = document.getElementById('progressType').value;
+    
+    let fromDate, toDate;
+    const today = new Date();
+    
+    if (period === 'custom') {
+        const fromVal = document.getElementById('progressDateFrom').value;
+        const toVal = document.getElementById('progressDateTo').value;
+        if (!fromVal || !toVal) return;
+        fromDate = new Date(fromVal.replace(/-/g, '/'));
+        toDate = new Date(toVal.replace(/-/g, '/'));
+    } else {
+        const days = parseInt(period);
+        toDate = new Date();
+        fromDate = new Date();
+        fromDate.setDate(today.getDate() - days + 1);
+    }
+    
+    const logs = getLogsRange(fromDate, toDate);
+    const allActs = getActivitiesRange(fromDate, toDate);
+    
+    let hasData = false;
+    if (type === 'food') {
+        hasData = logs.length > 0;
+    } else if (type === 'activity') {
+        let actCount = 0;
+        Object.values(allActs).forEach(dayActs => {
+            actCount += dayActs.length;
+        });
+        hasData = actCount > 0;
+    } else {
+        let actCount = 0;
+        Object.values(allActs).forEach(dayActs => {
+            actCount += dayActs.length;
+        });
+        hasData = logs.length > 0 || actCount > 0;
+    }
+    
+    const btn = document.getElementById('btnRunProgressAnalysis');
+    const msg = document.getElementById('progressValidationMsg');
+    
+    if (!hasData) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        msg.style.display = 'block';
+    } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        msg.style.display = 'none';
+    }
+}
+
+async function startProgressAnalysis() {
+    const apiKey = localStorage.getItem('lf_apikey');
+    const resultTextEl = document.getElementById('progressAiResultText');
+    const resultCard = document.getElementById('progressResultCard');
+    
+    if (!apiKey) {
+        alert('Set API Key terlebih dahulu di menu Settings!');
+        showPage('settings');
+        return;
+    }
+    
+    const period = document.getElementById('progressPeriod').value;
+    const type = document.getElementById('progressType').value;
+    
+    let fromDate, toDate;
+    const today = new Date();
+    
+    if (period === 'custom') {
+        const fromVal = document.getElementById('progressDateFrom').value;
+        const toVal = document.getElementById('progressDateTo').value;
+        fromDate = new Date(fromVal.replace(/-/g, '/'));
+        toDate = new Date(toVal.replace(/-/g, '/'));
+    } else {
+        const days = parseInt(period);
+        toDate = new Date();
+        fromDate = new Date();
+        fromDate.setDate(today.getDate() - days + 1);
+    }
+    
+    const logs = getLogsRange(fromDate, toDate);
+    const allActs = getActivitiesRange(fromDate, toDate);
+    
+    resultCard.style.display = 'block';
+    resultTextEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="19.07"/></svg>
+        Menganalisis progress dengan Groq AI...
+    </div>`;
+    
+    if (!document.getElementById('lf-spin-style')) {
+        const st = document.createElement('style');
+        st.id = 'lf-spin-style';
+        st.textContent = '@keyframes lfSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(st);
+    }
+    
+    try {
+        const profile = getProfile() || {};
+        const totalDays = Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
+        
+        let prompt = "";
+        
+        if (type === 'food') {
+            const dataLen = logs.length || 1;
+            const avgCal = logs.reduce((s, d) => s + (d.cal || 0), 0) / totalDays;
+            const avgProtein = logs.reduce((s, d) => s + (d.protein || 0), 0) / totalDays;
+            const avgCarbs = logs.reduce((s, d) => s + (d.carbs || 0), 0) / totalDays;
+            const avgFat = logs.reduce((s, d) => s + (d.fat || 0), 0) / totalDays;
+            
+            prompt = `Kamu adalah ahli gizi profesional. Analisis data asupan makanan & gizi LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
+                     `== PROFIL USER ==\n` +
+                     `Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'}kg, Goal: ${profile.target || 'maintenance'}\n\n` +
+                     `== STATISTIK RATA-RATA HARIAN (${totalDays} hari) ==\n` +
+                     `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
+                     `- Protein: ${avgProtein.toFixed(1)}g/hari (target: ${profile.targets?.protein || 120}g)\n` +
+                     `- Karbohidrat: ${avgCarbs.toFixed(1)}g/hari\n` +
+                     `- Lemak: ${avgFat.toFixed(1)}g/hari\n\n` +
+                     `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Berikan analisis kualitas makanan, konsistensi asupan, dan prioritas perbaikan gizi ke depan.`;
+        } else if (type === 'activity') {
+            let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
+            Object.values(allActs).forEach(dayActs => {
+                dayActs.forEach(a => {
+                    if (a.type === 'workout') { workoutCount++; }
+                    else if (a.type === 'gym') { gymCount++; }
+                    else if (a.type === 'cardio') { cardioCount++; }
+                    else if (a.type === 'other') { otherCount++; }
+                    else if (a.type === 'sleep') { sleepData.push(a.hours); }
+                    if (a.burn && a.burn.kcal) {
+                        totalBurnedKcal += parseFloat(a.burn.kcal);
+                    }
+                });
+            });
+            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+            const avgBurn = (totalBurnedKcal / totalDays).toFixed(0);
+            
+            prompt = `Kamu adalah pelatih fitness profesional. Analisis data kegiatan olahraga & tidur LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
+                     `== PROFIL USER ==\n` +
+                     `BB: ${profile.bb||'?'}kg, Goal: ${profile.target || 'maintenance'}, Aktivitas: ${profile.aktivitas || '?'}\n\n` +
+                     `== AKTIVITAS SELAMA ${totalDays} HARI ==\n` +
+                     `- Total Latihan: ${workoutCount + gymCount} sesi (Workout: ${workoutCount}, Gym: ${gymCount})\n` +
+                     `- Sesi Kardio: ${cardioCount} kali, Lainnya: ${otherCount} kali\n` +
+                     `- Rata-rata Kalori Terbakar: ${avgBurn} kcal/hari\n` +
+                     `- Rata-rata Tidur: ${avgSleep} jam/hari\n\n` +
+                     `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Berikan analisis tentang konsistensi latihan, pembakaran kalori, dan kualitas istirahat (recovery).`;
+        } else {
+            let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
+            Object.values(allActs).forEach(dayActs => {
+                dayActs.forEach(a => {
+                    if (a.type === 'workout') { workoutCount++; }
+                    else if (a.type === 'gym') { gymCount++; }
+                    else if (a.type === 'cardio') { cardioCount++; }
+                    else if (a.type === 'other') { otherCount++; }
+                    else if (a.type === 'sleep') { sleepData.push(a.hours); }
+                    if (a.burn && a.burn.kcal) {
+                        totalBurnedKcal += parseFloat(a.burn.kcal);
+                    }
+                });
+            });
+            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+            const avgBurn = (totalBurnedKcal / totalDays).toFixed(0);
+            
+            const avgCal = logs.reduce((s, d) => s + (d.cal || 0), 0) / totalDays;
+            const avgProtein = logs.reduce((s, d) => s + (d.protein || 0), 0) / totalDays;
+            
+            prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Analisis data gizi, latihan, dan tidur LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
+                     `== PROFIL USER ==\n` +
+                     `BB: ${profile.bb||'?'}kg, TB: ${profile.tb||'?'}cm, Goal: ${profile.target || 'maintenance'}\n\n` +
+                     `== RIWAYAT PROGRESS HARI (${totalDays} hari) ==\n` +
+                     `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
+                     `- Asupan Protein: ${avgProtein.toFixed(1)}g/hari\n` +
+                     `- Kalori Terbakar: ${avgBurn} kcal/hari\n` +
+                     `- Istirahat Tidur: ${avgSleep} jam/hari\n` +
+                     `- Total Olahraga: ${workoutCount + gymCount + cardioCount} kali sesi\n\n` +
+                     `Tulis evaluasi komprehensif dalam HTML VALID (TANPA markdown, TANPA code block). Evaluasi apakah asupan kalori & protein mendukung program olahraga, recovery otot, dan pencapaian goal user.`;
+        }
+        
+        const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
+        if (rawHtml) {
+            resultTextEl.innerHTML = styleAIHtml(rawHtml);
+            
+            const dateSeries = [];
+            const tempDate = new Date(fromDate);
+            while (tempDate <= toDate) {
+                dateSeries.push(new Date(tempDate));
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+            
+            renderProgressAnalysisChart(type, dateSeries, logs, allActs);
+        } else {
+            resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;
+        }
+    } catch (err) {
+        console.error('startProgressAnalysis error:', err);
+        resultTextEl.innerHTML = `<p style="color:var(--danger);">Error: ${err.message}</p>`;
+    }
+}
+
+function renderProgressAnalysisChart(type, dateSeries, logs, allActs) {
+    const canvas = document.getElementById('progressAnalysisChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    if (progressAnalysisChart) {
+        progressAnalysisChart.destroy();
+    }
+    
+    const labels = dateSeries.map(d => `${d.getDate()}/${d.getMonth()+1}`);
+    
+    const logsByDate = {};
+    logs.forEach(l => {
+        const key = l.date || new Date(l.loggedAt).toISOString().slice(0, 10);
+        if (!logsByDate[key]) logsByDate[key] = [];
+        logsByDate[key].push(l);
+    });
+    
+    const datasets = [];
+    
+    if (type === 'food') {
+        const calorieData = dateSeries.map(d => {
+            const key = d.toISOString().slice(0, 10);
+            const dayLogs = logsByDate[key] || [];
+            return dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
+        });
+        
+        const proteinData = dateSeries.map(d => {
+            const key = d.toISOString().slice(0, 10);
+            const dayLogs = logsByDate[key] || [];
+            return dayLogs.reduce((sum, item) => sum + (item.protein || 0), 0);
+        });
+        
+        datasets.push({
+            label: 'Asupan Kalori (kcal)',
+            data: calorieData,
+            borderColor: '#6c63ff',
+            backgroundColor: 'rgba(108, 99, 255, 0.1)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'y'
+        });
+        
+        datasets.push({
+            label: 'Protein (g)',
+            data: proteinData,
+            borderColor: '#00d9a6',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: 'y1'
+        });
+    } else if (type === 'activity') {
+        const burnData = dateSeries.map(d => {
+            const key = d.toISOString().slice(0, 10);
+            const dayActs = allActs[key] || [];
+            return dayActs.reduce((sum, item) => sum + ((item.burn && item.burn.kcal) ? parseFloat(item.burn.kcal) : 0), 0);
+        });
+        
+        const sleepData = dateSeries.map(d => {
+            const key = d.toISOString().slice(0, 10);
+            const dayActs = allActs[key] || [];
+            const sleepAct = dayActs.find(a => a.type === 'sleep');
+            return sleepAct ? parseFloat(sleepAct.hours || 0) : 0;
+        });
+        
+        datasets.push({
+            label: 'Kalori Terbakar (kcal)',
+            data: burnData,
+            borderColor: '#ff4d6d',
+            backgroundColor: 'rgba(255, 77, 109, 0.2)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'y'
+        });
+        
+        datasets.push({
+            label: 'Tidur (jam)',
+            data: sleepData,
+            borderColor: '#a78bfa',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: 'y1'
+        });
+    } else {
+        const calorieIntake = dateSeries.map(d => {
+            const key = d.toISOString().slice(0, 10);
+            const dayLogs = logsByDate[key] || [];
+            return dayLogs.reduce((sum, item) => sum + (item.cal || 0), 0);
+        });
+        
+        const calorieBurned = dateSeries.map(d => {
+            const key = d.toISOString().slice(0, 10);
+            const dayActs = allActs[key] || [];
+            return dayActs.reduce((sum, item) => sum + ((item.burn && item.burn.kcal) ? parseFloat(item.burn.kcal) : 0), 0);
+        });
+        
+        datasets.push({
+            label: 'Kalori Masuk (kcal)',
+            data: calorieIntake,
+            borderColor: '#6c63ff',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.3
+        });
+        
+        datasets.push({
+            label: 'Kalori Keluar (kcal)',
+            data: calorieBurned,
+            borderColor: '#ff4d6d',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.3
+        });
+    }
+    
+    const scales = {
+        x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } }
+        },
+        y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } }
+        }
+    };
+    
+    if (type === 'food') {
+        scales.y1 = {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } },
+            title: { display: true, text: 'Protein (g)', color: '#00d9a6' }
+        };
+    } else if (type === 'activity') {
+        scales.y1 = {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 10 } },
+            title: { display: true, text: 'Tidur (jam)', color: '#a78bfa' }
+        };
+    }
+    
+    progressAnalysisChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: '#8caebf', font: { family: '"Inter", sans-serif', size: 11 } }
+                }
+            },
+            scales: scales
+        }
+    });
 }
