@@ -642,8 +642,14 @@
             <div class="workout-sets-container" id="workoutSetsContainer">
               <div class="workout-set-row" id="workoutSet_1">
                 <div class="set-label">Set 1</div>
-                <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_1" style="max-width:85px;">
-                <input type="number" class="set-input" placeholder="Beban (kg)" min="0" id="wWeight_1" style="max-width:95px;">
+                <div style="display:flex;align-items:center;gap:4px;flex:1;">
+                  <input type="number" class="set-input" placeholder="Reps" min="1" id="wReps_1" style="max-width:70px;">
+                  <span style="font-size:0.8rem;color:var(--text3);">reps</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;flex:1;">
+                  <input type="number" class="set-input" placeholder="Beban" min="0" id="wWeight_1" style="max-width:75px;">
+                  <span style="font-size:0.8rem;color:var(--text3);">kg</span>
+                </div>
                 <button class="set-remove-btn" onclick="removeWorkoutSet(1)" style="opacity:0;pointer-events:none;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
               </div>
             </div>
@@ -676,9 +682,16 @@
               <div id="workoutBurnPreview" class="calburn-preview"></div>
             </div>
 
-            <button class="btn-primary btn-full" id="btnSaveWorkout" onclick="saveWorkoutSession()" style="display:none;margin-top:12px;background:var(--success);">
-              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Workout
-            </button>
+            <div id="workoutAiPreview" style="display:none; margin-top:12px;"></div>
+
+            <div id="workoutActions" style="display:none; margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+              <button class="btn-primary btn-full" id="btnAnalyzeWorkoutAI" onclick="triggerActivityAI('workout')" style="background:var(--bg3); border:1.5px solid var(--accent); color:var(--accent);">
+                <i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Analisa AI
+              </button>
+              <button class="btn-primary btn-full" id="btnSaveWorkout" onclick="saveWorkoutSession()" style="background:var(--success);">
+                <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Workout
+              </button>
+            </div>
           </div>
 
           <!-- GYM PANEL -->
@@ -718,9 +731,16 @@
               <div id="gymBurnPreview" class="calburn-preview"></div>
             </div>
 
-            <button class="btn-primary btn-full" id="btnSaveGym" onclick="saveGymSession()" style="display:none;margin-top:12px;background:var(--success);">
-              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Gym
-            </button>
+            <div id="gymAiPreview" style="display:none; margin-top:12px;"></div>
+
+            <div id="gymActions" style="display:none; margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+              <button class="btn-primary btn-full" id="btnAnalyzeGymAI" onclick="triggerActivityAI('gym')" style="background:var(--bg3); border:1.5px solid var(--accent); color:var(--accent);">
+                <i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Analisa AI
+              </button>
+              <button class="btn-primary btn-full" id="btnSaveGym" onclick="saveGymSession()" style="background:var(--success);">
+                <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Gym
+              </button>
+            </div>
           </div>
 
           <!-- CARDIO PANEL -->
@@ -736,27 +756,34 @@
             </div>
             <div class="form-group" style="margin-top:12px;">
               <label>Nama Aktivitas</label>
-              <input type="text" id="cardioName" placeholder="Contoh: Lari Pagi" class="form-input">
+              <input type="text" id="cardioName" placeholder="Contoh: Lari Pagi" class="form-input" oninput="clearActivityAiPreview('cardio')">
             </div>
             <div class="form-group" style="margin-top:10px;">
               <label>Durasi (menit)</label>
-              <input type="number" id="cardioDuration" placeholder="Contoh: 30" min="1" class="form-input">
+              <input type="number" id="cardioDuration" placeholder="Contoh: 30" min="1" class="form-input" oninput="clearActivityAiPreview('cardio')">
             </div>
             <div class="form-group" style="margin-top:10px;">
               <label>Jarak (km) - Opsional</label>
-              <input type="number" id="cardioDistance" placeholder="Contoh: 5" min="0" step="0.1" class="form-input">
+              <input type="number" id="cardioDistance" placeholder="Contoh: 5" min="0" step="0.1" class="form-input" oninput="clearActivityAiPreview('cardio')">
             </div>
             <div class="form-group" style="margin-top:10px;">
               <label>Intensitas</label>
-              <select id="cardioIntensity" class="form-input">
+              <select id="cardioIntensity" class="form-input" onchange="clearActivityAiPreview('cardio')">
                 <option value="low">Ringan</option>
                 <option value="medium" selected>Sedang</option>
                 <option value="high">Tinggi</option>
               </select>
             </div>
-            <button class="btn-primary btn-full" id="btnSaveCardio" onclick="saveCardioSession()" style="margin-top:16px;background:var(--success);">
-              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Kardio
-            </button>
+            <div id="cardioAiPreview" style="display:none; margin-top:12px;"></div>
+
+            <div id="cardioActions" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+              <button class="btn-primary btn-full" id="btnAnalyzeCardioAI" onclick="triggerActivityAI('cardio')" style="background:var(--bg3); border:1.5px solid var(--accent); color:var(--accent);">
+                <i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Analisa AI
+              </button>
+              <button class="btn-primary btn-full" id="btnSaveCardio" onclick="saveCardioSession()" style="background:var(--success);">
+                <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Kardio
+              </button>
+            </div>
           </div>
 
           <!-- OTHER ACTIVITY PANEL -->
@@ -772,23 +799,30 @@
             </div>
             <div class="form-group" style="margin-top:12px;">
               <label>Nama Aktivitas</label>
-              <input type="text" id="otherActName" placeholder="Contoh: Main Badminton" class="form-input">
+              <input type="text" id="otherActName" placeholder="Contoh: Main Badminton" class="form-input" oninput="clearActivityAiPreview('other')">
             </div>
             <div class="form-group" style="margin-top:10px;">
               <label>Durasi (menit)</label>
-              <input type="number" id="otherActDuration" placeholder="Contoh: 45" min="1" class="form-input">
+              <input type="number" id="otherActDuration" placeholder="Contoh: 45" min="1" class="form-input" oninput="clearActivityAiPreview('other')">
             </div>
             <div class="form-group" style="margin-top:10px;">
               <label>Intensitas</label>
-              <select id="otherActIntensity" class="form-input">
+              <select id="otherActIntensity" class="form-input" onchange="clearActivityAiPreview('other')">
                 <option value="low">Ringan</option>
                 <option value="medium" selected>Sedang</option>
                 <option value="high">Tinggi</option>
               </select>
             </div>
-            <button class="btn-primary btn-full" id="btnSaveOther" onclick="saveOtherSession()" style="margin-top:16px;background:var(--success);">
-              <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Lainnya
-            </button>
+            <div id="otherAiPreview" style="display:none; margin-top:12px;"></div>
+
+            <div id="otherActions" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+              <button class="btn-primary btn-full" id="btnAnalyzeOtherAI" onclick="triggerActivityAI('other')" style="background:var(--bg3); border:1.5px solid var(--accent); color:var(--accent);">
+                <i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Analisa AI
+              </button>
+              <button class="btn-primary btn-full" id="btnSaveOther" onclick="saveOtherSession()" style="background:var(--success);">
+                <i data-lucide="check-circle" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Sesi Lainnya
+              </button>
+            </div>
           </div>
         </div>
 
