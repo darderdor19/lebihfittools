@@ -2,8 +2,7 @@
 let currentChart = null;
 let currentMacroChart = null;
 let currentActivityChart = null;
-let energyCalChart = null;
-let energyFatChart = null;
+let energyComparisonChart = null;
 let progressAnalysisChart = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1809,8 +1808,7 @@ function renderDashboard() {
     document.getElementById('calTarget').textContent = calTarget;
     document.getElementById('calRemaining').textContent = Math.max(0, calTarget - Math.round(calConsumed) + Math.round(totalBurned));
     
-    renderEnergyCalChart(calConsumed, totalBurned);
-    renderEnergyFatChart(fatIntake, totalFatBurned);
+    renderEnergyComparisonChart(calConsumed, totalBurned, fatIntake, totalFatBurned);
     
     const calRing = document.getElementById('calRing');
     const circumference = 2 * Math.PI * 50; // r=50
@@ -3265,27 +3263,56 @@ function styleAIHtml(rawHtml) {
     return doc.body.innerHTML;
 }
 
-function _makeEnergyChartConfig(label1, val1, color1, label2, val2, color2, unit) {
-    return {
+function renderEnergyComparisonChart(calIn, calOut, fatIn, fatOut) {
+    const canvas = document.getElementById('energyComparisonChart');
+    if (!canvas) return;
+    if (energyComparisonChart) { energyComparisonChart.destroy(); energyComparisonChart = null; }
+    
+    energyComparisonChart = new Chart(canvas.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: ['Masuk', 'Keluar'],
+            // Two label groups: Kalori | (gap) | Lemak — achieved via 4 datasets with null values
+            labels: ['Kalori (kcal)', 'Lemak (g)'],
             datasets: [
                 {
-                    label: label1,
-                    data: [val1, null],
-                    backgroundColor: color1 + 'cc',
-                    borderColor: color1,
+                    // Kalori Masuk — dark blue
+                    label: 'Kalori Masuk',
+                    data: [Math.round(calIn), null],
+                    backgroundColor: 'rgba(108,99,255,0.92)',
+                    borderColor: '#6c63ff',
                     borderWidth: 1,
-                    borderRadius: 6
+                    borderRadius: 5,
+                    yAxisID: 'yCal'
                 },
                 {
-                    label: label2,
-                    data: [null, val2],
-                    backgroundColor: color2 + 'cc',
-                    borderColor: color2,
+                    // Kalori Keluar — light blue
+                    label: 'Kalori Keluar',
+                    data: [Math.round(calOut), null],
+                    backgroundColor: 'rgba(167,139,250,0.78)',
+                    borderColor: '#a78bfa',
                     borderWidth: 1,
-                    borderRadius: 6
+                    borderRadius: 5,
+                    yAxisID: 'yCal'
+                },
+                {
+                    // Lemak Masuk — dark orange
+                    label: 'Lemak Masuk',
+                    data: [null, parseFloat(fatIn.toFixed(1))],
+                    backgroundColor: 'rgba(249,115,22,0.92)',
+                    borderColor: '#f97316',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    yAxisID: 'yFat'
+                },
+                {
+                    // Lemak Keluar — light orange
+                    label: 'Lemak Keluar',
+                    data: [null, parseFloat(fatOut.toFixed(1))],
+                    backgroundColor: 'rgba(253,186,116,0.78)',
+                    borderColor: '#fdba74',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    yAxisID: 'yFat'
                 }
             ]
         },
@@ -3293,45 +3320,53 @@ function _makeEnergyChartConfig(label1, val1, color1, label2, val2, color2, unit
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#8caebf',
+                        font: { family: '"Inter",sans-serif', size: 10 },
+                        usePointStyle: true,
+                        pointStyle: 'rect',
+                        padding: 12,
+                        generateLabels: () => [
+                            { text: 'Masuk',  fillStyle: 'rgba(108,99,255,0.92)', strokeStyle: '#6c63ff',  lineWidth:1 },
+                            { text: 'Keluar', fillStyle: 'rgba(167,139,250,0.78)', strokeStyle: '#a78bfa', lineWidth:1 }
+                        ]
+                    }
+                },
                 tooltip: {
                     callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw : 0} ${unit}`
+                        label: ctx => {
+                            if (ctx.raw == null) return null;
+                            const unit = ctx.dataIndex === 0 ? 'kcal' : 'g';
+                            return ` ${ctx.dataset.label}: ${ctx.raw} ${unit}`;
+                        }
                     }
                 }
             },
             scales: {
-                y: {
+                yCal: {
+                    type: 'linear',
+                    position: 'left',
                     beginAtZero: true,
-                    stacked: false,
                     grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#8caebf', font: { family: '"Inter",sans-serif', size: 9 } }
+                },
+                yFat: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
                     ticks: { color: '#8caebf', font: { family: '"Inter",sans-serif', size: 9 } }
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#8caebf', font: { family: '"Inter",sans-serif', size: 10 } }
+                    ticks: { color: '#8caebf', font: { family: '"Inter",sans-serif', size: 11 } }
                 }
             }
         }
-    };
-}
-
-function renderEnergyCalChart(intake, burned) {
-    const canvas = document.getElementById('energyCalChart');
-    if (!canvas) return;
-    if (energyCalChart) { energyCalChart.destroy(); energyCalChart = null; }
-    energyCalChart = new Chart(canvas.getContext('2d'),
-        _makeEnergyChartConfig('Masuk', Math.round(intake), '#6c63ff', 'Keluar', Math.round(burned), '#ff4d6d', 'kcal')
-    );
-}
-
-function renderEnergyFatChart(fatIntake, fatBurned) {
-    const canvas = document.getElementById('energyFatChart');
-    if (!canvas) return;
-    if (energyFatChart) { energyFatChart.destroy(); energyFatChart = null; }
-    energyFatChart = new Chart(canvas.getContext('2d'),
-        _makeEnergyChartConfig('Masuk', parseFloat(fatIntake.toFixed(1)), '#a78bfa', 'Keluar', parseFloat(fatBurned.toFixed(1)), '#ffab40', 'g')
-    );
+    });
 }
 
 // ============================================================
