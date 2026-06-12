@@ -1504,13 +1504,53 @@ a{color:var(--accent);text-decoration:none}
  # p r o g r e s s A i R e s u l t T e x t   u l   { 
      m a r g i n - t o p :   0 . 5 r e m ; 
      m a r g i n - b o t t o m :   1 r e m ; 
-     p a d d i n g - l e f t :   1 . 5 r e m ; 
- } 
- # p r o g r e s s A i R e s u l t T e x t   l i   { 
-     m a r g i n - b o t t o m :   0 . 4 r e m ; 
- } 
- # p r o g r e s s A i R e s u l t T e x t   p   { 
-     m a r g i n - b o t t o m :   1 r e m ; 
- } 
-  
- 
+/* ===== PROGRESS SUB TABS ===== */
+.progress-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.sub-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+.sub-tab:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+.sub-tab.active {
+  background: rgba(108, 99, 255, 0.15);
+  color: var(--accent);
+}
+#physicalAiResultText h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px;
+}
+#physicalAiResultText ul {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+#physicalAiResultText li {
+    margin-bottom: 0.4rem;
+}
+#physicalAiResultText p {
+    margin-bottom: 1rem;
+}

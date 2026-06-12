@@ -314,6 +314,41 @@ Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON 
   }
 }
 
+async function analyzePhysicalPhotoAI(base64, mime, promptText) {
+  let key = getVisionKey();
+  if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
+      key = process.env.GEMINI_API_KEY;
+  }
+  if (!key) throw new Error("Gemini API Key belum diset. Buka Settings.");
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+  
+  const body = {
+    contents: [{
+      parts: [
+        { text: promptText },
+        { inline_data: { mime_type: mime, data: base64 } }
+      ]
+    }]
+  };
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
+  }
+
+  const data = await res.json();
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
+  return raw;
+}
+
 async function analyzeTextAI(name, portion, desc) {
   let prompt = `Berikan estimasi nutrisi untuk makanan berikut:
 Nama: ${name}

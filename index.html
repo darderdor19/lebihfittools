@@ -627,8 +627,14 @@
             <p class="page-subtitle">Evaluasi AI komprehensif & grafik perkembangan Anda</p>
           </div>
         </div>
-        
-        <div class="section-card">
+
+        <div class="progress-tabs">
+          <button id="btnProgressTabTrend" class="sub-tab active" onclick="switchProgressTab('trend')"><i data-lucide="line-chart" style="width:16px;height:16px;"></i> Analisis Tren Data</button>
+          <button id="btnProgressTabPhysical" class="sub-tab" onclick="switchProgressTab('physical')"><i data-lucide="camera" style="width:16px;height:16px;"></i> Evaluasi Fisik via Foto</button>
+        </div>
+
+        <div id="progress-data-content">
+          <div class="section-card">
           <h3 class="section-title"><i data-lucide="sliders" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Filter Analisis</h3>
           <div class="form-grid" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
             <div class="form-group">
@@ -711,6 +717,54 @@
           <h3 class="section-title" id="progressChartTitle" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px;"><i data-lucide="line-chart" style="display:inline-block;vertical-align:text-bottom;"></i> Grafik Progress</h3>
           <div class="chart-container" style="position: relative; height: 300px; width: 100%; margin-top: 15px;">
             <canvas id="progressAnalysisChart"></canvas>
+          </div>
+        </div> <!-- End of #progress-data-content -->
+
+        <!-- ===== PHYSICAL PROGRESS CONTENT ===== -->
+        <div id="progress-physical-content" class="hidden">
+          <div class="section-card">
+            <h3 class="section-title"><i data-lucide="camera" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Evaluasi Fisik & Progres AI (Foto)</h3>
+            <p class="setting-desc">Unggah foto kondisi badan Anda saat ini. AI Gemini 3.5 Flash akan mengevaluasi kondisi fisik visual Anda dan mengorelasikannya dengan riwayat nutrisi, olahraga, dan istirahat Anda.</p>
+            
+            <div class="form-group" style="margin-top: 20px;">
+              <label>Foto Tubuh / Kondisi Fisik</label>
+              <div class="upload-area" id="physicalUploadArea" style="border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: var(--radius); cursor: pointer; background: var(--surface); margin-top: 8px; position: relative; transition: border-color 0.2s;" onclick="document.getElementById('physicalFileInput').click()">
+                <input type="file" id="physicalFileInput" accept="image/*" style="display: none;" onchange="handlePhysicalFileSelect(event)">
+                <div id="physicalUploadPlaceholder">
+                  <div class="upload-icon" style="margin-bottom:10px;"><i data-lucide="camera" style="width:48px;height:48px;color:var(--text3);display:inline-block;"></i></div>
+                  <p style="font-weight:600;color:var(--text2);">Klik atau seret foto badan ke sini</p>
+                  <p style="font-size:0.75rem;color:var(--text3);margin-top:4px;">PNG, JPG, JPEG, WEBP</p>
+                </div>
+                <div id="physicalPreviewContainer" class="hidden">
+                  <img id="physicalImagePreview" src="" alt="Preview" style="max-height: 250px; border-radius: var(--radius); margin: 0 auto; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                  <button class="btn-text" onclick="removePhysicalPhoto(event)" style="margin-top:12px;color:var(--danger);font-size:0.85rem;background:none;border:none;cursor:pointer;font-weight:600;"><i data-lucide="trash-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Hapus Foto</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+              <label>Catatan / Deskripsi Kondisi Badan (Opsional)</label>
+              <textarea id="physicalDescInput" placeholder="Contoh: Otot perut mulai keliatan samar-samar, tapi paha ngerasa makin tebal. Ada keluhan kembung..." style="width: 100%; min-height: 80px; padding: 12px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); margin-top: 8px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+              <label>Sertakan Riwayat Data Sejak</label>
+              <select id="physicalDataPeriod" style="width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); margin-top: 8px; font-family: inherit;">
+                <option value="7" selected>7 Hari Terakhir</option>
+                <option value="14">14 Hari Terakhir</option>
+                <option value="30">30 Hari Terakhir</option>
+              </select>
+            </div>
+
+            <button id="btnRunPhysicalAnalysis" class="btn-primary" onclick="startPhysicalAnalysis()" style="width:100%;padding:12px;font-weight:700;margin-top:24px;">
+              ✨ Mulai Analisis Kondisi Fisik AI
+            </button>
+          </div>
+
+          <!-- Physical Result Card -->
+          <div class="section-card" id="physicalResultCard" style="display:none;margin-top:20px;">
+            <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Hasil Evaluasi Fisik AI</h3>
+            <div id="physicalAiResultText" style="line-height:1.6;font-size:0.92rem;color:var(--text);"></div>
           </div>
         </div>
       </div>

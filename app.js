@@ -3540,6 +3540,38 @@ function initProgressPage() {
     document.getElementById('progressDateFrom').value = formatDateLocal(sevenDaysAgo);
     document.getElementById('progressDateTo').value = formatDateLocal(today);
     
+    // Reset Physical Evaluation Inputs
+    removePhysicalPhoto();
+    document.getElementById('physicalDescInput').value = '';
+    document.getElementById('physicalDataPeriod').value = '7';
+    document.getElementById('physicalResultCard').style.display = 'none';
+    
+    // Default Tab
+    switchProgressTab('trend');
+    
+    // Initialize Drag and Drop for Physical Photo Upload
+    const area = document.getElementById('physicalUploadArea');
+    if (area && !area.dataset.dragInitialized) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            area.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            area.addEventListener(eventName, () => {
+                area.style.borderColor = 'var(--accent)';
+            }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            area.addEventListener(eventName, () => {
+                area.style.borderColor = 'var(--border)';
+            }, false);
+        });
+        area.addEventListener('drop', handlePhysicalFileSelect, false);
+        area.dataset.dragInitialized = 'true';
+    }
+    
     onProgressPeriodSelect(); // This will update active classes and call onProgressFilterChange
     if (window.lucide) lucide.createIcons();
 }
@@ -3976,4 +4008,164 @@ function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, date
             scales: scales
         }
     });
+}
+
+// ===== PHYSICAL EVALUATION VIA PHOTO AND AI =====
+function switchProgressTab(tab) {
+    const btnTrend = document.getElementById('btnProgressTabTrend');
+    const btnPhysical = document.getElementById('btnProgressTabPhysical');
+    const contentData = document.getElementById('progress-data-content');
+    const contentPhysical = document.getElementById('progress-physical-content');
+    
+    if (tab === 'trend') {
+        btnTrend.classList.add('active');
+        btnPhysical.classList.remove('active');
+        contentData.classList.remove('hidden');
+        contentPhysical.classList.add('hidden');
+    } else {
+        btnTrend.classList.remove('active');
+        btnPhysical.classList.add('active');
+        contentData.classList.add('hidden');
+        contentPhysical.classList.remove('hidden');
+    }
+    
+    if (window.lucide) lucide.createIcons();
+}
+
+function handlePhysicalFileSelect(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    const files = event.target.files || event.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+        showToast('File harus berupa gambar!', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('physicalImagePreview').src = e.target.result;
+        document.getElementById('physicalUploadPlaceholder').classList.add('hidden');
+        document.getElementById('physicalPreviewContainer').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removePhysicalPhoto(event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    document.getElementById('physicalFileInput').value = '';
+    document.getElementById('physicalImagePreview').src = '';
+    document.getElementById('physicalPreviewContainer').classList.add('hidden');
+    document.getElementById('physicalUploadPlaceholder').classList.remove('hidden');
+}
+
+async function startPhysicalAnalysis() {
+    const apiKey = getVisionKey() || localStorage.getItem('lf_visionkey');
+    const resultTextEl = document.getElementById('physicalAiResultText');
+    const resultCard = document.getElementById('physicalResultCard');
+    
+    if (!apiKey) {
+        alert('Set API Key Gemini terlebih dahulu di menu Settings!');
+        showPage('settings');
+        return;
+    }
+    
+    const imgPreview = document.getElementById('physicalImagePreview');
+    if (!imgPreview.src || imgPreview.src.includes('localhost') || imgPreview.src === '') {
+        alert('Harap unggah foto kondisi badan terlebih dahulu!');
+        return;
+    }
+    
+    resultCard.style.display = 'block';
+    resultTextEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="19.07"/></svg>
+        Menganalisis kondisi fisik dengan Gemini 3.5 Flash...
+    </div>`;
+    
+    try {
+        const profile = getProfile() || {};
+        const days = parseInt(document.getElementById('physicalDataPeriod').value) || 7;
+        const customDesc = document.getElementById('physicalDescInput').value.trim();
+        
+        const today = new Date();
+        const fromDate = new Date();
+        fromDate.setDate(today.getDate() - days + 1);
+        
+        const logs = getLogsRange(fromDate, today);
+        const allActs = getActivitiesRange(fromDate, today);
+        
+        // Calculate food metrics
+        const dataLen = logs.length || 1;
+        const avgCal = logs.reduce((s, d) => s + (d.totals ? d.totals.cal || 0 : 0), 0) / dataLen;
+        const avgProtein = logs.reduce((s, d) => s + (d.totals ? d.totals.protein || 0 : 0), 0) / dataLen;
+        const avgCarbs = logs.reduce((s, d) => s + (d.totals ? d.totals.carbs || 0 : 0), 0) / dataLen;
+        const avgFat = logs.reduce((s, d) => s + (d.totals ? d.totals.fat || 0 : 0), 0) / dataLen;
+        const avgFiber = logs.reduce((s, d) => s + (d.totals ? d.totals.fiber || 0 : 0), 0) / dataLen;
+        
+        // Calculate activities
+        let workoutCount = 0, gymCount = 0, cardioCount = 0, sleepData = [], totalBurnedKcal = 0;
+        Object.values(allActs).forEach(dayActs => {
+            dayActs.forEach(a => {
+                if (a.type === 'workout') workoutCount++;
+                else if (a.type === 'gym') gymCount++;
+                else if (a.type === 'cardio') cardioCount++;
+                else if (a.type === 'sleep') sleepData.push(a.hours);
+                if (a.burn && a.burn.kcal) totalBurnedKcal += parseFloat(a.burn.kcal);
+            });
+        });
+        const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+        const avgBurn = (totalBurnedKcal / days).toFixed(0);
+        
+        // Prepare base64 image details
+        const base64Data = imgPreview.src.split(',')[1];
+        const mimeType = imgPreview.src.split(',')[0].split(':')[1].split(';')[0];
+        
+        // Build the prompt for Gemini Flash
+        let promptText = `Kamu adalah pelatih fitness personal dan ahli gizi klinis profesional. Analisis foto kondisi fisik tubuh user ini secara visual. ` +
+                         `Bandingkan kondisi fisiknya saat ini dengan data profil, catatan pribadinya, dan riwayat asupan/olahraganya selama ${days} hari terakhir. ` +
+                         `Berikan evaluasi yang objektif, jujur, edukatif, dan memotivasi untuk membantunya mencapai target kebugarannya.\n\n` +
+                         `== PROFIL PENGGUNA ==\n` +
+                         `- Tinggi Badan (TB): ${profile.tb || '?'} cm\n` +
+                         `- Berat Badan (BB): ${profile.bb || '?'} kg\n` +
+                         `- Usia: ${profile.usia || '?'} tahun\n` +
+                         `- Jenis Kelamin: ${profile.gender || 'pria'}\n` +
+                         `- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}\n` +
+                         `- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})\n\n` +
+                         `== RIWAYAT ${days} HARI TERAKHIR ==\n` +
+                         `- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
+                         `- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${profile.targets?.protein || 120} g)\n` +
+                         `- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari\n` +
+                         `- Rata-rata Lemak: ${avgFat.toFixed(1)} g/hari\n` +
+                         `- Rata-rata Serat: ${avgFiber.toFixed(1)} g/hari\n` +
+                         `- Total Latihan: ${workoutCount + gymCount} sesi latihan beban (Gym: ${gymCount}, Workout: ${workoutCount}), serta ${cardioCount} sesi kardio\n` +
+                         `- Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari\n` +
+                         `- Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari\n\n`;
+                         
+        if (customDesc) {
+            promptText += `== CATATAN TAMBAHAN USER ==\n` +
+                          `"${customDesc}"\n\n`;
+        }
+        
+        promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format HTML VALID (TANPA markdown, TANPA kode \`\`\`html). Gunakan struktur berikut:\n` +
+                      `1. <h3>🔍 Analisis Visual Tubuh</h3>: Berikan komentar objektif berdasarkan apa yang terlihat di foto (misal: komposisi tubuh kasar, retensi air, pembentukan otot, atau postur tubuh).\n` +
+                      `2. <h3>⚖️ Analisis Sinkronisasi Data & Goals</h3>: Hubungkan kondisi fisik visualnya dengan data asupan makan, latihan, dan istirahatnya. Apakah surplus/defisit kalori dan latihan bebannya sudah cocok dengan goalsnya?\n` +
+                      `3. <h3>💡 Saran Tindakan Konkret</h3>: Berikan 3-4 tips konkret tindakan yang harus diubah atau dipertahankan dari sisi diet, pola olahraga, dan istirahat.\n\n` +
+                      `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
+                      
+        const rawHtml = await analyzePhysicalPhotoAI(base64Data, mimeType, promptText);
+        if (rawHtml) {
+            resultTextEl.innerHTML = styleAIHtml(rawHtml);
+        } else {
+            resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;
+        }
+    } catch (err) {
+        console.error('startPhysicalAnalysis error:', err);
+        resultTextEl.innerHTML = `<p style="color:var(--danger);">Error: ${err.message}</p>`;
+    }
 }
