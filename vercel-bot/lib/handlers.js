@@ -148,6 +148,23 @@ async function handleMessage(msg) {
     }
   }
 
+  // Physical evaluation states
+  if (state === 'AWAIT_PHYSICAL_PHOTO') {
+    if (msg.photo && msg.photo.length > 0) {
+      return handlePhysicalPhotoInput(chatId, userId, msg.photo);
+    }
+    if (text && text.length > 0 && text !== '/start' && text !== '/menu') {
+       return sendMessage(chatId, 'Tolong kirimkan foto tubuh/badan lu ya, bukan teks. Atau klik Batal jika ingin kembali.', {
+         inline_keyboard: [[{ text: '❌ Batal', callback_data: 'progress_menu' }]]
+       });
+    }
+  }
+  if (state === 'AWAIT_PHYSICAL_DESC') {
+    if (text && text.length > 0) {
+      return onPhysicalDescInput(chatId, userId, text);
+    }
+  }
+
   if (state === 'AWAIT_FOOD_NAME' || state === 'AWAIT_FOOD') return onFoodNameInput(chatId, userId, text);
   if (state === 'AWAIT_FOOD_PORTION') return onFoodPortionInput(chatId, userId, text);
   if (state === 'AWAIT_FOOD_DESC') return onFoodDescInput(chatId, userId, text);
@@ -262,6 +279,7 @@ async function handleCallback(cb) {
   if (data === 'prog_toggle_sleep') return email ? toggleProgressConfig(chatId, userId, email, 'sleep', cb.message.message_id) : promptLogin(chatId, userId);
   if (data === 'prog_cycle_period') return email ? toggleProgressConfig(chatId, userId, email, 'period', cb.message.message_id) : promptLogin(chatId, userId);
   if (data === 'prog_run_analysis') return email ? runProgressAnalysis(chatId, userId, email) : promptLogin(chatId, userId);
+  if (data === 'prog_physical_eval') return email ? startPhysicalEvaluationBot(chatId, userId) : promptLogin(chatId, userId);
 
   if (data === 'settings') return showSettings(chatId, userId, email);
   if (data === 'logout') return doLogout(chatId, userId);
@@ -2989,6 +3007,9 @@ async function showProgressMenu(chatId, userId, email, editMessageId = null) {
         { text: '✨ Mulai Analisis Progress AI', callback_data: 'prog_run_analysis' }
       ],
       [
+        { text: '📸 Evaluasi Fisik via Foto', callback_data: 'prog_physical_eval' }
+      ],
+      [
         { text: '🏠 Menu Utama', callback_data: 'menu' }
       ]
     ]
@@ -3195,6 +3216,186 @@ ATURAN FORMATTING WAJIB:
     return sendMessage(chatId, 'Gagal memuat analisis AI: ' + err.message, {
       inline_keyboard: [[{ text: 'Kembali', callback_data: 'progress_menu' }]]
     });
+  }
+}
+
+// ===== PHYSICAL PROGRESS EVALUATION VIA BOT (GEMINI 3.5 FLASH) =====
+async function startPhysicalEvaluationBot(chatId, userId) {
+  await setState(userId, 'AWAIT_PHYSICAL_PHOTO');
+  return sendMessage(chatId,
+    '📸 *Evaluasi Fisik via Foto AI*\n\nSilakan kirim atau *forward* foto kondisi badan lu saat ini (tampak depan/samping) ke sini.\n\nAI Gemini 3.5 Flash akan menganalisis bentuk fisik visual lu secara objektif dan mengaitkannya dengan data profil, asupan nutrisi, olahraga, dan istirahat lu.',
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'progress_menu' }]] }
+  );
+}
+
+async function handlePhysicalPhotoInput(chatId, userId, photos) {
+  try {
+    await sendMessage(chatId, '⏳ Mengunduh foto tubuh lu...');
+    
+    const largestPhoto = photos[photos.length - 1];
+    const fileId = largestPhoto.file_id;
+    
+    // Download file path from Telegram
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    if (!fileData.ok) throw new Error('Gagal mendapatkan file dari Telegram');
+    
+    const filePath = fileData.result.file_path;
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+    
+    // Download file binary
+    const imgRes = await fetch(fileUrl);
+    const arrayBuffer = await imgRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
+    
+    let mime = 'image/jpeg';
+    if (filePath.endsWith('.png')) mime = 'image/png';
+    if (filePath.endsWith('.webp')) mime = 'image/webp';
+
+    // Save temporary state & data to cache
+    await setCache(`${userId}_physical_photo`, base64);
+    await setCache(`${userId}_physical_mime`, mime);
+    await setState(userId, 'AWAIT_PHYSICAL_DESC');
+
+    return sendMessage(chatId,
+      '📸 *Foto diterima!*\n\nAda deskripsi tambahan atau catatan kondisi fisik lu saat ini? (Opsional)\n_Contoh: Merasa lingkar perut agak menyusut, tapi lengan berasa lebih padat. Akhir-akhir ini sering lemas_\n\nKetik `-` atau `skip` jika tidak ada.',
+      { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'progress_menu' }]] }
+    );
+  } catch (err) {
+    console.error('handlePhysicalPhotoInput error:', err);
+    await setState(userId, null);
+    return sendMessage(chatId, 'Gagal memproses foto: ' + err.message, {
+      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'progress_menu' }]]
+    });
+  }
+}
+
+async function onPhysicalDescInput(chatId, userId, text) {
+  try {
+    const email = await getLinkedEmail(userId);
+    if (!email) return promptLogin(chatId, userId);
+
+    const base64 = await getCache(`${userId}_physical_photo`);
+    const mime = await getCache(`${userId}_physical_mime`);
+    
+    if (!base64 || !mime) {
+      await setState(userId, null);
+      return sendMessage(chatId, 'Sesi kedaluwarsa. Silakan ulangi evaluasi fisik.', {
+        inline_keyboard: [[{ text: '📸 Mulai Ulang', callback_data: 'prog_physical_eval' }]]
+      });
+    }
+
+    // Clean up temporary state
+    await setState(userId, null);
+    await deleteCache(`${userId}_physical_photo`);
+    await deleteCache(`${userId}_physical_mime`);
+
+    const customDesc = (text && text.toLowerCase() !== 'skip' && text !== '-') ? text.trim() : '';
+
+    await sendMessage(chatId, '⏳ Menganalisis kondisi fisik lu dengan AI Gemini 3.5 Flash dan menarik data riwayat kebugaran lu selama 7 hari terakhir. Harap tunggu sebentar...');
+    await sendChatAction(chatId, 'typing');
+
+    // Fetch context data from Firebase
+    const profile = await getFirebase(`users/${safe(email)}/lf_profile`) || {};
+    const dates = getPastWibDates(7);
+    
+    const logPromises = dates.map(key => getFirebase(`users/${safe(email)}/lf_logs/${key}`));
+    const rawLogs = await Promise.all(logPromises);
+    
+    const actPromises = dates.map(key => getFirebase(`users/${safe(email)}/lf_activities/${key}`));
+    const rawActs = await Promise.all(actPromises);
+
+    // Sum logs and acts
+    let totalDaysWithLogs = 0;
+    let sumCal = 0, sumProtein = 0, sumCarbs = 0, sumFat = 0, sumFiber = 0;
+    
+    rawLogs.forEach(dayLogObj => {
+      const items = toArray(dayLogObj);
+      if (items.length > 0) {
+        totalDaysWithLogs++;
+        const t = sumNutrients(items);
+        sumCal += t.cal;
+        sumProtein += t.protein;
+        sumCarbs += t.carbs;
+        sumFat += t.fat;
+        sumFiber += t.fiber;
+      }
+    });
+
+    const activeDays = totalDaysWithLogs || 1;
+    const avgCal = sumCal / activeDays;
+    const avgProtein = sumProtein / activeDays;
+    const avgCarbs = sumCarbs / activeDays;
+    const avgFat = sumFat / activeDays;
+    const avgFiber = sumFiber / activeDays;
+
+    let workoutCount = 0, gymCount = 0, cardioCount = 0, sleepData = [], totalBurnedKcal = 0;
+    rawActs.forEach(dayActsObj => {
+      const dayActs = toArray(dayActsObj);
+      dayActs.forEach(a => {
+        if (a.type === 'workout') workoutCount++;
+        else if (a.type === 'gym') gymCount++;
+        else if (a.type === 'cardio') cardioCount++;
+        else if (a.type === 'sleep') sleepData.push(a.hours);
+        if (a.burn && a.burn.kcal) totalBurnedKcal += parseFloat(a.burn.kcal);
+      });
+    });
+
+    const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s, x) => s + x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
+    const avgBurn = (totalBurnedKcal / 7).toFixed(0);
+    const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+    const targetProtein = Math.round((profile && profile.targets) ? profile.targets.protein : 120);
+
+    // Build Gemini prompt requesting Markdown instead of HTML
+    let promptText = `Kamu adalah pelatih fitness personal dan ahli gizi klinis profesional. Analisis foto kondisi fisik tubuh user ini secara visual. ` +
+                     `Bandingkan kondisi fisiknya saat ini dengan data profil, catatan pribadinya, dan riwayat asupan/olahraganya selama 7 hari terakhir. ` +
+                     `Berikan evaluasi yang objektif, jujur, edukatif, dan memotivasi untuk membantunya mencapai target kebugarannya.\n\n` +
+                     `== PROFIL PENGGUNA ==\n` +
+                     `- Tinggi Badan (TB): ${profile.tb || '?'} cm\n` +
+                     `- Berat Badan (BB): ${profile.bb || '?'} kg\n` +
+                     `- Usia: ${profile.usia || '?'} tahun\n` +
+                     `- Jenis Kelamin: ${profile.gender || 'pria'}\n` +
+                     `- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}\n` +
+                     `- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})\n\n` +
+                     `== RIWAYAT 7 HARI TERAKHIR ==\n` +
+                     `- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${calTarget} kcal)\n` +
+                     `- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${targetProtein} g)\n` +
+                     `- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari\n` +
+                     `- Rata-rata Lemak: ${avgFat.toFixed(1)} g/hari\n` +
+                     `- Rata-rata Serat: ${avgFiber.toFixed(1)} g/hari\n` +
+                     `- Total Latihan: ${workoutCount + gymCount} sesi latihan beban (Gym: ${gymCount}, Workout: ${workoutCount}), serta ${cardioCount} sesi kardio\n` +
+                     `- Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari\n` +
+                     `- Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari\n\n`;
+                     
+    if (customDesc) {
+      promptText += `== CATATAN TAMBAHAN USER ==\n` +
+                    `"${customDesc}"\n\n`;
+    }
+    
+    promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format MARKDOWN TELEGRAM yang valid (hanya gunakan *tebal*, _miring_, atau \`code\`). Jangan gunakan tag HTML, dan jangan gunakan heading dengan simbol '#' atau '##' karena tidak didukung rapi di Telegram chat. Gunakan emoji di setiap poin untuk kerapihan.\n\n` +
+                  `Struktur laporan wajib:\n` +
+                  `*🔍 Analisis Visual Tubuh*\n` +
+                  `Berikan komentar objektif berdasarkan apa yang terlihat di foto (misal: komposisi tubuh kasar, retensi air, pembentukan otot, atau postur tubuh).\n\n` +
+                  `*⚖️ Analisis Sinkronisasi Data & Goals*\n` +
+                  `Hubungkan kondisi fisik visualnya dengan data asupan makan, latihan, dan istirahatnya. Apakah surplus/defisit kalori dan latihan bebannya sudah cocok dengan goalsnya?\n\n` +
+                  `*💡 Saran Tindakan Konkret*\n` +
+                  `Berikan 3-4 tips konkret tindakan yang harus diubah atau dipertahankan dari sisi diet, pola olahraga, dan istirahat.\n\n` +
+                  `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
+
+    const rawMarkdown = await callGeminiVisionAPI(base64, mime, promptText);
+    
+    if (rawMarkdown) {
+      return sendMessage(chatId, rawMarkdown, mainMenuKeyboard());
+    } else {
+      return sendMessage(chatId, 'Gagal mendapatkan analisis dari AI. Silakan coba lagi nanti.', mainMenuKeyboard());
+    }
+
+  } catch (err) {
+    console.error('onPhysicalDescInput error:', err);
+    await setState(userId, null);
+    return sendMessage(chatId, 'Gagal menjalankan evaluasi fisik: ' + err.message, mainMenuKeyboard());
   }
 }
 
