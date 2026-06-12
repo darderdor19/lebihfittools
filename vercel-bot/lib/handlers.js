@@ -134,6 +134,20 @@ async function handleMessage(msg) {
 
   if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text);
   if (state === 'AWAIT_OTP') return onOtpInput(chatId, userId, text);
+
+  // If waiting for a photo
+  if (state === 'AWAIT_FOOD_PHOTO') {
+    if (msg.photo && msg.photo.length > 0) {
+      return handlePhotoInput(chatId, userId, msg.photo, msg.caption);
+    }
+    // If user sent text instead of photo
+    if (text && text.length > 0 && text !== '/start' && text !== '/menu') {
+       return sendMessage(chatId, 'Tolong kirimkan gambar/foto makanannya ya, bukan teks. Atau klik batal jika ingin kembali.', {
+         inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]]
+       });
+    }
+  }
+
   if (state === 'AWAIT_FOOD_NAME' || state === 'AWAIT_FOOD') return onFoodNameInput(chatId, userId, text);
   if (state === 'AWAIT_FOOD_PORTION') return onFoodPortionInput(chatId, userId, text);
   if (state === 'AWAIT_FOOD_DESC') return onFoodDescInput(chatId, userId, text);
@@ -186,6 +200,9 @@ async function handleCallback(cb) {
   if (data === 'menu') return showMainMenu(chatId, userId);
   if (data === 'dashboard') return email ? showDashboard(chatId, email) : promptLogin(chatId, userId);
   if (data === 'log_food') return email ? promptFoodInput(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'log_food_manual') return email ? startFoodManual(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'log_food_photo') return email ? startFoodPhoto(chatId, userId) : promptLogin(chatId, userId);
+  if (data === 'food_ai_save') return saveFoodAI(chatId, userId, email);
   
   // Activities callbacks
   if (data === 'log_activity') return email ? showLogActivityOptions(chatId) : promptLogin(chatId, userId);
@@ -573,9 +590,29 @@ async function showDashboard(chatId, email) {
 // LOG MAKANAN
 // ====================================================
 async function promptFoodInput(chatId, userId) {
+  return sendMessage(chatId,
+    '*Pilih Cara Log Makanan* 🍽️\n\nLu mau log makanan secara manual (ketik nama, porsi) atau pakai analisis foto AI (otomatis deteksi nutrisi)?',
+    { 
+      inline_keyboard: [
+        [{ text: '✏️ Manual', callback_data: 'log_food_manual' }, { text: '📸 Upload Foto', callback_data: 'log_food_photo' }],
+        [{ text: '❌ Batal', callback_data: 'confirm_no' }]
+      ] 
+    }
+  );
+}
+
+async function startFoodManual(chatId, userId) {
   await setState(userId, 'AWAIT_FOOD_NAME');
   return sendMessage(chatId,
-    '*Log Makanan - Langkah 1 dari 3* 🍽️\n\nMakanan apa yang lu makan hari ini?\n_Contoh: nasi goreng ayam, sate kambing, pisang goreng_',
+    '*Log Makanan Manual - Langkah 1 dari 3* 🍽️\n\nMakanan apa yang lu makan hari ini?\n_Contoh: nasi goreng ayam, sate kambing, pisang goreng_',
+    { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
+  );
+}
+
+async function startFoodPhoto(chatId, userId) {
+  await setState(userId, 'AWAIT_FOOD_PHOTO');
+  return sendMessage(chatId,
+    '*Log Makanan AI* 📸\n\nSilakan kirim atau *forward* foto makanan lu ke sini. AI bakal otomatis ngeanalisis nama makanan, porsi, dan estimasi gizinya.\n\n_(Pastikan fotonya jelas dan terang ya!)_',
     { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'confirm_no' }]] }
   );
 }
@@ -612,6 +649,167 @@ async function onFoodPortionInput(chatId, userId, text) {
     }
   );
 }
+
+// ===== GEMINI VISION API CALL =====
+async function callGeminiVisionAPI(base64Image, mimeType, prompt) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY is not set in Vercel environment variables.');
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+  
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: mimeType, data: base64Image } }
+      ]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Gemini API Error');
+  return data.candidates[0].content.parts[0].text;
+}
+
+// ===== HANDLE PHOTO INPUT =====
+async function handlePhotoInput(chatId, userId, photos, caption) {
+  try {
+    await sendMessage(chatId, '⏳ Mengunduh dan menganalisis foto makanan lu dengan AI Gemini. Tunggu bentar ya...');
+
+    // Ambil foto resolusi paling besar
+    const largestPhoto = photos[photos.length - 1];
+    const fileId = largestPhoto.file_id;
+    
+    // Ambil path file dari Telegram
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    if (!fileData.ok) throw new Error('Gagal mendapatkan file dari Telegram');
+    
+    const filePath = fileData.result.file_path;
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+    
+    // Download file
+    const imgRes = await fetch(fileUrl);
+    const arrayBuffer = await imgRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
+    
+    let mime = 'image/jpeg';
+    if (filePath.endsWith('.png')) mime = 'image/png';
+    if (filePath.endsWith('.webp')) mime = 'image/webp';
+
+    const prompt = `Analisis foto makanan ini. Berikan estimasi nutrisi dalam JSON dengan format:
+{"name":"nama makanan","portion":"estimasi porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat"}
+Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON valid tanpa teks apapun di luar kurung kurawal.`;
+
+    const raw = await callGeminiVisionAPI(base64, mime, prompt);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch(e) {
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Gagal memproses hasil dari AI: Format JSON tidak sesuai.');
+    }
+
+    await setCache(`${userId}_food_ai`, JSON.stringify(parsed));
+    await setState(userId, 'AWAIT_FOOD_CONFIRM_AI');
+
+    let msg = `📸 *Hasil Analisis AI*\n\n`;
+    msg += `🍽️ Makanan: *${parsed.name}*\n`;
+    msg += `⚖️ Porsi: *${parsed.portion}*\n`;
+    msg += `🔥 Kalori: *${parsed.cal} kcal*\n`;
+    msg += `• Protein: *${parsed.protein}g*\n`;
+    msg += `• Karbo: *${parsed.carbs}g*\n`;
+    msg += `• Lemak: *${parsed.fat}g*\n\n`;
+    msg += `📝 Catatan AI: _${parsed.notes || '-' }_\n\n`;
+    msg += `Apakah lu mau nyimpen data ini?`;
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [{ text: '✅ Ya, Simpan', callback_data: 'food_ai_save' }],
+        [{ text: '❌ Batal / Ulangi', callback_data: 'log_food' }]
+      ]
+    });
+
+  } catch (err) {
+    console.error('Photo handler error:', err);
+    return sendMessage(chatId, 'Gagal memproses foto: ' + err.message, {
+      inline_keyboard: [[{ text: '🔄 Coba Lagi', callback_data: 'log_food' }]]
+    });
+  }
+}
+
+async function saveFoodAI(chatId, userId, email) {
+  await sendMessage(chatId, '⏳ Menyimpan log makanan dari AI...');
+  try {
+    const rawData = await getCache(`${userId}_food_ai`);
+    if (!rawData) throw new Error('Session expired.');
+    const parsed = JSON.parse(rawData);
+
+    // Save to Firebase
+    const tzOffset = 7 * 60; // WIB (UTC+7)
+    const localNow = new Date(Date.now() + tzOffset * 60000);
+    const dateKey = localNow.toISOString().split('T')[0];
+
+    const todayLogRef = `users/${safe(email)}/lf_logs/${dateKey}`;
+    const todayLog = await getFirebase(todayLogRef) || { date: dateKey, items: [], totals: { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, calcium: 0, iron: 0, vitC: 0, vitD: 0, zinc: 0 } };
+
+    const newItem = {
+      id: uid(),
+      name: parsed.name,
+      portion: parsed.portion,
+      desc: parsed.notes || '',
+      time: 'makan_siang', // default
+      cal: parsed.cal,
+      protein: parsed.protein,
+      carbs: parsed.carbs,
+      fat: parsed.fat,
+      fiber: parsed.fiber || 0,
+      sugar: parsed.sugar || 0,
+      sodium: parsed.sodium || 0,
+      calcium: parsed.calcium || 0,
+      iron: parsed.iron || 0,
+      vitC: parsed.vitC || 0,
+      vitD: parsed.vitD || 0,
+      zinc: parsed.zinc || 0,
+      aiGenerated: true
+    };
+
+    todayLog.items.push(newItem);
+    todayLog.totals.cal += newItem.cal;
+    todayLog.totals.protein += newItem.protein;
+    todayLog.totals.carbs += newItem.carbs;
+    todayLog.totals.fat += newItem.fat;
+    todayLog.totals.fiber += newItem.fiber;
+
+    await setFirebase(todayLogRef, todayLog);
+
+    await clearState(userId);
+    await deleteCache(`${userId}_food_ai`);
+
+    return sendMessage(chatId, `✅ *Makanan Berhasil Dicatat (via AI)!*\n\n+ ${newItem.cal} kcal (${newItem.name})`, {
+      inline_keyboard: [
+        [{ text: '📊 Dashboard Hari Ini', callback_data: 'dashboard' }],
+        [{ text: '🍽️ Log Lagi', callback_data: 'log_food' }],
+        [{ text: '🏠 Menu Utama', callback_data: 'menu' }]
+      ]
+    });
+  } catch (err) {
+    console.error('saveFoodAI error:', err);
+    return sendMessage(chatId, 'Gagal menyimpan data makanan: ' + err.message);
+  }
+}
+
 
 async function onFoodDescInput(chatId, userId, text) {
   const foodName = await getCache(`${userId}_food_name`);

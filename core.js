@@ -268,28 +268,45 @@ async function analyzePhotoAI(base64, mime) {
 {"name":"nama makanan","portion":"estimasi porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat"}
 Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON valid tanpa teks apapun di luar kurung kurawal.`;
 
-  const msgs = [{ role:'user', content:[
-    { type:'text', text: prompt },
-    { type:'image_url', image_url:{ url:`data:${mime};base64,${base64}`, detail: 'low' } }
-  ]}];
+  // Use getVisionKey() which will fall back to process.env.GEMINI_API_KEY on the server
+  let key = getVisionKey();
+  if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
+      key = process.env.GEMINI_API_KEY;
+  }
+  if (!key) throw new Error("Gemini API Key belum diset. Buka Settings.");
 
-  // Gunakan Groq llama-4 vision - gratis dan super cepat
-  const raw = await callAI(msgs, false, 'meta-llama/llama-4-scout-17b-16e-instruct', false, true);
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
   
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: mime, data: base64 } }
+      ]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
+  }
+
+  const data = await res.json();
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
   if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
   
   try {
-    if (typeof raw === 'string') {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        let cleanStr = match[0];
-        // Hapus trailing commas yang sering bikin JSON.parse error
-        cleanStr = cleanStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-        return JSON.parse(cleanStr);
-      }
-      return JSON.parse(raw);
-    }
-    return raw;
+    return JSON.parse(raw);
   } catch (e) {
     console.error("Parse Error. Raw data:", raw);
     let preview = typeof raw === 'string' ? raw.substring(0, 150) : JSON.stringify(raw).substring(0, 150);
