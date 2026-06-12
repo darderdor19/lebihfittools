@@ -3377,11 +3377,14 @@ async function onPhysicalDescInput(chatId, userId, text) {
     promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format MARKDOWN TELEGRAM yang valid (hanya gunakan *tebal*, _miring_, atau \`code\`). Jangan gunakan tag HTML, dan jangan gunakan heading dengan simbol '#' atau '##' karena tidak didukung rapi di Telegram chat. Gunakan emoji di setiap poin untuk kerapihan.\n\n` +
                   `Struktur laporan wajib:\n` +
                   `*🔍 Analisis Visual Tubuh*\n` +
-                  `Berikan komentar objektif berdasarkan apa yang terlihat di foto (misal: komposisi tubuh kasar, retensi air, pembentukan otot, atau postur tubuh).\n\n` +
+                  `- Di bagian awal, tulis 2-3 kesimpulan visual dengan status emoji (misal: 🔴 *Komposisi:* Skinny Fat, 🟡 *Massa Otot:* Kurang).\n` +
+                  `- Berikan analisis visual detail di bawahnya.\n\n` +
                   `*⚖️ Analisis Sinkronisasi Data & Goals*\n` +
-                  `Hubungkan kondisi fisik visualnya dengan data asupan makan, latihan, dan istirahatnya. Apakah surplus/defisit kalori dan latihan bebannya sudah cocok dengan goalsnya?\n\n` +
+                  `- Jika ada mismatch besar, tulis di bagian awal menggunakan emoji ⚠️ *Warning Mismatch:* ...\n` +
+                  `- Hubungkan kondisi fisik visual dengan data asupan makan, latihan, dan istirahat.\n\n` +
                   `*💡 Saran Tindakan Konkret*\n` +
-                  `Berikan 3-4 tips konkret tindakan yang harus diubah atau dipertahankan dari sisi diet, pola olahraga, dan istirahat.\n\n` +
+                  `- Gunakan nomor emoji (1️⃣, 2️⃣, 3️⃣, 4️⃣) untuk daftar langkah konkret.\n` +
+                  `- Tulis nama langkah dalam *tebal* diikuti penjelasan ringkas.\n\n` +
                   `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
 
     const rawMarkdown = await callGeminiVisionAPI(base64, mime, promptText);

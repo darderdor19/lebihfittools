@@ -3329,6 +3329,11 @@ function styleAIHtml(rawHtml) {
     // Select all div elements (or any direct blocks)
     const divs = doc.querySelectorAll('div');
     divs.forEach(div => {
+        // Skip if this div or parent has premium feedback styling class
+        if (div.classList.contains('feedback-container') || div.classList.contains('feedback-card') || div.classList.contains('feedback-step') || div.closest('.feedback-container')) {
+            return;
+        }
+
         // Find existing inline styles
         const inlineStyle = div.getAttribute('style') || '';
         
@@ -3382,6 +3387,7 @@ function styleAIHtml(rawHtml) {
     // Style any lists
     const uls = doc.querySelectorAll('ul');
     uls.forEach(ul => {
+        if (ul.classList.contains('feedback-list') || ul.closest('.feedback-container')) return;
         ul.style.paddingLeft = '20px';
         ul.style.marginBottom = '14px';
         ul.style.lineHeight = '1.5';
@@ -3389,6 +3395,7 @@ function styleAIHtml(rawHtml) {
 
     const lis = doc.querySelectorAll('li');
     lis.forEach(li => {
+        if (li.closest('.feedback-container')) return;
         li.style.fontSize = '0.9rem';
         li.style.color = '#e2e8f0';
         li.style.marginBottom = '6px';
@@ -3397,6 +3404,7 @@ function styleAIHtml(rawHtml) {
     // Style headings if present
     const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
     headings.forEach(h => {
+        if (h.classList.contains('feedback-title') || h.closest('.feedback-container')) return;
         h.style.fontSize = '1.02rem';
         h.style.fontWeight = '700';
         h.style.color = '#fff';
@@ -4152,10 +4160,21 @@ async function startPhysicalAnalysis() {
                           `"${customDesc}"\n\n`;
         }
         
-        promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format HTML VALID (TANPA markdown, TANPA kode \`\`\`html). Gunakan struktur berikut:\n` +
-                      `1. <h3>🔍 Analisis Visual Tubuh</h3>: Berikan komentar objektif berdasarkan apa yang terlihat di foto (misal: komposisi tubuh kasar, retensi air, pembentukan otot, atau postur tubuh).\n` +
-                      `2. <h3>⚖️ Analisis Sinkronisasi Data & Goals</h3>: Hubungkan kondisi fisik visualnya dengan data asupan makan, latihan, dan istirahatnya. Apakah surplus/defisit kalori dan latihan bebannya sudah cocok dengan goalsnya?\n` +
-                      `3. <h3>💡 Saran Tindakan Konkret</h3>: Berikan 3-4 tips konkret tindakan yang harus diubah atau dipertahankan dari sisi diet, pola olahraga, dan istirahat.\n\n` +
+        promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format HTML VALID yang indah dan terstruktur (TANPA markdown, TANPA kode \`\`\`html). Gunakan struktur class CSS berikut:\n` +
+                      `- Bungkus seluruh laporan di dalam \`<div class="feedback-container">\`\n` +
+                      `- Gunakan \`<div class="feedback-card">\` untuk setiap dari 3 section utama.\n` +
+                      `- Judul section menggunakan \`<h3 class="feedback-title">\` (sertakan emoji/icon yang sesuai).\n` +
+                      `- Di bagian awal section "Analisis Visual Tubuh", buat tag \`<div class="feedback-badge-row">\` yang berisi 2-3 badge \`<span class="feedback-pill danger|warning|success|info">\` untuk menyimpulkan secara cepat kondisi visual (misal: Skinny Fat, Massa Otot Rendah, dll).\n` +
+                      `- Untuk poin-poin analisis detail (seperti Distribusi Lemak, Massa Otot, dll), gunakan list terstruktur dengan class \`<ul class="feedback-list">\` dan tag \`<li>\`.\n` +
+                      `- Di bagian awal section "Analisis Sinkronisasi Data & Goals", jika ada mismatch besar antara latihan/nutrisi dengan goals, buat box warning menggunakan \`<div class="feedback-warning-box">\` untuk memaparkan ketidakcocokan utama secara menonjol.\n` +
+                      `- Di section "Saran Tindakan Konkret", buat daftar langkah terstruktur menggunakan class \`<div class="feedback-steps">\` yang membungkus beberapa \`<div class="feedback-step">\`. Struktur per langkah:\n` +
+                      `  \`<div class="feedback-step">\`\n` +
+                      `    \`<div class="step-number">1</div>\` (angka berurutan)\n` +
+                      `    \`<div class="step-content">\`\n` +
+                      `      \`<h4>Judul Langkah Singkat & Jelas</h4>\`\n` +
+                      `      \`<p>Penjelasan detail saran tindakan...</p>\`\n` +
+                      `    \`</div>\`\n` +
+                      `  \`</div>\`\n\n` +
                       `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
                       
         const rawHtml = await analyzePhysicalPhotoAI(base64Data, mimeType, promptText);
