@@ -159,6 +159,20 @@ async function handleMessage(msg) {
        });
     }
   }
+  if (state === 'AWAIT_PHYSICAL_DAYS') {
+    if (text && text.length > 0 && text !== '/start' && text !== '/menu') {
+       return sendMessage(chatId, 'Tolong pilih rentang hari riwayat data di tombol bawah ya, atau klik Batal untuk kembali.', {
+         inline_keyboard: [
+           [
+             { text: '📅 7 Hari', callback_data: 'phys_days_7' },
+             { text: '📅 14 Hari', callback_data: 'phys_days_14' },
+             { text: '📅 30 Hari', callback_data: 'phys_days_30' }
+           ],
+           [{ text: '❌ Batal', callback_data: 'progress_menu' }]
+         ]
+       });
+    }
+  }
   if (state === 'AWAIT_PHYSICAL_DESC') {
     if (text && text.length > 0) {
       return onPhysicalDescInput(chatId, userId, text);
@@ -280,6 +294,8 @@ async function handleCallback(cb) {
   if (data === 'prog_cycle_period') return email ? toggleProgressConfig(chatId, userId, email, 'period', cb.message.message_id) : promptLogin(chatId, userId);
   if (data === 'prog_run_analysis') return email ? runProgressAnalysis(chatId, userId, email) : promptLogin(chatId, userId);
   if (data === 'prog_physical_eval') return email ? startPhysicalEvaluationBot(chatId, userId) : promptLogin(chatId, userId);
+  if (data.startsWith('phys_days_')) return email ? onPhysicalDaysSelected(chatId, userId, parseInt(data.replace('phys_days_', ''))) : promptLogin(chatId, userId);
+  if (data === 'phys_skip_desc') return email ? onPhysicalDescInput(chatId, userId, 'skip') : promptLogin(chatId, userId);
 
   if (data === 'settings') return showSettings(chatId, userId, email);
   if (data === 'logout') return doLogout(chatId, userId);
@@ -669,7 +685,7 @@ async function onFoodPortionInput(chatId, userId, text) {
 }
 
 // ===== GEMINI VISION API CALL =====
-async function callGeminiVisionAPI(base64Image, mimeType, prompt) {
+async function callGeminiVisionAPI(base64Image, mimeType, prompt, jsonMode = false) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY is not set in Vercel environment variables.');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
@@ -680,11 +696,14 @@ async function callGeminiVisionAPI(base64Image, mimeType, prompt) {
         { text: prompt },
         { inline_data: { mime_type: mimeType, data: base64Image } }
       ]
-    }],
-    generationConfig: {
-      responseMimeType: "application/json"
-    }
+    }]
   };
+
+  if (jsonMode) {
+    body.generationConfig = {
+      responseMimeType: "application/json"
+    };
+  }
 
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -729,7 +748,7 @@ async function handlePhotoInput(chatId, userId, photos, caption) {
 {"name":"nama makanan","portion":"estimasi porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat"}
 Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON valid tanpa teks apapun di luar kurung kurawal.`;
 
-    const raw = await callGeminiVisionAPI(base64, mime, prompt);
+    const raw = await callGeminiVisionAPI(base64, mime, prompt, true);
     let parsed;
     try {
       parsed = JSON.parse(raw);
@@ -3257,16 +3276,48 @@ async function handlePhysicalPhotoInput(chatId, userId, photos) {
     // Save temporary state & data to cache
     await setCache(`${userId}_physical_photo`, base64);
     await setCache(`${userId}_physical_mime`, mime);
-    await setState(userId, 'AWAIT_PHYSICAL_DESC');
+    await setState(userId, 'AWAIT_PHYSICAL_DAYS');
 
     return sendMessage(chatId,
-      '📸 *Foto diterima!*\n\nAda deskripsi tambahan atau catatan kondisi fisik lu saat ini? (Opsional)\n_Contoh: Merasa lingkar perut agak menyusut, tapi lengan berasa lebih padat. Akhir-akhir ini sering lemas_\n\nKetik `-` atau `skip` jika tidak ada.',
-      { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'progress_menu' }]] }
+      '📸 *Foto tubuh diterima!*\n\nPilih rentang hari riwayat data kebugaran lu (nutrisi, latihan, tidur) yang mau diikutkan dalam analisis:',
+      {
+        inline_keyboard: [
+          [
+            { text: '📅 7 Hari', callback_data: 'phys_days_7' },
+            { text: '📅 14 Hari', callback_data: 'phys_days_14' },
+            { text: '📅 30 Hari', callback_data: 'phys_days_30' }
+          ],
+          [{ text: '❌ Batal', callback_data: 'progress_menu' }]
+        ]
+      }
     );
   } catch (err) {
     console.error('handlePhysicalPhotoInput error:', err);
     await setState(userId, null);
     return sendMessage(chatId, 'Gagal memproses foto: ' + err.message, {
+      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'progress_menu' }]]
+    });
+  }
+}
+
+async function onPhysicalDaysSelected(chatId, userId, days) {
+  try {
+    await setCache(`${userId}_physical_days`, String(days));
+    await setState(userId, 'AWAIT_PHYSICAL_DESC');
+    
+    return sendMessage(chatId,
+      `📅 *Rentang ${days} hari dipilih.*\n\nAda deskripsi tambahan atau catatan kondisi fisik lu saat ini? (Opsional)\n_Contoh: Merasa lingkar perut agak menyusut, tapi lengan berasa lebih padat. Akhir-akhir ini sering lemas_\n\nKetik pesan di bawah untuk mengirim catatan, atau klik tombol di bawah untuk lewati.`,
+      {
+        inline_keyboard: [
+          [{ text: '➡️ Lewati / Skip', callback_data: 'phys_skip_desc' }],
+          [{ text: '❌ Batal', callback_data: 'progress_menu' }]
+        ]
+      }
+    );
+  } catch (err) {
+    console.error('onPhysicalDaysSelected error:', err);
+    await setState(userId, null);
+    return sendMessage(chatId, 'Gagal memproses pilihan hari: ' + err.message, {
       inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'progress_menu' }]]
     });
   }
@@ -3279,6 +3330,8 @@ async function onPhysicalDescInput(chatId, userId, text) {
 
     const base64 = await getCache(`${userId}_physical_photo`);
     const mime = await getCache(`${userId}_physical_mime`);
+    const daysStr = await getCache(`${userId}_physical_days`);
+    const days = parseInt(daysStr) || 7;
     
     if (!base64 || !mime) {
       await setState(userId, null);
@@ -3291,15 +3344,16 @@ async function onPhysicalDescInput(chatId, userId, text) {
     await setState(userId, null);
     await deleteCache(`${userId}_physical_photo`);
     await deleteCache(`${userId}_physical_mime`);
+    await deleteCache(`${userId}_physical_days`);
 
     const customDesc = (text && text.toLowerCase() !== 'skip' && text !== '-') ? text.trim() : '';
 
-    await sendMessage(chatId, '⏳ Menganalisis kondisi fisik lu dengan LebihFit Tools AI dan menarik data riwayat kebugaran lu selama 7 hari terakhir. Harap tunggu sebentar...');
+    await sendMessage(chatId, `⏳ Menganalisis kondisi fisik lu dengan LebihFit Tools AI dan menarik data riwayat kebugaran lu selama ${days} hari terakhir. Harap tunggu sebentar...`);
     await sendChatAction(chatId, 'typing');
 
     // Fetch context data from Firebase
     const profile = await getFirebase(`users/${safe(email)}/lf_profile`) || {};
-    const dates = getPastWibDates(7);
+    const dates = getPastWibDates(days);
     
     const logPromises = dates.map(key => getFirebase(`users/${safe(email)}/lf_logs/${key}`));
     const rawLogs = await Promise.all(logPromises);
@@ -3344,13 +3398,13 @@ async function onPhysicalDescInput(chatId, userId, text) {
     });
 
     const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s, x) => s + x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
-    const avgBurn = (totalBurnedKcal / 7).toFixed(0);
+    const avgBurn = (totalBurnedKcal / days).toFixed(0);
     const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
     const targetProtein = Math.round((profile && profile.targets) ? profile.targets.protein : 120);
 
     // Build Gemini prompt requesting Markdown instead of HTML
     let promptText = `Kamu adalah pelatih fitness personal dan ahli gizi klinis profesional. Analisis foto kondisi fisik tubuh user ini secara visual. ` +
-                     `Bandingkan kondisi fisiknya saat ini dengan data profil, catatan pribadinya, dan riwayat asupan/olahraganya selama 7 hari terakhir. ` +
+                     `Bandingkan kondisi fisiknya saat ini dengan data profil, catatan pribadinya, dan riwayat asupan/olahraganya selama ${days} hari terakhir. ` +
                      `Berikan evaluasi yang objektif, jujur, edukatif, dan memotivasi untuk membantunya mencapai target kebugarannya.\n\n` +
                      `== PROFIL PENGGUNA ==\n` +
                      `- Tinggi Badan (TB): ${profile.tb || '?'} cm\n` +
@@ -3359,7 +3413,7 @@ async function onPhysicalDescInput(chatId, userId, text) {
                      `- Jenis Kelamin: ${profile.gender || 'pria'}\n` +
                      `- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}\n` +
                      `- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})\n\n` +
-                     `== RIWAYAT 7 HARI TERAKHIR ==\n` +
+                     `== RIWAYAT ${days} HARI TERAKHIR ==\n` +
                      `- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${calTarget} kcal)\n` +
                      `- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${targetProtein} g)\n` +
                      `- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari\n` +
@@ -3375,19 +3429,20 @@ async function onPhysicalDescInput(chatId, userId, text) {
     }
     
     promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format MARKDOWN TELEGRAM yang valid (hanya gunakan *tebal*, _miring_, atau \`code\`). Jangan gunakan tag HTML, dan jangan gunakan heading dengan simbol '#' atau '##' karena tidak didukung rapi di Telegram chat. Gunakan emoji di setiap poin untuk kerapihan.\n\n` +
-                  `Struktur laporan wajib:\n` +
-                  `*🔍 Analisis Visual Tubuh*\n` +
-                  `- Di bagian awal, tulis 2-3 kesimpulan visual dengan status emoji (misal: 🔴 *Komposisi:* Skinny Fat, 🟡 *Massa Otot:* Kurang).\n` +
-                  `- Berikan analisis visual detail di bawahnya.\n\n` +
-                  `*⚖️ Analisis Sinkronisasi Data & Goals*\n` +
-                  `- Jika ada mismatch besar, tulis di bagian awal menggunakan emoji ⚠️ *Warning Mismatch:* ...\n` +
-                  `- Hubungkan kondisi fisik visual dengan data asupan makan, latihan, dan istirahat.\n\n` +
-                  `*💡 Saran Tindakan Konkret*\n` +
-                  `- Gunakan nomor emoji (1️⃣, 2️⃣, 3️⃣, 4️⃣) untuk daftar langkah konkret.\n` +
-                  `- Tulis nama langkah dalam *tebal* diikuti penjelasan ringkas.\n\n` +
+                  `Panduan format visual premium agar pembaca tertarik & tidak bosan:\n` +
+                  `1. Gunakan pembatas garis mendatar \`========================\` di antara section agar rapi.\n` +
+                  `2. Di awal section *🔍 Analisis Visual Tubuh*, buat summary box berisi status visual menggunakan inline code block agar memiliki background berbeda di Telegram, contoh:\n` +
+                  `   \`🔴 Komposisi: Skinny Fat\`\n` +
+                  `   \`🟡 Massa Otot: Rendah\`\n` +
+                  `   \`🟢 Definisi: Cukup\`\n` +
+                  `3. Di awal section *⚖️ Analisis Sinkronisasi*, jika ada ketidakcocokan data, buat sorotan mismatch utama dengan format:\n` +
+                  `   \`⚠️ Warning: Latihan beban 1x seminggu kurang untuk goal bulking!\`\n` +
+                  `4. Di awal section *💡 Saran Tindakan Konkret*, buat kesimpulan 1 kalimat tebal dan buat daftar langkah terstruktur menggunakan nomor emoji (1️⃣, 2️⃣, 3️⃣, 4️⃣). Contoh format langkah:\n` +
+                  `   1️⃣ *Ubah Frekuensi Latihan Beban*\n` +
+                  `   _Lakukan latihan minimal 3-4x seminggu dengan pola Upper/Lower split..._\n\n` +
                   `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
 
-    const rawMarkdown = await callGeminiVisionAPI(base64, mime, promptText);
+    const rawMarkdown = await callGeminiVisionAPI(base64, mime, promptText, false);
     
     if (rawMarkdown) {
       return sendMessage(chatId, rawMarkdown, mainMenuKeyboard());
