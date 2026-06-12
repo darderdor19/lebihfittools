@@ -92,8 +92,11 @@ const setAuthUser = (email, name) => {
   if(name) DB.set('lf_user_name', name);
 };
 const clearAuthUser = () => {
-  DB.del('lf_user_email');
-  DB.del('lf_user_name');
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('lf_')) {
+            localStorage.removeItem(key);
+        }
+    });
 };
 
 function getLogs() { return DB.get('lf_logs') || {}; }

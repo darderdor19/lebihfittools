@@ -189,6 +189,7 @@ async function verifyOTP() {
         console.log('[OTP] Verify parsed response:', data);
         
         if (data.success) {
+            clearAuthUser();
             setAuthUser(data.data.email, data.data.name || tempAuthName);
             document.getElementById('authOverlay').classList.add('hidden');
             showToast("Login Berhasil! Menyinkronkan data...", "info");
