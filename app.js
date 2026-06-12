@@ -27,13 +27,19 @@ async function initApp() {
     if (!authUser) {
         document.getElementById('authOverlay').classList.remove('hidden');
     } else {
-        // Sync Firebase jika sudah login
-        await syncFirebaseToLocal();
+        // Sync Firebase in the background
+        syncFirebaseToLocal().then(() => {
+            const updatedProfile = getProfile();
+            if (updatedProfile) {
+                document.getElementById('onboarding').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                renderProfileDisplay();
+            }
+        }).catch(console.error);
         
-        // Panggil getProfile lagi karena mungkin baru ketarik dari Firebase
-        const updatedProfile = getProfile();
-        
-        if (!updatedProfile) {
+        // Show UI immediately based on local state
+        const profile = getProfile();
+        if (!profile) {
             document.getElementById('onboarding').classList.remove('hidden');
         } else {
             document.getElementById('app').classList.remove('hidden');
@@ -187,10 +193,19 @@ async function verifyOTP() {
             document.getElementById('authOverlay').classList.add('hidden');
             showToast("Login Berhasil! Menyinkronkan data...", "info");
             
-            await syncFirebaseToLocal();
-            showToast("Sinkronisasi Selesai!", "success");
+            // Sync Firebase in background
+            syncFirebaseToLocal().then(() => {
+                showToast("Sinkronisasi Selesai!", "success");
+                const updatedProfile = getProfile();
+                if (updatedProfile) {
+                    document.getElementById('onboarding').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                    renderProfileDisplay();
+                    showPage('dashboard');
+                }
+            }).catch(console.error);
             
-            // Check if profile exists
+            // Check immediately if profile exists locally
             if (!getProfile()) {
                 document.getElementById('onboarding').classList.remove('hidden');
             } else {
