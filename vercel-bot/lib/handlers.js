@@ -700,7 +700,7 @@ async function callGeminiVisionAPI(base64Image, mimeType, prompt) {
 // ===== HANDLE PHOTO INPUT =====
 async function handlePhotoInput(chatId, userId, photos, caption) {
   try {
-    await sendMessage(chatId, '⏳ Mengunduh dan menganalisis foto makanan lu dengan AI Gemini. Tunggu bentar ya...');
+    await sendMessage(chatId, '⏳ Mengunduh dan menganalisis foto makanan lu dengan LebihFit Tools AI. Tunggu bentar ya...');
 
     // Ambil foto resolusi paling besar
     const largestPhoto = photos[photos.length - 1];
@@ -2545,7 +2545,7 @@ async function showAIHistoryDays(chatId, email, days) {
       html = cache.html;
     } else {
       // Show intermediate loading message
-      await sendMessage(chatId, `🤖 *Menghubungi Groq AI...*\nMemproses data riwayat ${days} hari untuk membuat analisis komprehensif. Harap tunggu sebentar...`, null);
+      await sendMessage(chatId, `🤖 *Menghubungi LebihFit Tools AI...*\nMemproses data riwayat ${days} hari untuk membuat analisis komprehensif. Harap tunggu sebentar...`, null);
       
       // Calculate averages
       const activeDays = results.filter(d => d.logs.length > 0).length || 1;
@@ -2631,7 +2631,7 @@ Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan
         html = `
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.08);border:1px solid rgba(94,92,230,0.2);border-radius:8px;font-size:0.75rem;color:#5e5ce6;">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            <b>Analisis AI Groq Komprehensif</b> · Hubungan Nutrisi + Tidur + Olahraga · ${new Date().toLocaleDateString('id-ID')}
+            <b>Analisis LebihFit Tools AI Komprehensif</b> · Hubungan Nutrisi + Tidur + Olahraga · ${new Date().toLocaleDateString('id-ID')}
           </div>
           ${cleanHtml}
         `;
@@ -3086,7 +3086,7 @@ async function runProgressAnalysis(chatId, userId, email) {
     }
 
     // Show loading message
-    const loadingMsg = await sendMessage(chatId, `🤖 *Menghubungi Groq AI...*\nMemproses data progress lu selama ${days} hari terakhir untuk membuat analisis progress AI. Harap tunggu sebentar...`);
+    const loadingMsg = await sendMessage(chatId, `🤖 *Menghubungi LebihFit Tools AI...*\nMemproses data progress lu selama ${days} hari terakhir untuk membuat analisis progress AI. Harap tunggu sebentar...`);
     const loadingMsgId = loadingMsg && loadingMsg.result ? loadingMsg.result.message_id : null;
 
     // Build the AI Prompt based on selected types
@@ -3223,7 +3223,7 @@ ATURAN FORMATTING WAJIB:
 async function startPhysicalEvaluationBot(chatId, userId) {
   await setState(userId, 'AWAIT_PHYSICAL_PHOTO');
   return sendMessage(chatId,
-    '📸 *Evaluasi Fisik via Foto AI*\n\nSilakan kirim atau *forward* foto kondisi badan lu saat ini (tampak depan/samping) ke sini.\n\nAI Gemini 3.5 Flash akan menganalisis bentuk fisik visual lu secara objektif dan mengaitkannya dengan data profil, asupan nutrisi, olahraga, dan istirahat lu.',
+    '📸 *Evaluasi Fisik via Foto AI*\n\nSilakan kirim or *forward* foto kondisi badan lu saat ini (tampak depan/samping) ke sini.\n\nLebihFit Tools AI akan menganalisis bentuk fisik visual lu secara objektif dan mengaitkannya dengan data profil, asupan nutrisi, olahraga, dan istirahat lu.',
     { inline_keyboard: [[{ text: '❌ Batal', callback_data: 'progress_menu' }]] }
   );
 }
@@ -3294,7 +3294,7 @@ async function onPhysicalDescInput(chatId, userId, text) {
 
     const customDesc = (text && text.toLowerCase() !== 'skip' && text !== '-') ? text.trim() : '';
 
-    await sendMessage(chatId, '⏳ Menganalisis kondisi fisik lu dengan AI Gemini 3.5 Flash dan menarik data riwayat kebugaran lu selama 7 hari terakhir. Harap tunggu sebentar...');
+    await sendMessage(chatId, '⏳ Menganalisis kondisi fisik lu dengan LebihFit Tools AI dan menarik data riwayat kebugaran lu selama 7 hari terakhir. Harap tunggu sebentar...');
     await sendChatAction(chatId, 'typing');
 
     // Fetch context data from Firebase

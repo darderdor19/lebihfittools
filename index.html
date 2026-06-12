@@ -112,11 +112,11 @@
           <h4 style="color: var(--primary); margin-bottom: 0.5rem;"><i data-lucide="key" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;"></i> Kunci API (Jika Belum Diset)</h4>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Jika Anda berpindah HP dan API Key belum tersinkron, masukkan di sini.</p>
           <div style="margin-bottom: 0.8rem;">
-            <label style="font-size: 0.8rem;">API Key Groq (Text)</label>
+            <label style="font-size: 0.8rem;">API Key (Text)</label>
             <input type="text" id="onboardingApiKey" placeholder="gsk_..." style="font-size: 0.9rem; padding: 8px;">
           </div>
           <div>
-            <label style="font-size: 0.8rem;">API Key OpenRouter (Vision)</label>
+            <label style="font-size: 0.8rem;">API Key (Vision)</label>
             <input type="text" id="onboardingVisionKey" placeholder="sk-or-v1-..." style="font-size: 0.9rem; padding: 8px;">
           </div>
         </div>
@@ -725,7 +725,7 @@
         <div id="progress-physical-content" class="hidden">
           <div class="section-card">
             <h3 class="section-title"><i data-lucide="camera" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Evaluasi Fisik & Progres AI (Foto)</h3>
-            <p class="setting-desc">Unggah foto kondisi badan Anda saat ini. AI Gemini 3.5 Flash akan mengevaluasi kondisi fisik visual Anda dan mengorelasikannya dengan riwayat nutrisi, olahraga, dan istirahat Anda.</p>
+            <p class="setting-desc">Unggah foto kondisi badan Anda saat ini. LebihFit Tools AI akan mengevaluasi kondisi fisik visual Anda dan mengorelasikannya dengan riwayat nutrisi, olahraga, dan istirahat Anda.</p>
             
             <div class="form-group" style="margin-top: 20px;">
               <label>Foto Tubuh / Kondisi Fisik</label>
@@ -1162,14 +1162,14 @@
           <h3 class="section-title"><i data-lucide="key" style="display:inline-block;vertical-align:text-bottom;"></i> API Keys</h3>
           <p class="setting-desc">Masukkan API Key untuk menghubungkan aplikasi dengan sistem server.</p>
           <div class="form-group">
-            <label>Secret Token (Groq - Analisis Teks)</label>
+            <label>Secret Token (Text - Analisis Teks)</label>
             <div class="api-input-wrap">
               <input type="password" id="apiKeyInput" placeholder="sk-..." class="api-input">
               <button class="btn-icon" onclick="toggleApiVis('apiKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
             </div>
           </div>
           <div class="form-group" style="margin-top: 12px;">
-            <label>Secret Token (Gemini 3.5 Flash - Analisis Gambar) <span style="font-size:0.75rem;color:var(--text3);font-weight:400;">(Opsional, kalau mau API sendiri)</span></label>
+            <label>Secret Token (Vision - Analisis Gambar) <span style="font-size:0.75rem;color:var(--text3);font-weight:400;">(Opsional, kalau mau API sendiri)</span></label>
             <div class="api-input-wrap">
               <input type="password" id="visionKeyInput" placeholder="AQ. / AIza... (opsional)" class="api-input">
               <button class="btn-icon" onclick="toggleApiVis('visionKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>

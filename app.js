@@ -461,7 +461,7 @@ async function triggerActivityAI(type) {
         _currentActivityAiResult = {
             type: type,
             burn: burn,
-            analysis: 'Kalkulasi standar digunakan karena API Key Groq tidak ditemukan di pengaturan.'
+            analysis: 'Kalkulasi standar digunakan karena API Key (Text) tidak ditemukan di pengaturan.'
         };
         renderActivityAiPreview(type, _currentActivityAiResult);
         
@@ -1632,7 +1632,7 @@ async function updateHistoryAIAnalysis(foodStats, fromDate, toDate) {
 
     el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
-        Menganalisis data komprehensif dengan Groq AI...
+        Menganalisis data komprehensif dengan LebihFit Tools AI...
     </div>`;
 
     // Gather activity data for the period
@@ -1697,7 +1697,7 @@ Jangan gunakan emoji sama sekali. Gunakan layout HTML yang bersih, elegan, dan p
         const aiHtml = `
             <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <b>Analisis AI Groq</b> · Makanan + Olahraga + Tidur · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
+                <b>Analisis LebihFit Tools AI</b> · Makanan + Olahraga + Tidur · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
             </div>${cleanHtml}`;
         
         el.innerHTML = styleAIHtml(aiHtml);
@@ -2028,7 +2028,7 @@ async function updateDailyAIAnalysis(logs, profile, email) {
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:lfSpin 1s linear infinite;flex-shrink:0;">
                 <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
             </svg>
-            <span style="font-size:0.9rem;">✨ AI Groq menganalisis gizi + kegiatan harian lu...</span>
+            <span style="font-size:0.9rem;">✨ LebihFit Tools AI menganalisis gizi + kegiatan harian lu...</span>
         </div>`;
 
     // Add spin keyframe once
@@ -2105,7 +2105,7 @@ async function updateDailyAIAnalysis(logs, profile, email) {
             const aiHtml = `
                 <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    <b>Dianalisis AI Groq</b> · llama-3.3-70b · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
+                    <b>Dianalisis LebihFit Tools AI</b> · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB
                 </div>
                 ${cleanHtml}`;
 
@@ -3761,7 +3761,7 @@ async function startProgressAnalysis() {
     resultCard.style.display = 'block';
     resultTextEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="19.07"/></svg>
-        Menganalisis progress dengan Groq AI...
+        Menganalisis progress dengan LebihFit Tools AI...
     </div>`;
     
     if (!document.getElementById('lf-spin-style')) {
@@ -4071,7 +4071,7 @@ async function startPhysicalAnalysis() {
     const resultCard = document.getElementById('physicalResultCard');
     
     if (!apiKey) {
-        alert('Set API Key Gemini terlebih dahulu di menu Settings!');
+        alert('Set Secret Token (Vision) terlebih dahulu di menu Settings!');
         showPage('settings');
         return;
     }
@@ -4085,7 +4085,7 @@ async function startPhysicalAnalysis() {
     resultCard.style.display = 'block';
     resultTextEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="19.07"/></svg>
-        Menganalisis kondisi fisik dengan Gemini 3.5 Flash...
+        Menganalisis kondisi fisik dengan LebihFit Tools AI...
     </div>`;
     
     try {
