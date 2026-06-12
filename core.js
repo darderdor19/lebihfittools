@@ -66,7 +66,17 @@ const DB = {
   }
 };
 
-const getProfile = () => DB.get('lf_profile');
+const getProfile = () => {
+    try {
+        const p = DB.get('lf_profile');
+        if (p && p.targets && p.tb && p.bb && p.usia && p.gender) {
+            return p;
+        }
+    } catch (e) {
+        console.error("Error in getProfile:", e);
+    }
+    return null;
+};
 const setProfile = p => { DB.set('lf_profile', p); invalidateAnalysisCache(); };
 const getApiKey = () => DB.get('lf_apikey');
 const setApiKey = k => DB.set('lf_apikey', k);
