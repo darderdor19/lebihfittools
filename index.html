@@ -565,11 +565,25 @@
           </div>
           <div class="section-card">
             <h3 class="section-title"><i data-lucide="pie-chart" style="display:inline-block;vertical-align:text-bottom;"></i> Proporsi Makronutrisi</h3>
-            <div class="macro-chart-layout">
-              <div class="chart-container-doughnut">
-                <canvas id="macroChart"></canvas>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px;">
+              <div>
+                <div style="text-align:center; color:var(--text2); font-size:0.85rem; font-weight:600; margin-bottom:12px; letter-spacing:1px;">RATA-RATA HARIAN</div>
+                <div class="macro-chart-layout">
+                  <div class="chart-container-doughnut">
+                    <canvas id="macroChart"></canvas>
+                  </div>
+                  <div class="macro-legend" id="macroLegend"></div>
+                </div>
               </div>
-              <div class="macro-legend" id="macroLegend"></div>
+              <div>
+                <div style="text-align:center; color:var(--text2); font-size:0.85rem; font-weight:600; margin-bottom:12px; letter-spacing:1px;">TOTAL KESELURUHAN</div>
+                <div class="macro-chart-layout">
+                  <div class="chart-container-doughnut">
+                    <canvas id="macroTotalChart"></canvas>
+                  </div>
+                  <div class="macro-legend" id="macroTotalLegend"></div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="section-card">

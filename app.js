@@ -1,6 +1,7 @@
 // State and Initialization
 let currentChart = null;
 let currentMacroChart = null;
+let currentMacroTotalChart = null;
 let currentActivityChart = null;
 let energyComparisonChart = null;
 let progressAnalysisChart = null;
@@ -2724,6 +2725,111 @@ function renderHistoryChart(data) {
                 </div>
             </div>
         `;
+    }
+
+    // Render Macro Total Chart
+    const ctxTotalMacro = document.getElementById('macroTotalChart');
+    if (ctxTotalMacro) {
+        const totalProtein = data.reduce((sum, d) => sum + (d.totals.protein || 0), 0);
+        const totalCarbs = data.reduce((sum, d) => sum + (d.totals.carbs || 0), 0);
+        const totalFat = data.reduce((sum, d) => sum + (d.totals.fat || 0), 0);
+        
+        if (currentMacroTotalChart) currentMacroTotalChart.destroy();
+        
+        currentMacroTotalChart = new Chart(ctxTotalMacro, {
+            type: 'doughnut',
+            data: {
+                labels: ['Protein', 'Karbo', 'Lemak'],
+                datasets: [{
+                    data: [totalProtein, totalCarbs, totalFat],
+                    backgroundColor: ['#00f0ff', '#fbbf24', '#ff3366'],
+                    borderWidth: 0,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '78%',
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(11, 18, 28, 0.95)',
+                        titleColor: '#e0f7fa',
+                        bodyColor: '#e0f7fa',
+                        borderColor: 'rgba(0, 240, 255, 0.3)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12,
+                        titleFont: { family: '"Inter", sans-serif', weight: 'bold', size: 12 },
+                        bodyFont: { family: '"Inter", sans-serif', size: 12 },
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw || 0;
+                                return ` ${context.label}: ${val > 1000 ? (val/1000).toFixed(2)+'kg' : val.toFixed(1)+'g'}`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerTextTotal',
+                beforeDraw: function(chart) {
+                    const { ctx, chartArea: { top, right, bottom, left } } = chart;
+                    ctx.save();
+                    const dataset = chart.data.datasets[0];
+                    const total = dataset.data.reduce((a, b) => a + b, 0);
+                    const centerX = (left + right) / 2;
+                    const centerY = (top + bottom) / 2;
+                    
+                    ctx.font = 'bold 22px "Inter", "Plus Jakarta Sans", sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    let totalTxt = total > 1000 ? (total/1000).toFixed(1) + 'kg' : Math.round(total) + 'g';
+                    ctx.fillText(totalTxt, centerX, centerY - 6);
+                    
+                    ctx.font = 'normal 10px "Inter", "Plus Jakarta Sans", sans-serif';
+                    ctx.fillStyle = '#8caebf';
+                    ctx.fillText('TOTAL MAKRO', centerX, centerY + 14);
+                    
+                    ctx.restore();
+                }
+            }]
+        });
+
+        // Render Total Custom HTML Legend
+        const totalGramsAll = totalProtein + totalCarbs + totalFat;
+        const proteinPctAll = totalGramsAll > 0 ? Math.round((totalProtein / totalGramsAll) * 100) : 0;
+        const carbsPctAll = totalGramsAll > 0 ? Math.round((totalCarbs / totalGramsAll) * 100) : 0;
+        const fatPctAll = totalGramsAll > 0 ? Math.round((totalFat / totalGramsAll) * 100) : 0;
+
+        const legendContainerTotal = document.getElementById('macroTotalLegend');
+        if (legendContainerTotal) {
+            legendContainerTotal.innerHTML = `
+                <div class="macro-legend-item" style="color: #00f0ff;">
+                    <div class="macro-legend-dot" style="background-color: #00f0ff;"></div>
+                    <div class="macro-legend-info">
+                        <span class="macro-legend-val">${totalProtein > 1000 ? (totalProtein/1000).toFixed(2)+'kg' : totalProtein.toFixed(1)+'g'}</span>
+                        <span class="macro-legend-lbl">Protein (${proteinPctAll}%)</span>
+                    </div>
+                </div>
+                <div class="macro-legend-item" style="color: #fbbf24;">
+                    <div class="macro-legend-dot" style="background-color: #fbbf24;"></div>
+                    <div class="macro-legend-info">
+                        <span class="macro-legend-val">${totalCarbs > 1000 ? (totalCarbs/1000).toFixed(2)+'kg' : totalCarbs.toFixed(1)+'g'}</span>
+                        <span class="macro-legend-lbl">Karbo (${carbsPctAll}%)</span>
+                    </div>
+                </div>
+                <div class="macro-legend-item" style="color: #ff3366;">
+                    <div class="macro-legend-dot" style="background-color: #ff3366;"></div>
+                    <div class="macro-legend-info">
+                        <span class="macro-legend-val">${totalFat > 1000 ? (totalFat/1000).toFixed(2)+'kg' : totalFat.toFixed(1)+'g'}</span>
+                        <span class="macro-legend-lbl">Lemak (${fatPctAll}%)</span>
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 
