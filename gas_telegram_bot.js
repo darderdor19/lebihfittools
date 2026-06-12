@@ -94,8 +94,10 @@ function handleVerifyOTPCombined(body) {
 
   cache.remove('otp_' + email);
 
-  // Simpan nama user ke Firebase jika belum ada
+  // Simpan email dan nama user ke Firebase jika belum ada
   try {
+    setFirebase('users/' + safe(email) + '/lf_user_email', email);
+    setFirebase('users/' + safe(email) + '/lf_user_name', data.name);
     setFirebase('users/' + safe(email) + '/lf_profile/lf_user_name', data.name);
     // Sync users ke spreadsheet setelah login baru
     syncUsersToSpreadsheet();
