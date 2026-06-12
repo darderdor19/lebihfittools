@@ -1405,14 +1405,24 @@ function renderActivityHistory() {
             }
         });
     });
+    const daysDiff = Math.max(1, Math.round((to - from) / (1000 * 60 * 60 * 24)) + 1);
     const avgSleep = totalSleepEntries > 0 ? (totalSleepHours / totalSleepEntries).toFixed(1) : '--';
+    const avgKcalBurned = Math.round(totalKcalBurned / daysDiff);
+    const avgFatBurned = (totalFatBurned / daysDiff).toFixed(1);
+
     summaryEl.innerHTML = `
         <div class="act-stat-card"><div class="act-stat-value">${totalWorkoutSessions}</div><div class="act-stat-label">Sesi Workout</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${totalGymSessions}</div><div class="act-stat-label">Sesi Gym</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${totalCardioSessions}</div><div class="act-stat-label">Sesi Kardio</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${totalOtherSessions}</div><div class="act-stat-label">Sesi Lainnya</div></div>
-        <div class="act-stat-card"><div class="act-stat-value" style="color:var(--success);text-shadow:0 0 10px rgba(0,255,204,0.3);">${Math.round(totalKcalBurned)}</div><div class="act-stat-label">Kalori Terbakar (kcal)</div></div>
-        <div class="act-stat-card"><div class="act-stat-value" style="color:#ffab40;text-shadow:0 0 10px rgba(255,171,64,0.3);">${totalFatBurned.toFixed(1)}g</div><div class="act-stat-label">Lemak Terbakar</div></div>
+        <div class="act-stat-card" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="act-stat-value" style="color:var(--success);text-shadow:0 0 10px rgba(0,255,204,0.3);">${avgKcalBurned}</div><div class="act-stat-label">Rerata Kcal/hari</div></div>
+            <div style="flex:1; border-left: 1px solid rgba(255,255,255,0.1); padding-left:12px;"><div class="act-stat-value" style="color:var(--success); font-size:1.1rem;">${Math.round(totalKcalBurned)}</div><div class="act-stat-label">Total Kcal Terbakar</div></div>
+        </div>
+        <div class="act-stat-card" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="act-stat-value" style="color:#ffab40;text-shadow:0 0 10px rgba(255,171,64,0.3);">${avgFatBurned}g</div><div class="act-stat-label">Rerata Lemak/hari</div></div>
+            <div style="flex:1; border-left: 1px solid rgba(255,255,255,0.1); padding-left:12px;"><div class="act-stat-value" style="color:#ffab40; font-size:1.1rem;">${totalFatBurned.toFixed(1)}g</div><div class="act-stat-label">Total Lemak Terbakar</div></div>
+        </div>
         <div class="act-stat-card"><div class="act-stat-value">${totalSleepHours.toFixed(1)}j</div><div class="act-stat-label">Total Tidur</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${avgSleep}j</div><div class="act-stat-label">Rerata Tidur/Hari</div></div>`;
     // Build list by date
@@ -2734,10 +2744,22 @@ function renderHistoryStats(data) {
     const count = data.length;
     
     document.getElementById('historyAvgGrid').innerHTML = `
-        <div class="avg-item"><div class="val">${Math.round(totals.cal/count)}</div><div class="lbl">Kalori/hari</div></div>
-        <div class="avg-item"><div class="val">${Math.round(totals.protein/count)}g</div><div class="lbl">Protein/hari</div></div>
-        <div class="avg-item"><div class="val">${Math.round(totals.carbs/count)}g</div><div class="lbl">Karbo/hari</div></div>
-        <div class="avg-item"><div class="val">${Math.round(totals.fat/count)}g</div><div class="lbl">Lemak/hari</div></div>
+        <div class="avg-item" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="val">${Math.round(totals.cal/count)}</div><div class="lbl">Kalori/hari</div></div>
+            <div style="flex:1; border-left: 1px solid var(--border); padding-left:12px;"><div class="val" style="color:var(--text2); font-size:1.1rem;">${Math.round(totals.cal)}</div><div class="lbl">Total Kalori</div></div>
+        </div>
+        <div class="avg-item" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="val">${Math.round(totals.protein/count)}g</div><div class="lbl">Protein/hari</div></div>
+            <div style="flex:1; border-left: 1px solid var(--border); padding-left:12px;"><div class="val" style="color:var(--text2); font-size:1.1rem;">${Math.round(totals.protein)}g</div><div class="lbl">Total Protein</div></div>
+        </div>
+        <div class="avg-item" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="val">${Math.round(totals.carbs/count)}g</div><div class="lbl">Karbo/hari</div></div>
+            <div style="flex:1; border-left: 1px solid var(--border); padding-left:12px;"><div class="val" style="color:var(--text2); font-size:1.1rem;">${Math.round(totals.carbs)}g</div><div class="lbl">Total Karbo</div></div>
+        </div>
+        <div class="avg-item" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="val">${Math.round(totals.fat/count)}g</div><div class="lbl">Lemak/hari</div></div>
+            <div style="flex:1; border-left: 1px solid var(--border); padding-left:12px;"><div class="val" style="color:var(--text2); font-size:1.1rem;">${Math.round(totals.fat)}g</div><div class="lbl">Total Lemak</div></div>
+        </div>
     `;
 }
 

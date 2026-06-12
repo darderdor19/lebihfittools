@@ -898,18 +898,19 @@ async function showFoodHistoryDays(chatId, email, days) {
     msg += `📊 *Grafik Kalori:*\n${chartText}\n`;
     msg += `_(Target: ${calTarget} kcal/hari)_\n\n`;
 
-    msg += `📝 *Ringkasan Statistik:*\n`;
+    msg += `📝 *Ringkasan Statistik (Hari Aktif):*\n`;
+    msg += `• Total Kalori: *${totalCal} kcal*\n`;
     msg += `• Rata-rata Kalori: *${avgCal} kcal/hari*\n`;
     msg += `• Kepatuhan Target: *${compliantDays}/${activeDays} hari aktif* (≤ target)\n`;
     msg += `• Hari Aktif Mencatat: *${activeDays}/${days} hari*\n`;
     msg += `• Kalori Tertinggi: *${maxCal} kcal* (${formatDateKey(maxCalDate)})\n`;
     msg += `• Kalori Terendah: *${minCal} kcal* (${formatDateKey(minCalDate)})\n\n`;
 
-    msg += `🍎 *Rata-rata Gizi Harian (Hari Aktif):*\n`;
-    msg += `• Protein: *${avgProtein.toFixed(1)}g*\n`;
-    msg += `• Karbohidrat: *${avgCarbs.toFixed(1)}g*\n`;
-    msg += `• Lemak: *${avgFat.toFixed(1)}g*\n`;
-    msg += `• Serat: *${avgFiber.toFixed(1)}g*\n`;
+    msg += `🍎 *Total & Rata-rata Gizi:*\n`;
+    msg += `• Protein: *${totalProtein.toFixed(1)}g* (Avg: *${avgProtein.toFixed(1)}g/hari*)\n`;
+    msg += `• Karbohidrat: *${totalCarbs.toFixed(1)}g* (Avg: *${avgCarbs.toFixed(1)}g/hari*)\n`;
+    msg += `• Lemak: *${totalFat.toFixed(1)}g* (Avg: *${avgFat.toFixed(1)}g/hari*)\n`;
+    msg += `• Serat: *${totalFiber.toFixed(1)}g* (Avg: *${avgFiber.toFixed(1)}g/hari*)\n`;
 
     return sendMessage(chatId, msg, {
       inline_keyboard: [
@@ -2225,6 +2226,8 @@ async function showActivityHistoryDays(chatId, email, days) {
     const totalSessions = totalWorkouts + totalGyms + totalCardio + totalOther;
     const avgBurn = totalSessions > 0 ? Math.round(totalBurned / totalSessions) : 0;
 
+    const avgBurnPerDay = Math.round(totalBurned / days);
+
     let msg = `🏃 *Riwayat Kegiatan ${days} Hari Terakhir*\n\n`;
     msg += `📝 *Statistik Ringkas:*\n`;
     msg += `• Total Workout: *${totalWorkouts}x sesi*\n`;
@@ -2235,7 +2238,7 @@ async function showActivityHistoryDays(chatId, email, days) {
     if (totalSleeps > 0) {
       msg += `  _(Lelap: ${sleepQualities.lelap}x, Biasa: ${sleepQualities.biasa}x, Kurang: ${sleepQualities.kurang}x)_\n`;
     }
-    msg += `• Total Kalori Terbakar: *${totalBurned} kcal* (Rerata: *${avgBurn} kcal/sesi*)\n`;
+    msg += `• Total Kalori Terbakar: *${totalBurned} kcal* (Rerata: *${avgBurnPerDay} kcal/hari*)\n`;
 
     const sortedMuscles = Object.keys(muscles).sort((a,b) => muscles[b] - muscles[a]);
     if (sortedMuscles.length > 0) {
