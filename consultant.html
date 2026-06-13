@@ -604,13 +604,14 @@
       flex-direction: column;
       background: rgba(15, 23, 42, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      padding: 16px;
-      gap: 12px;
+      border-radius: 28px;
+      padding: 16px 20px;
+      gap: 8px;
       transition: all 0.3s ease;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      position: relative;
     }
     .input-container:focus-within {
       border-color: var(--accent);
@@ -622,11 +623,6 @@
       gap: 12px;
       align-items: flex-start;
       width: 100%;
-    }
-    .input-ai-icon {
-      color: var(--accent);
-      margin-top: 4px;
-      flex-shrink: 0;
     }
     .chat-textarea {
       flex: 1;
@@ -709,20 +705,21 @@
     }
     .btn-input-attachment {
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text2);
-      padding: 6px 14px;
-      border-radius: 12px;
-      font-size: 0.8rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
       cursor: pointer;
       transition: 0.2s;
     }
     .btn-input-attachment:hover {
       background: rgba(255, 255, 255, 0.1);
       color: var(--text);
+      border-color: rgba(255, 255, 255, 0.2);
     }
     .btn-send {
       background: var(--accent);
@@ -898,9 +895,9 @@
         gap: 8px;
       }
       .input-container {
-        padding: 12px;
-        border-radius: 16px;
-        gap: 8px;
+        padding: 12px 16px;
+        border-radius: 24px;
+        gap: 6px;
       }
       .chat-textarea {
         height: 36px;
@@ -1111,13 +1108,11 @@
           <div id="attachmentPreview" class="hidden"></div>
 
           <div class="input-main-row">
-            <i data-lucide="sparkles" class="input-ai-icon" style="width: 20px; height: 20px;"></i>
             <textarea id="chatInput" class="chat-textarea" placeholder="Tanya apa saja ke LebihFit AI......" rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
           </div>
           <div class="input-actions-row">
             <button id="attachmentBtn" class="btn-input-attachment" onclick="toggleAttachmentMenu(event)">
-              <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i>
-              <span>Attach file</span>
+              <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
             </button>
             
             <!-- Attachment Options Menu -->
@@ -1232,7 +1227,6 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       sidebar.classList.remove('open');
     }
 
-    // Get User Session and load list of sessions
     function getUserSession() {
       const email = localStorage.getItem('lf_user_email');
       const name = localStorage.getItem('lf_user_name');
