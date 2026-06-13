@@ -290,8 +290,9 @@ Instruksi:
    - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
    - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-4. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
-5. Berikan jawaban dalam JSON dengan format berikut:
+4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
+5. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
+6. Berikan jawaban dalam JSON dengan format berikut:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
@@ -395,27 +396,31 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
 - Minyak Goreng / Margarin (per 10g / 1 sdm): 88 kcal | Karbo: 0g | Protein: 0g | Lemak: 10g | Serat: 0g | Gula: 0g | Sodium: 0mg | Kalsium: 0mg | Besi: 0mg | VitC: 0mg | VitD: 0mcg | Zinc: 0mg
 
 == INSTRUKSI KALKULASI SECARA KETAT ==
-1. Ekstrak berat makanan dalam gram (misal: "545 gram" -> 545g, "500gram" -> 500g). Jika tidak disebutkan beratnya, gunakan estimasi porsi standar.
+1. Ekstrak berat masing-masing bahan dalam gram (misal: dada ayam 545g, singkong 500g).
 2. Bedakan Berat Mentah vs Matang secara logis:
    - Jika deskripsi mengandung kata "fillet", "mentah", "raw", gunakan data "MENTAH".
-   - Jika matang atau tidak disebutkan secara spesifik, asumsikan berat yang diinput adalah berat mentah sebelum dimasak kecuali konteksnya jelas-jelas matang.
-3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK (sama seperti rebus/panggang kering). JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-4. Lakukan perkalian matematis secara eksak: (Berat Gizi per 100g) * (Total Berat / 100).
-   - CONTOH 1: "dada ayam fillet 545 gram dimasak air-fryer tanpa minyak" (Fillet = Mentah, Air-fryer = Tanpa minyak):
-     - Faktor pengali = 5.45
-     - Kalori = 120 * 5.45 = 654 kcal
-     - Protein = 23 * 5.45 = 125.4g
-     - Lemak = 2.5 * 5.45 = 13.6g
-     - Karbo = 0 * 5.45 = 0g
-   - CONTOH 2: "singkong 500gram dimasak air-fryer tanpa minyak":
-     - Faktor pengali = 5.0
-     - Kalori = 160 * 5.0 = 800 kcal
-     - Karbohidrat = 38 * 5.0 = 190g
-     - Protein = 1.3 * 5.0 = 6.5g
-     - Lemak = 0.3 * 5.0 = 1.5g
-5. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
-6. Untuk makanan lain, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
-7. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
+   - Jika tidak disebutkan secara spesifik, asumsikan berat yang diinput adalah berat mentah sebelum dimasak kecuali konteksnya jelas-jelas matang.
+3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK (0g lemak tambahan). Jangan menambah kalori/lemak minyak goreng ke dalamnya.
+4. ATURAN MULTI-BAHAN (SANGAT PENTING):
+   - Jika terdapat lebih dari 1 bahan makanan (misal: "dada ayam fillet 545g dan singkong 500g"):
+     - Hitung kandungan nutrisi masing-masing bahan secara terpisah terlebih dahulu.
+     - JANGAN PERNAH menjumlahkan total berat (545g + 500g = 1045g) lalu mengalikan seluruh berat tersebut dengan gizi dada ayam. Ini salah!
+     - Jumlahkan hasil akhir nutrisi dari masing-masing bahan di akhir.
+5. CONTOH DETAIL PERHITUNGAN MULTI-BAHAN:
+   - Input: "dada ayam fillet 545g dan singkong 500g dimasak air-fryer tanpa bumbu/minyak"
+     - Langkah 1: Hitung dada ayam fillet mentah 545g -> Faktor pengali = 5.45.
+       - Kalori = 120 * 5.45 = 654 kcal, Protein = 23 * 5.45 = 125.4g, Lemak = 2.5 * 5.45 = 13.6g
+     - Langkah 2: Hitung singkong 500g -> Faktor pengali = 5.0.
+       - Kalori = 160 * 5.0 = 800 kcal, Karbo = 38 * 5.0 = 190g, Protein = 1.3 * 5.0 = 6.5g, Lemak = 0.3 * 5.0 = 1.5g, Serat = 1.8 * 5.0 = 9g
+     - Langkah 3: Jumlahkan total gizi akhir:
+       - Kalori = 654 + 800 = 1454 kcal
+       - Protein = 125.4 + 6.5 = 131.9g
+       - Karbohidrat = 0 + 190 = 190g
+       - Lemak = 13.6 + 1.5 = 15.1g
+       - Serat = 0 + 9 = 9g
+6. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
+7. Untuk makanan lain, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
+8. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
 Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');

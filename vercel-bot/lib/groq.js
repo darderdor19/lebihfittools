@@ -55,7 +55,12 @@ Nama Makanan / Deskripsi: "${text}"
    - Jika deskripsi mengandung kata "fillet", "mentah", "raw", gunakan data "MENTAH".
    - Jika matang atau tidak disebutkan secara spesifik, asumsikan berat yang diinput adalah berat mentah sebelum dimasak kecuali konteksnya jelas-jelas matang.
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK (sama seperti rebus/panggang kering). JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-4. Lakukan perkalian matematis secara eksak: (Berat Gizi per 100g) * (Total Berat / 100).
+4. ATURAN MULTI-BAHAN (SANGAT PENTING):
+   - Jika terdapat lebih dari 1 bahan makanan (misal: "dada ayam fillet 545g dan singkong 500g"):
+     - Hitung kandungan nutrisi masing-masing bahan secara terpisah terlebih dahulu.
+     - JANGAN PERNAH menjumlahkan total berat (545g + 500g = 1045g) lalu mengalikan seluruh berat tersebut dengan gizi dada ayam. Ini salah!
+     - Jumlahkan hasil akhir nutrisi dari masing-masing bahan di akhir.
+5. Lakukan perkalian matematis secara eksak: (Berat Gizi per 100g) * (Total Berat / 100).
    - CONTOH 1: "dada ayam fillet 545 gram dimasak air-fryer tanpa minyak" (Fillet = Mentah, Air-fryer = Tanpa minyak):
      - Faktor pengali = 5.45
      - Kalori = 120 * 5.45 = 654 kcal
@@ -68,9 +73,13 @@ Nama Makanan / Deskripsi: "${text}"
      - Karbohidrat = 38 * 5.0 = 190g
      - Protein = 1.3 * 5.0 = 6.5g
      - Lemak = 0.3 * 5.0 = 1.5g
-5. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
-6. Untuk makanan lain, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
-7. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
+   - CONTOH 3 (MULTI-BAHAN): "dada ayam fillet 545g dan singkong 500g dimasak air-fryer tanpa bumbu/minyak"
+     - Dada ayam fillet mentah 545g: Kalori = 120 * 5.45 = 654 kcal, Protein = 23 * 5.45 = 125.4g, Lemak = 2.5 * 5.45 = 13.6g
+     - Singkong 500g: Kalori = 160 * 5.0 = 800 kcal, Karbo = 38 * 5.0 = 190g, Protein = 1.3 * 5.0 = 6.5g, Lemak = 0.3 * 5.0 = 1.5g
+     - Hasil akhir penjumlahan: Kalori = 1454 kcal, Protein = 131.9g, Karbo = 190g, Lemak = 15.1g
+6. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
+7. Untuk makanan lain, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
+8. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
 Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
   const content = await callGroq([{ role: 'user', content: prompt }], true, 600);

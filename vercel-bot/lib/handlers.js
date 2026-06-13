@@ -758,8 +758,9 @@ Instruksi:
    - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
    - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-4. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
-5. Berikan jawaban dalam JSON dengan format berikut:
+4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
+5. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
+6. Berikan jawaban dalam JSON dengan format berikut:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
