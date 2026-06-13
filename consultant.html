@@ -340,6 +340,29 @@
       width: 100%;
     }
 
+    /* Media queries for welcome screen responsiveness */
+    @media (max-width: 768px) {
+      .welcome-container {
+        padding: 20px 12px;
+      }
+      .welcome-header {
+        margin-bottom: 24px;
+        margin-top: 10px;
+      }
+      .hey-title, .help-title {
+        font-size: 1.8rem;
+      }
+      .suggestion-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .suggestion-card {
+        padding: 16px;
+        gap: 8px;
+      }
+    }
+
     /* Messages Bubble */
     .message-row {
       display: flex;
