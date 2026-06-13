@@ -249,36 +249,67 @@
     /* Messages Bubble */
     .message-row {
       display: flex;
+      gap: 12px;
       width: 100%;
-      animation: slideUp 0.3s ease;
+      margin-bottom: 24px;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .message-row.user {
-      justify-content: flex-end;
+      flex-direction: row-reverse;
+      justify-content: flex-start;
     }
     .message-row.assistant {
       justify-content: flex-start;
     }
+    .message-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: transform 0.2s ease;
+    }
+    .message-row:hover .message-avatar {
+      transform: scale(1.05);
+    }
+    .message-row.user .message-avatar {
+      background: linear-gradient(135deg, var(--border), var(--surface3));
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+    .message-row.assistant .message-avatar {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--dark-bg);
+      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
+    }
     .message-bubble {
       max-width: 75%;
-      padding: 16px;
-      border-radius: 8px;
+      padding: 16px 20px;
+      border-radius: 18px;
       line-height: 1.6;
       font-size: 0.95rem;
       position: relative;
       word-wrap: break-word;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
     .message-row.user .message-bubble {
-      background: var(--surface2);
-      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text);
-      border-bottom-right-radius: 2px;
+      border-top-right-radius: 4px;
     }
     .message-row.assistant .message-bubble {
-      background: var(--surface);
-      border: 1px solid var(--accent3);
+      background: rgba(11, 24, 38, 0.65);
+      border: 1px solid rgba(0, 240, 255, 0.15);
       color: var(--text);
-      border-bottom-left-radius: 2px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      border-top-left-radius: 4px;
+      box-shadow: 0 8px 32px rgba(0, 240, 255, 0.04);
     }
     
     /* Markdown Styling in Bubble */
@@ -288,19 +319,89 @@
     .message-bubble p:last-child {
       margin-bottom: 0;
     }
-    .message-bubble ul, .message-bubble ol {
-      margin-left: 20px;
-      margin-bottom: 12px;
+    .message-bubble ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 12px 0;
+    }
+    .message-bubble ul li {
+      position: relative;
+      padding-left: 22px;
+      margin-bottom: 8px;
+    }
+    .message-bubble ul li::before {
+      content: "⚡";
+      position: absolute;
+      left: 0;
+      top: 2px;
+      color: var(--accent);
+      font-size: 0.85rem;
+    }
+    .message-bubble ol {
+      list-style: none;
+      counter-reset: list-counter;
+      padding-left: 0;
+      margin: 12px 0;
+    }
+    .message-bubble ol li {
+      position: relative;
+      padding-left: 26px;
+      margin-bottom: 8px;
+      counter-increment: list-counter;
+    }
+    .message-bubble ol li::before {
+      content: counter(list-counter);
+      position: absolute;
+      left: 0;
+      top: 2px;
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--dark-bg);
+      border-radius: 50%;
+      font-size: 0.7rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .message-bubble strong {
       color: var(--accent);
+      font-weight: 600;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
     }
     .message-bubble blockquote {
       border-left: 3px solid var(--accent2);
-      padding-left: 10px;
+      padding-left: 14px;
       color: var(--text2);
       font-style: italic;
-      margin: 8px 0;
+      margin: 14px 0;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 8px 14px;
+      border-radius: 4px;
+    }
+    .message-bubble h2, .message-bubble h3, .message-bubble h4 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .message-bubble h2 {
+      font-size: 1.35rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+    .message-bubble h3 {
+      font-size: 1.15rem;
+      color: var(--accent);
+    }
+    .message-bubble h4 {
+      font-size: 1rem;
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     /* Typing Indicator */
@@ -822,6 +923,11 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       // Code blocks
       str = str.replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface2); border:1px solid var(--border); padding:10px; border-radius:4px; overflow-x:auto; font-family:monospace; font-size:0.85rem; margin:8px 0;">$1</pre>');
       
+      // Headers
+      str = str.replace(/^\s*###\s+(.+)$/gm, '<h4>$1</h4>');
+      str = str.replace(/^\s*##\s+(.+)$/gm, '<h3>$1</h3>');
+      str = str.replace(/^\s*#\s+(.+)$/gm, '<h2>$1</h2>');
+
       // Bullet list items
       str = str.replace(/^\s*[-*+]\s+(.+)$/gm, '<li>$1</li>');
       str = str.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
@@ -841,7 +947,8 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       // Paragraph conversion
       const paragraphs = str.split('\n\n');
       str = paragraphs.map(p => {
-        if (p.trim().startsWith('<pre') || p.trim().startsWith('<ul') || p.trim().startsWith('<ol>')) return p;
+        const trimmed = p.trim();
+        if (trimmed.startsWith('<pre') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol>') || trimmed.startsWith('<h2') || trimmed.startsWith('<h3') || trimmed.startsWith('<h4')) return p;
         return `<p>${p.replace(/\n/g, '<br>')}</p>`;
       }).join('');
 
@@ -855,12 +962,23 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       const row = document.createElement('div');
       row.className = `message-row ${role}`;
       
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      if (role === 'user') {
+        avatar.innerHTML = `<i data-lucide="user" style="width: 16px; height: 16px;"></i>`;
+      } else {
+        avatar.innerHTML = `<i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>`;
+      }
+      
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
       bubble.innerHTML = parseMarkdown(content);
       
+      row.appendChild(avatar);
       row.appendChild(bubble);
       container.appendChild(row);
+      
+      if (window.lucide) lucide.createIcons();
     }
 
     // Send Message
@@ -910,6 +1028,10 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       typingRow.className = 'message-row assistant';
       typingRow.id = 'typingBubble';
       
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.innerHTML = `<i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>`;
+      
       const typingBubble = document.createElement('div');
       typingBubble.className = 'message-bubble';
       typingBubble.innerHTML = `
@@ -919,13 +1041,15 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
           <div class="typing-dot"></div>
         </div>
       `;
+      typingRow.appendChild(avatar);
       typingRow.appendChild(typingBubble);
       container.appendChild(typingRow);
+      if (window.lucide) lucide.createIcons();
       scrollToBottom();
 
       // Call Vercel Backend Proxy
       try {
-        const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-pro';
+        const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-flash';
         
         // Build payload messages with system context
         const apiMessages = [

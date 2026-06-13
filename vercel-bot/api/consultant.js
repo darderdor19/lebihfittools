@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid messages array' });
     }
 
-    const selectedModel = model || 'google/gemini-2.5-pro';
+    const selectedModel = model || 'google/gemini-2.5-flash';
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
