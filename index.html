@@ -160,6 +160,9 @@
         <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
           <span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span>
         </button>
+        <button class="nav-btn" onclick="openConsultantPage()">
+          <span class="nav-icon"><i data-lucide="message-square" style="color: var(--accent);"></i></span><span class="nav-label">AI Consultant</span>
+        </button>
         <a href="https://t.me/jadilebihfit_bot" target="_blank" class="nav-btn" style="text-decoration: none;">
           <span class="nav-icon"><i data-lucide="send" style="color: var(--accent);"></i></span><span class="nav-label">Bot Telegram</span>
         </a>
@@ -1182,6 +1185,22 @@
               <input type="password" id="visionKeyInput" placeholder="AQ. / AIza... (opsional)" class="api-input">
               <button class="btn-icon" onclick="toggleApiVis('visionKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
             </div>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
+            <label>OpenRouter API Key (AI Consultant)</label>
+            <div class="api-input-wrap">
+              <input type="password" id="openRouterKeyInput" placeholder="sk-or-v1-..." class="api-input">
+              <button class="btn-icon" onclick="toggleApiVis('openRouterKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
+            <label>Model AI Consultant</label>
+            <select id="openRouterModelSelect" class="api-input" style="background:var(--surface2); border:1px solid var(--border); padding:14px 16px; color:var(--text); border-radius:var(--radius-sm); outline:none; height:auto;">
+              <option value="google/gemini-2.5-pro">Google: Gemini 2.5 Pro (Sangat Cerdas, Direkomendasikan)</option>
+              <option value="anthropic/claude-3.5-sonnet">Anthropic: Claude 3.5 Sonnet (Sangat Pintar & Konsisten)</option>
+              <option value="deepseek/deepseek-chat">DeepSeek: V3 (Sangat Cepat & Ekonomis)</option>
+              <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (Handal)</option>
+            </select>
           </div>
           <div class="form-actions">
             <button class="btn-primary" onclick="saveApiKey()"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan API Keys</button>
