@@ -745,9 +745,21 @@ async function handlePhotoInput(chatId, userId, photos, caption) {
     if (filePath.endsWith('.png')) mime = 'image/png';
     if (filePath.endsWith('.webp')) mime = 'image/webp';
 
-    const prompt = `Analisis foto makanan ini. Berikan estimasi nutrisi dalam JSON dengan format:
-{"name":"nama makanan","portion":"estimasi porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat"}
-Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON valid tanpa teks apapun di luar kurung kurawal.`;
+    const prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
+Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
+
+Instruksi:
+1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
+2. Gunakan database referensi gizi standar per 100g berikut untuk menghitung secara proporsional:
+   - Singkong (mentah/rebus): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
+   - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
+   - Dada Ayam (rebus/panggang, matang): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
+   - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
+   - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
+3. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
+4. Berikan jawaban dalam JSON dengan format berikut:
+{"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
+Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
     const raw = await callGeminiVisionAPI(base64, mime, prompt, true);
     let parsed;

@@ -282,11 +282,14 @@ Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makan
 
 Instruksi:
 1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
-2. Lakukan perhitungan nutrisi secara proporsional. Gunakan standar gizi dasar, misalnya:
-   - Nasi putih: ~130 kcal/100g.
-   - Dada ayam: ~120-150 kcal/100g.
-   - Minyak goreng/lemak: ~900 kcal/100g (jika makanan terlihat berminyak atau digoreng, tambahkan lemak secara logis).
-3. Berikan jawaban dalam JSON dengan format berikut:
+2. Gunakan database referensi gizi standar per 100g berikut untuk menghitung secara proporsional:
+   - Singkong (mentah/rebus): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
+   - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
+   - Dada Ayam (rebus/panggang, matang): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
+   - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
+   - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
+3. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
+4. Berikan jawaban dalam JSON dengan format berikut:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
@@ -373,29 +376,42 @@ async function analyzePhysicalPhotoAI(base64, mime, promptText) {
 }
 
 async function analyzeTextAI(name, portion, desc) {
-  let prompt = `Kamu adalah database gizi dan sistem kalkulasi nutrisi makanan yang sangat akurat, konsisten, dan ilmiah.
-Tugas kamu adalah memberikan estimasi nutrisi secara presisi berdasarkan basis data terpercaya (seperti USDA, Kemenkes, atau FatSecret).
+  let prompt = `Kamu adalah mesin kalkulator gizi dan database nutrisi makanan yang sangat akurat, konsisten, dan ilmiah.
+Tugas kamu adalah menghitung kandungan nutrisi makro dan mikro secara presisi berdasarkan data standar per 100g.
 
+== BAHAN UTAMA & PORSI ==
 Nama Makanan: ${name}
-Porsi/Berat: ${portion || '1 porsi standar'}`;
+Porsi/Berat: ${portion || '1 porsi standar'}
+Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
 
-  if (desc) {
-    prompt += `\nDeskripsi/Metode Masak: ${desc}`;
-  }
+== DATABASE REFERENCE (Per 100g): ==
+- Singkong (mentah/rebus): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
+- Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
+- Dada Ayam (rebus/panggang, matang): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
+- Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
+- Minyak Goreng / Margarin (per 10g / 1 sdm): 88 kcal | Karbo: 0g | Protein: 0g | Lemak: 10g | Serat: 0g | Gula: 0g | Sodium: 0mg | Kalsium: 0mg | Besi: 0mg | VitC: 0mg | VitD: 0mcg | Zinc: 0mg
 
-  prompt += `
-
-Instruksi Perhitungan (WAJIB DIIKUTI SECARA KETAT):
-1. Gunakan nilai gizi dasar per 100g untuk makanan umum berikut sebagai patokan perhitungan:
-   - Singkong rebus/mentah: ~160 kalori, ~38g karbohidrat, ~1.3g protein, ~0.3g lemak, ~1.8g serat per 100g. (Jadi jika porsi adalah 500 gram singkong rebus tanpa bumbu/minyak, total kalorinya adalah 5 * 160 = 800 kcal, karbohidrat = 5 * 38 = 190g, lemak = 5 * 0.3 = 1.5g).
-   - Nasi putih matang: ~130 kalori, ~28g karbohidrat, ~2.7g protein, ~0.3g lemak per 100g.
-   - Dada ayam mentah: ~120 kalori, ~23g protein, ~2.5g lemak per 100g.
-   - Telur ayam utuh sedang: ~75 kalori, ~6g protein, ~5g lemak, ~0.6g karbohidrat per butir (~50g).
-2. Jika pengguna menyebutkan berat spesifik (misal: "500gram", "200g", "1.5 kg"), lakukan perkalian matematika secara ketat berdasarkan berat tersebut dibagi 100.
-3. Selalu perhitungkan deskripsi metode masak (seperti digoreng pakai minyak, direbus tanpa bumbu/minyak sama sekali, mentah, matang) untuk menyesuaikan nilai kalori dan lemak secara logis.
-4. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
+== INSTRUKSI KALKULASI SECARA KETAT ==
+1. Ekstrak berat makanan dalam gram (misal: "500gram" -> 500g, "1 kg" -> 1000g). Jika tidak disebutkan beratnya, estimasikan berat standar (misal: 1 piring nasi = 200g, 1 potong ayam = 100g).
+2. Lakukan perkalian matematis secara eksak: (Berat Gizi per 100g) * (Total Berat / 100).
+   - CONTOH: Jika pengguna memasukkan "Singkong 500 gram rebus tanpa minyak", maka faktor pengalinya adalah 5.0.
+     - Kalori = 160 * 5.0 = 800 kcal
+     - Karbohidrat = 38 * 5.0 = 190g
+     - Protein = 1.3 * 5.0 = 6.5g
+     - Lemak = 0.3 * 5.0 = 1.5g
+     - Serat = 1.8 * 5.0 = 9.0g
+     - Gula = 1.7 * 5.0 = 8.5g
+     - Sodium = 14 * 5.0 = 70mg
+     - Kalsium = 16 * 5.0 = 80mg
+     - Besi = 0.3 * 5.0 = 1.5mg
+     - Vit C = 20 * 5.0 = 100mg
+     - Vit D = 0 * 5.0 = 0mcg
+     - Zinc = 0.3 * 5.0 = 1.5mg
+3. Jika terdapat minyak goreng atau bumbu berminyak dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (contoh: digoreng -> tambahkan 1 sdm / 10g minyak = +88 kcal dan +10g lemak).
+4. Untuk makanan lain yang tidak ada di daftar di atas, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
+5. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
-Semua nilai numerik dalam satuan standar (gram/mg/mcg).`;
+Semua nilai numerik dibulatkan ke 1 angka di belakang koma (misal: 6.5).`;
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
