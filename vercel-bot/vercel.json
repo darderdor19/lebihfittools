@@ -3,6 +3,9 @@
   "functions": {
     "api/webhook.js": {
       "maxDuration": 30
+    },
+    "api/consultant.js": {
+      "maxDuration": 30
     }
   }
 }

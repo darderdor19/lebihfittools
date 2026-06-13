@@ -196,13 +196,6 @@
       border-bottom-left-radius: 2px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
-    .message-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      width: 10px;
-      height: 10px;
-    }
     
     /* Markdown Styling in Bubble */
     .message-bubble p {
@@ -307,21 +300,21 @@
       transform: none;
     }
 
-    /* Key Overlay */
-    .key-overlay {
+    /* Auth Overlay */
+    .auth-overlay {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(6, 11, 17, 0.95);
+      background: rgba(6, 11, 17, 0.98);
       z-index: 2000;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
     }
-    .key-card {
+    .auth-card {
       background: var(--surface);
       border: 1px solid var(--accent3);
       border-radius: var(--radius);
@@ -332,7 +325,7 @@
       box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
       position: relative;
     }
-    .key-card::before {
+    .auth-card::before {
       content: '';
       position: absolute;
       top: 0;
@@ -341,7 +334,7 @@
       height: 2px;
       background: var(--accent);
     }
-    .key-card h3 {
+    .auth-card h3 {
       font-size: 1.5rem;
       font-weight: 900;
       text-transform: uppercase;
@@ -349,26 +342,11 @@
       margin-bottom: 12px;
       color: var(--accent);
     }
-    .key-card p {
+    .auth-card p {
       color: var(--text2);
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       line-height: 1.5;
       margin-bottom: 24px;
-    }
-    .key-card input {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px;
-      color: var(--text);
-      width: 100%;
-      margin-bottom: 16px;
-      text-align: center;
-      outline: none;
-      font-family: monospace;
-    }
-    .key-card input:focus {
-      border-color: var(--accent);
     }
 
     /* Animations */
@@ -388,14 +366,13 @@
 </head>
 <body>
 
-  <!-- KEY CONFIG OVERLAY -->
-  <div id="keyOverlay" class="key-overlay hidden">
-    <div class="key-card">
-      <i data-lucide="key" class="welcome-icon" style="width:48px;height:48px;"></i>
-      <h3>OpenRouter API Key</h3>
-      <p>Untuk menggunakan fitur AI Consultant, Kamu perlu memasukkan OpenRouter API Key terlebih dahulu. Kunci ini akan disimpan dengan aman di browser Kamu.</p>
-      <input type="password" id="overlayKeyInput" placeholder="sk-or-v1-...">
-      <button class="btn-primary btn-full" onclick="saveOverlayKey()"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;margin-right:6px"></i> Simpan & Mulai</button>
+  <!-- AUTH REQUIREMENT OVERLAY -->
+  <div id="authOverlay" class="auth-overlay hidden">
+    <div class="auth-card">
+      <i data-lucide="lock" class="welcome-icon" style="width:48px;height:48px;"></i>
+      <h3>Akses Terkunci</h3>
+      <p>Kamu harus melakukan login terlebih dahulu di aplikasi LebihFit sebelum bisa menggunakan fitur AI Consultant ini.</p>
+      <button class="btn-primary btn-full" onclick="window.close()"><i data-lucide="x" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;margin-right:6px"></i> Tutup Tab</button>
     </div>
   </div>
 
@@ -449,10 +426,9 @@
   </footer>
 
   <script>
-    // Storage keys (consistent with core.js)
-    const KEY_NAME = 'lf_openrouterkey';
+    // Constants
     const MODEL_NAME = 'lf_openroutermodel';
-    const HISTORY_NAME = 'lf_consultant_history';
+    const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
 
     // System prompt context
     const SYSTEM_PROMPT = `Kamu adalah AI Consultant LebihFit. Kamu adalah pakar gizi klinis, pelatih kebugaran (fitness coach), dan konsultan kesehatan profesional. 
@@ -462,43 +438,42 @@ Hubungkan saranmu dengan konsep gaya hidup sehat jangka panjang.
 Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutrisi, ingatkan pengguna secara ramah bahwa tugasmu khusus membantu konsultasi seputar kesehatan dan kebugaran di LebihFit.`;
 
     let chatHistory = [];
+    let userEmail = '';
+    let userName = 'Bro';
+    let safeEmail = '';
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
       if(window.lucide) lucide.createIcons();
-      checkApiKey();
-      loadChatHistory();
-      updateHeaderBadge();
+      getUserSession();
     });
 
-    // Check API Key
-    function checkApiKey() {
-      const key = localStorage.getItem(KEY_NAME);
-      if (!key) {
-        document.getElementById('keyOverlay').classList.remove('hidden');
+    // Get User Session and load history
+    function getUserSession() {
+      // Get session from localStorage
+      const email = localStorage.getItem('lf_user_email');
+      const name = localStorage.getItem('lf_user_name');
+      
+      if (!email) {
+        document.getElementById('authOverlay').classList.remove('hidden');
       } else {
-        document.getElementById('keyOverlay').classList.add('hidden');
+        document.getElementById('authOverlay').classList.add('hidden');
+        userEmail = email.replace(/\"/g, '');
+        userName = name ? name.replace(/\"/g, '') : 'Bro';
+        safeEmail = userEmail.replace(/[.#$[\]]/g, '_');
+        
+        loadChatHistoryFromFirebase();
+        updateHeaderBadge();
       }
     }
 
-    // Save key from overlay
-    function saveOverlayKey() {
-      const key = document.getElementById('overlayKeyInput').value.trim();
-      if (key) {
-        localStorage.setItem(KEY_NAME, key);
-        checkApiKey();
-        showToast('API Key disimpan', 'success');
-      } else {
-        alert('Masukkan API Key yang valid!');
-      }
-    }
-
-    // Load history
-    function loadChatHistory() {
+    // Load history from Firebase REST API
+    async function loadChatHistoryFromFirebase() {
       try {
-        const raw = localStorage.getItem(HISTORY_NAME);
-        if (raw) {
-          chatHistory = JSON.parse(raw);
+        const response = await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_history.json`);
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          chatHistory = data;
           if (chatHistory.length > 0) {
             document.getElementById('welcomeContainer').style.display = 'none';
             chatHistory.forEach(msg => {
@@ -508,20 +483,30 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
           }
         }
       } catch (e) {
-        console.error('Failed to load chat history:', e);
+        console.error('Failed to load chat history from Firebase:', e);
       }
     }
 
-    // Save history
-    function saveChatHistory() {
-      localStorage.setItem(HISTORY_NAME, JSON.stringify(chatHistory));
+    // Save history to Firebase REST API
+    async function saveChatHistoryToFirebase() {
+      try {
+        await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_history.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chatHistory)
+        });
+      } catch (e) {
+        console.error('Failed to save chat history to Firebase:', e);
+      }
     }
 
     // Reset history
-    function resetChatHistory() {
+    async function resetChatHistory() {
       if (confirm('Apakah Kamu yakin ingin menghapus riwayat chat ini?')) {
         chatHistory = [];
-        localStorage.removeItem(HISTORY_NAME);
+        // Save empty array to Firebase
+        await saveChatHistoryToFirebase();
+        
         // Clear UI bubbles and show welcome
         const container = document.getElementById('chatContainer');
         container.innerHTML = '';
@@ -656,12 +641,6 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
       const text = input.value.trim();
       if (!text) return;
 
-      const apiKey = localStorage.getItem(KEY_NAME);
-      if (!apiKey) {
-        checkApiKey();
-        return;
-      }
-
       // Hide welcome screen
       const welcome = document.getElementById('welcomeContainer');
       if (welcome) welcome.style.display = 'none';
@@ -675,7 +654,7 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
       // Append user bubble
       appendMessageUI('user', text);
       chatHistory.push({ role: 'user', content: text });
-      saveChatHistory();
+      saveChatHistoryToFirebase();
       scrollToBottom();
 
       // Typing bubble
@@ -697,28 +676,25 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
       container.appendChild(typingRow);
       scrollToBottom();
 
-      // Call OpenRouter
+      // Call Vercel Backend Proxy
       try {
         const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-pro';
         
         // Build payload messages with system context
         const apiMessages = [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: SYSTEM_PROMPT.replace('{name}', userName) },
           ...chatHistory
         ];
 
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        // Call our Vercel Serverless Function Proxy instead of OpenRouter directly
+        const response = await fetch('/api/consultant', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://lebihfittools.vercel.app',
-            'X-Title': 'LebihFit AI Consultant'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             model: model,
-            messages: apiMessages,
-            temperature: 0.7
+            messages: apiMessages
           })
         });
 
@@ -728,14 +704,14 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
         const tBubble = document.getElementById('typingBubble');
         if (tBubble) tBubble.remove();
 
-        if (resData.choices && resData.choices[0]) {
+        if (response.ok && resData.choices && resData.choices[0]) {
           const aiResponse = resData.choices[0].message.content;
           appendMessageUI('assistant', aiResponse);
           chatHistory.push({ role: 'assistant', content: aiResponse });
-          saveChatHistory();
+          saveChatHistoryToFirebase();
         } else {
-          console.error('OpenRouter Error:', resData);
-          appendMessageUI('assistant', '⚠️ Gagal mendapatkan jawaban dari AI. Periksa API key Kamu di Settings atau coba lagi nanti.');
+          console.error('API Error:', resData);
+          appendMessageUI('assistant', '⚠️ Gagal mendapatkan jawaban dari AI. Periksa apakah variable *OPENROUTER_API_KEY* sudah di-set di Vercel, lalu coba lagi.');
         }
       } catch (err) {
         console.error('Fetch Error:', err);
@@ -748,31 +724,6 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
         input.focus();
         scrollToBottom();
       }
-    }
-
-    // Helper for Toast
-    function showToast(message, type = 'success') {
-      // Create element in window context if needed
-      const toast = document.createElement('div');
-      toast.style.position = 'fixed';
-      toast.style.bottom = '20px';
-      toast.style.right = '20px';
-      toast.style.background = type === 'success' ? '#00ffcc' : '#ff3366';
-      toast.style.color = '#060b11';
-      toast.style.padding = '12px 24px';
-      toast.style.borderRadius = '4px';
-      toast.style.fontWeight = 'bold';
-      toast.style.fontSize = '0.9rem';
-      toast.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-      toast.style.zIndex = '3000';
-      toast.style.animation = 'slideUp 0.3s ease';
-      toast.innerText = message;
-      
-      document.body.appendChild(toast);
-      setTimeout(() => {
-        toast.style.animation = 'slideUp 0.3s ease reverse';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
     }
   </script>
 </body>

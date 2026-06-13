@@ -82,8 +82,6 @@ const getApiKey = () => DB.get('lf_apikey');
 const setApiKey = k => DB.set('lf_apikey', k);
 const getVisionKey = () => DB.get('lf_visionkey');
 const setVisionKey = k => DB.set('lf_visionkey', k);
-const getOpenRouterKey = () => DB.get('lf_openrouterkey');
-const setOpenRouterKey = k => DB.set('lf_openrouterkey', k);
 const getOpenRouterModel = () => DB.get('lf_openroutermodel') || 'google/gemini-2.5-pro';
 const setOpenRouterModel = m => DB.set('lf_openroutermodel', m);
 const getAuthUser = () => {

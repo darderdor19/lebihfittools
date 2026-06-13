@@ -23,12 +23,10 @@ async function initApp() {
     if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
     if (visionKey) document.getElementById('visionKeyInput').value = visionKey;
     
-    const openRouterKey = getOpenRouterKey();
     const openRouterModel = getOpenRouterModel();
-    if (openRouterKey) document.getElementById('openRouterKeyInput').value = openRouterKey;
     if (openRouterModel) document.getElementById('openRouterModelSelect').value = openRouterModel;
 
-    if (apiKey || visionKey || openRouterKey) updateApiStatus(true);
+    if (apiKey || visionKey) updateApiStatus(true);
 
     if (!authUser) {
         document.getElementById('authOverlay').classList.remove('hidden');
@@ -3094,15 +3092,13 @@ function toggleApiVis(id) {
 function saveApiKey() {
     const key = document.getElementById('apiKeyInput').value.trim();
     const visionKey = document.getElementById('visionKeyInput').value.trim();
-    const openRouterKey = document.getElementById('openRouterKeyInput').value.trim();
     const openRouterModel = document.getElementById('openRouterModelSelect').value;
     
     setApiKey(key);
     setVisionKey(visionKey);
-    setOpenRouterKey(openRouterKey);
     setOpenRouterModel(openRouterModel);
     
-    updateApiStatus(!!key || !!visionKey || !!openRouterKey);
+    updateApiStatus(!!key || !!visionKey);
     showToast('API Keys disimpan', 'success');
 }
 
