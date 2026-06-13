@@ -1904,19 +1904,24 @@ function parseSetsReps(str) {
 }
 
 const GROQ_KEY = process.env.GROQ_API_KEY;
-async function callGroqAPI(messages, maxTokens = 2500) {
+async function callGroqAPI(messages, maxTokens = 2500, jsonMode = false) {
   if (!GROQ_KEY) throw new Error('GROQ_API_KEY env variable is not set');
+  const body = {
+    model: 'llama-3.3-70b-versatile',
+    messages,
+    max_tokens: maxTokens,
+    temperature: 0
+  };
+  if (jsonMode) {
+    body.response_format = { type: 'json_object' };
+  }
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${GROQ_KEY}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages,
-      max_tokens: maxTokens
-    })
+    body: JSON.stringify(body)
   });
   const data = await res.json();
   if (!data.choices || !data.choices[0]) {
@@ -3139,12 +3144,11 @@ async function runProgressAnalysis(chatId, userId, email) {
     const loadingMsgId = loadingMsg && loadingMsg.result ? loadingMsg.result.message_id : null;
 
     // Build the AI Prompt based on selected types
-    let prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Analisis data LebihFit berikut selama ${days} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
-                 `== PROFIL USER ==\n` +
-                 `Gender: ${(profile && profile.gender) || '?'}, BB: ${(profile && profile.bb) || '?'}kg, TB: ${(profile && profile.tb) || '?'}cm, Usia: ${(profile && profile.usia) || '?'}th, Goal: ${(profile && profile.target) || 'maintenance'}, Aktivitas: ${(profile && profile.aktivitas) || '?'}\n\n`;
-
     const activeDays = results.filter(d => d.logs.length > 0).length || 1;
-
+    
+    let avgCal = 0, avgProtein = 0, avgCarbs = 0, avgFat = 0, avgFiber = 0, avgSugar = 0, avgSodium = 0;
+    let avgCalcium = 0, avgIron = 0, avgVitC = 0, avgVitD = 0, avgZinc = 0;
+    
     if (config.food) {
       const totalCal = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.cal || 0), 0), 0);
       const totalProtein = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.protein || 0), 0), 0);
@@ -3153,88 +3157,295 @@ async function runProgressAnalysis(chatId, userId, email) {
       const totalFiber = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.fiber || 0), 0), 0);
       const totalSugar = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.sugar || 0), 0), 0);
       const totalSodium = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.sodium || 0), 0), 0);
+      const totalCalcium = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.calcium || 0), 0), 0);
+      const totalIron = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.iron || 0), 0), 0);
+      const totalVitC = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.vitC || 0), 0), 0);
+      const totalVitD = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.vitD || 0), 0), 0);
+      const totalZinc = results.reduce((s, d) => s + d.logs.reduce((sum, i) => sum + (i.zinc || 0), 0), 0);
 
-      const avgCal = totalCal / activeDays;
-      const avgProtein = totalProtein / activeDays;
-      const avgCarbs = totalCarbs / activeDays;
-      const avgFat = totalFat / activeDays;
-      const avgFiber = totalFiber / activeDays;
-      const avgSugar = totalSugar / activeDays;
-      const avgSodium = totalSodium / activeDays;
-
-      const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
-      const targetProtein = (profile && profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
-      const targetCarbs = (profile && profile.targets && profile.targets.carbs) ? profile.targets.carbs : Math.round((calTarget * 0.50) / 4);
-      const targetFat = (profile && profile.targets && profile.targets.fat) ? profile.targets.fat : Math.round((calTarget * 0.25) / 9);
-
-      prompt += `== DATA ASUPAN MAKANAN & GIZI (Rata-rata Harian) ==\n` +
-                `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${calTarget} kcal)\n` +
-                `- Protein: ${avgProtein.toFixed(1)}g/hari (target: ${targetProtein}g)\n` +
-                `- Karbohidrat: ${avgCarbs.toFixed(1)}g/hari\n` +
-                `- Lemak: ${avgFat.toFixed(1)}g/hari\n` +
-                `- Serat: ${avgFiber.toFixed(1)}g/hari\n` +
-                `- Gula: ${avgSugar.toFixed(1)}g/hari\n` +
-                `- Sodium: ${Math.round(avgSodium)}mg/hari\n\n`;
+      avgCal = totalCal / activeDays;
+      avgProtein = totalProtein / activeDays;
+      avgCarbs = totalCarbs / activeDays;
+      avgFat = totalFat / activeDays;
+      avgFiber = totalFiber / activeDays;
+      avgSugar = totalSugar / activeDays;
+      avgSodium = totalSodium / activeDays;
+      avgCalcium = totalCalcium / activeDays;
+      avgIron = totalIron / activeDays;
+      avgVitC = totalVitC / activeDays;
+      avgVitD = totalVitD / activeDays;
+      avgZinc = totalZinc / activeDays;
     }
 
-    if (config.activity || config.sleep) {
-      let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
-      results.forEach(d => {
-        d.acts.forEach(a => {
-          if (a.type === 'workout') workoutCount++;
-          else if (a.type === 'gym') gymCount++;
-          else if (a.type === 'cardio') cardioCount++;
-          else if (a.type === 'other') otherCount++;
-          else if (a.type === 'sleep') sleepData.push(a.hours);
+    let activitiesSummary = '';
+    results.forEach(d => {
+        const dayActs = d.acts || [];
+        if (dayActs.length > 0) {
+            activitiesSummary += `Tanggal ${d.date}:\n`;
+            dayActs.forEach(a => {
+                if (a.type === 'gym') {
+                    activitiesSummary += `- Gym: Otot ${(a.muscles || []).map(m => m.muscle).join(', ')}\n`;
+                    (a.muscles || []).forEach(m => {
+                        (m.variations || []).forEach(v => {
+                            const setsStr = (v.sets || []).map(s => `${s.reps} reps @ ${s.weight}kg`).join(', ');
+                            activitiesSummary += `  * ${v.name || 'Gerakan'}: ${setsStr}\n`;
+                        });
+                    });
+                } else if (a.type === 'workout') {
+                    activitiesSummary += `- Workout:\n`;
+                    (a.exercises || []).forEach(ex => {
+                        const setsStr = (ex.sets || []).map(s => `${s.reps} reps @ ${s.weight}kg`).join(', ');
+                        activitiesSummary += `  * ${ex.name}: ${setsStr}\n`;
+                    });
+                } else if (a.type === 'cardio') {
+                    activitiesSummary += `- Kardio: ${a.name}, ${a.durationMin} m, ${a.distanceKm || '--'} km, Intensitas ${a.intensity}, Burn ${a.burn?.kcal || 0} kcal\n`;
+                } else if (a.type === 'sleep') {
+                    activitiesSummary += `- Tidur: ${a.hours} jam, Kualitas ${a.quality}\n`;
+                } else if (a.type === 'other') {
+                    activitiesSummary += `- Aktivitas Lain: ${a.name}, ${a.durationMin} m, Intensitas ${a.intensity}, Burn ${a.burn?.kcal || 0} kcal\n`;
+                }
+            });
+        }
+    });
 
-          if (a.burn && a.burn.kcal) {
-            totalBurnedKcal += parseFloat(a.burn.kcal);
-          }
-        });
+    const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
+    const targetProtein = (profile && profile.targets && profile.targets.protein) ? profile.targets.protein : Math.round((calTarget * 0.25) / 4);
+
+    let prompt = `Kamu adalah AI Personal Coach, ahli gizi, dan pelatih fitness profesional yang asik, cerdas, dan bersahabat.
+Analisis data LebihFit berikut selama ${days} hari terakhir dan kembalikan respons dalam format JSON valid (dan HANYA JSON valid).
+
+== PROFIL USER ==
+- Gender: ${(profile && profile.gender) || '?'}, BB: ${(profile && profile.bb) || '?'} kg, TB: ${(profile && profile.tb) || '?'} cm, Usia: ${(profile && profile.usia) || '?'} tahun
+- Goal Target: ${(profile && profile.target) || 'maintenance'}, Level Aktivitas: ${(profile && profile.aktivitas) || '?'}
+- Target Kalori Harian: ${calTarget} kcal
+- Target Protein Harian: ${targetProtein} g
+- Target Berat Badan: ${(profile && profile.targetBb) || (profile && profile.bb) || '?'} kg
+- Body Fat saat ini: ${(profile && profile.bodyFat) || '?'} %
+- Catatan Tambahan Profil: ${(profile && profile.catatan) || '-'}
+
+== DATA ASUPAN MAKANAN HARIANS (RATA-RATA) ==
+- Kalori: ${Math.round(avgCal)} kcal/hari
+- Protein: ${avgProtein.toFixed(1)} g/hari
+- Karbohidrat: ${avgCarbs.toFixed(1)} g/hari
+- Lemak: ${avgFat.toFixed(1)} g/hari
+- Serat: ${avgFiber.toFixed(1)} g/hari
+- Gula: ${avgSugar.toFixed(1)} g/hari
+- Sodium: ${avgSodium.toFixed(1)} mg/hari
+- Kalsium: ${avgCalcium.toFixed(1)} mg/hari
+- Besi: ${avgIron.toFixed(1)} mg/hari
+- Vitamin C: ${avgVitC.toFixed(1)} mg/hari
+- Vitamin D: ${avgVitD.toFixed(1)} mcg/hari
+- Zinc: ${avgZinc.toFixed(1)} mg/hari
+
+== DATA KEGIATAN & ISTIRAHAT ==
+${activitiesSummary}
+
+== INSTRUKSI KALKULASI & ATURAN ANALISIS ==
+1. Hitung skorHarian (0-100) untuk nutrisi, protein, recovery (tidur vs intensitas latihan), aktivitas, dan konsistensi. Berikan status: "Sangat Baik" (85-100), "Perlu Perbaikan" (70-84), "Bermasalah" (<70).
+2. Tentukan statusGoal sesuai goal target (misal: "Cutting Agresif"). Tandai checklist yang sudah atau belum tercapai (defisit kalori, protein, aktivitas, tidur). Estimasi probabilitas keberhasilan besok.
+3. Hitung prediksiBerat: hitung rata-rata surplus/defisit harian (TDEE - Kalori makan + Kalori bakar olahraga). Estimasi penurunan/kenaikan lemak per minggu (Defisit/Surplus * 7 / 7700). Berikan prediksi perubahan berat badan dalam 30 hari dan 60 hari.
+4. Tentukan bodyFatEstimation: jika user tidak memasukkan Body Fat %, estimasikan secara ilmiah. Hitung Lean Mass dan Fat Mass (kg). Estimasi berapa minggu lagi untuk mencapai body fat target tertentu (misal: target 15%, 12%, 10% untuk pria; 24%, 20%, 18% untuk wanita).
+5. Lakukan analisisMakro secara pintar. Berikan peringatan jika lemak < 0.6g/kg BB, karbohidrat terlalu rendah untuk latihan beban, protein optimal, atau protein berlebih.
+6. Lakukan analisisMikro secara presisi. Bandingkan asupan harian dengan kebutuhan standar (Vit C: 90mg, Kalium: 4700mg, Magnesium: 350mg, Kalsium: 1000mg). Berikan gap (kekurangan) dan sebutkan rekomendasi makanan Indonesia yang kaya zat gizi tersebut.
+7. Hitung recovery score (0-100) berdasarkan durasi tidur (idealnya 7-9 jam), frekuensi latihan, intensitas, dan defisit kalori. Tuliskan penyebab pemulihan kurang maksimal.
+8. Lakukan analisisLatihan secara mendalam: hitung total volume latihan beban minggu ini (set * reps * weight) dan bandingkan dengan data sesi sebelumnya jika ada, hitung perubahan persen (progressive overload), dan hitung distribusi set per kelompok otot (misal: Back 12 set, Biceps 8 set).
+9. Buat actionPlan harian yang konkret dan mudah dilakukan (3-5 poin).
+10. Berikan progressAlert jika berat badan stag (plateau) atau turun terlalu cepat (risiko otot susut), beserta solusi kalorinya (misal: "Turunkan 150 kcal" atau "Naikkan 200 kcal").
+11. Hitung progressMeter: persentase progres menuju target berat badan, sisa kg, dan estimasi tanggal selesai secara logis.
+
+Kembalikan respons dalam JSON dengan format persis seperti ini:
+{
+  "skorHarian": {
+    "nutrisi": 92,
+    "protein": 100,
+    "recovery": 75,
+    "aktivitas": 88,
+    "konsistensi": 95,
+    "overallScore": 90,
+    "status": "Sangat Baik",
+    "statusColor": "green"
+  },
+  "statusGoal": {
+    "targetName": "Cutting Aggressive",
+    "checklist": [
+      { "label": "Defisit kalori tercapai", "achieved": true },
+      { "label": "Protein tercapai", "achieved": true },
+      { "label": "Aktivitas tercapai", "achieved": true },
+      { "label": "Tidur kurang 1 jam", "achieved": false }
+    ],
+    "tomorrowProbability": 90
+  },
+  "prediksiBerat": {
+    "weeklyDeficit": 4200,
+    "estFatLossPerWeek": 0.55,
+    "forecast30Days": -2.2,
+    "forecast60Days": -4.4
+  },
+  "bodyFatEstimation": {
+    "currentWeight": 82,
+    "currentBF": 18.0,
+    "leanMass": 67.2,
+    "fatMass": 14.8,
+    "targets": [
+      { "bf": 15, "estWeeks": 4 },
+      { "bf": 12, "estWeeks": 9 }
+    ]
+  },
+  "analisisMakro": [
+    { "label": "Protein Optimal", "status": "success", "desc": "Asupan protein lu cukup untuk mempertahankan massa otot." }
+  ],
+  "analisisMikro": [
+    { "name": "Vitamin C", "current": 78, "target": 90, "unit": "mg", "gap": 12, "foods": ["Jeruk", "Brokoli"] }
+  ],
+  "recovery": {
+    "score": 68,
+    "status": "Cukup Pemulihan",
+    "causes": ["Defisit kalori terlalu besar", "Tidur harian kurang dari 7 jam"]
+  },
+  "analisisLatihan": {
+    "summary": "Volume latihan meningkat, progres overload berjalan.",
+    "muscles": [
+      { "muscle": "Back", "sets": 12 }
+    ],
+    "volumeThisWeek": 4200,
+    "volumeLastWeek": 3800,
+    "volumeChangePercent": 10.5
+  },
+  "actionPlan": [
+    { "label": "Target protein minimal 170g", "done": false }
+  ],
+  "alerts": [
+    { "title": "Berat Badan Plateau", "type": "warning", "cause": "Kalori under-reporting atau retensi air", "recommendation": "Turunkan asupan kalori 150 kcal untuk minggu depan." }
+  ],
+  "progressMeter": {
+    "targetWeight": 75,
+    "currentWeight": 82,
+    "percent": 54,
+    "remaining": 7.0,
+    "estCompletion": "12 September 2026"
+  }
+}`;
+
+    const rawJson = await callGroqAPI([{ role: 'user', content: prompt }], 2500, true);
+    let data = null;
+    try {
+      let cleanJson = rawJson.trim();
+      const match = cleanJson.match(/\{[\s\S]*\}/);
+      data = match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+    } catch (e) {
+      console.error("Failed to parse progress JSON in bot:", rawJson, e);
+    }
+
+    let msg = `✨ *Hasil Analisis Progress AI (${days} Hari)* ✨\n\n`;
+    
+    if (data) {
+      // 1. Skor Fitness Harian
+      const sh = data.skorHarian || {};
+      const overall = sh.overallScore || 0;
+      let scoreEmoji = '🟢';
+      if (sh.statusColor === 'yellow') scoreEmoji = '🟡';
+      else if (sh.statusColor === 'red') scoreEmoji = '🔴';
+      
+      msg += `📊 *SKOR FITNESS HARIAN: ${overall}/100* ${scoreEmoji}\n`;
+      msg += `• Status: *${escapeMarkdown(sh.status || 'Sedang')}*\n`;
+      msg += `• Nutrisi: ${sh.nutrisi || 0}/100\n`;
+      msg += `• Protein: ${sh.protein || 0}/100\n`;
+      msg += `• Recovery: ${sh.recovery || 0}/100\n`;
+      msg += `• Aktivitas: ${sh.aktivitas || 0}/100\n`;
+      msg += `• Konsistensi: ${sh.konsistensi || 0}/100\n\n`;
+      
+      // 2. Goal Status
+      const sg = data.statusGoal || {};
+      msg += `🎯 *STATUS GOAL: ${escapeMarkdown(sg.targetName || 'Maintenance')}*\n`;
+      (sg.checklist || []).forEach(item => {
+        msg += `${item.achieved ? '✅' : '❌'} ${escapeMarkdown(item.label)}\n`;
       });
-      const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
-      const avgBurn = (totalBurnedKcal / days).toFixed(0);
-
-      if (config.activity) {
-        prompt += `== DATA OLAHRAGA & KEGIATAN ==\n` +
-                  `- Total Latihan: ${workoutCount + gymCount} sesi (Workout: ${workoutCount}, Gym: ${gymCount})\n` +
-                  `- Sesi Kardio: ${cardioCount} kali, Aktivitas Lainnya: ${otherCount} kali\n` +
-                  `- Rata-rata Kalori Terbakar: ${avgBurn} kcal/hari dari kegiatan olahraga\n\n`;
+      msg += `🔮 Probabilitas progress besok: *${sg.tomorrowProbability || 0}%*\n\n`;
+      
+      // 3. Goal Progress Meter
+      const pm = data.progressMeter || {};
+      const pmPercent = pm.percent !== undefined ? pm.percent : 0;
+      const filledBlocks = Math.min(10, Math.round(pmPercent / 10));
+      const emptyBlocks = 10 - filledBlocks;
+      const progressBarStr = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
+      
+      msg += `⚖️ *PROGRESS METER GOAL*\n`;
+      msg += `Target: ${pm.targetWeight || '--'} kg | Saat ini: ${pm.currentWeight || '--'} kg\n`;
+      msg += `[${progressBarStr}] *${pmPercent}%*\n`;
+      msg += `Sisa: *${pm.remaining !== undefined ? Math.abs(pm.remaining).toFixed(1) : '--'} kg lagi*\n`;
+      msg += `📅 Selesai target: *${escapeMarkdown(pm.estCompletion || '--')}*\n\n`;
+      
+      // 4. Weight Prediction & Body Comp
+      const pb = data.prediksiBerat || {};
+      const bf = data.bodyFatEstimation || {};
+      msg += `📈 *PREDIKSI & KOMPOSISI TUBUH*\n`;
+      msg += `• Defisit mingguan: *${pb.weeklyDeficit || 0} kcal*\n`;
+      msg += `• Lemak ${pb.estFatLossPerWeek >= 0 ? 'turun' : 'naik'}: *${Math.abs(pb.estFatLossPerWeek || 0).toFixed(2)} kg/minggu*\n`;
+      msg += `• Prediksi 30 hari: *${pb.forecast30Days > 0 ? '+' : ''}${pb.forecast30Days} kg*\n`;
+      msg += `• Prediksi 60 hari: *${pb.forecast60Days > 0 ? '+' : ''}${pb.forecast60Days} kg*\n`;
+      msg += `• Body Fat saat ini: *${bf.currentBF || '--'}%* (Lean: *${bf.leanMass || '--'} kg* | Fat: *${bf.fatMass || '--'} kg*)\n`;
+      (bf.targets || []).forEach(t => {
+        msg += `  - Target BF ${t.bf}%: *${t.estWeeks} minggu lagi*\n`;
+      });
+      msg += `\n`;
+      
+      // 5. Smart Macro Analysis
+      msg += `🔥 *ANALISIS MAKRO PINTAR*\n`;
+      (data.analisisMakro || []).forEach(item => {
+        const mIcon = item.status === 'success' ? '🟢' : item.status === 'warning' ? '⚠️' : '🚨';
+        msg += `${mIcon} *${escapeMarkdown(item.label)}*: ${escapeMarkdown(item.desc)}\n`;
+      });
+      msg += `\n`;
+      
+      // 6. Micro Nutrient Breakdown
+      msg += `🥛 *ANALISIS GIZI MIKRO GAPS*\n`;
+      (data.analisisMikro || []).forEach(m => {
+        msg += `• *${escapeMarkdown(m.name)}*: ${m.current}/${m.target} ${m.unit} ${m.gap > 0 ? `(Kurang ${m.gap} ${m.unit})` : '(Cukup)'}\n`;
+        msg += `  _Sumber makanan: ${escapeMarkdown((m.foods || []).join(', '))}_\n`;
+      });
+      msg += `\n`;
+      
+      // 7. Recovery Score
+      const rec = data.recovery || {};
+      msg += `😴 *RECOVERY & PEMULIHAN: ${rec.score || 0}/100* (${escapeMarkdown(rec.status || 'Cukup')})\n`;
+      (rec.causes || []).forEach(c => {
+        msg += `  - ${escapeMarkdown(c)}\n`;
+      });
+      msg += `\n`;
+      
+      // 8. Deep Training Analysis
+      const ex = data.analisisLatihan || {};
+      const vDiff = (ex.volumeThisWeek || 0) - (ex.volumeLastWeek || 0);
+      msg += `🏋️ *DEEP TRAINING ANALYSIS*\n`;
+      msg += `• Summary: ${escapeMarkdown(ex.summary || 'Latihan tercatat.')}\n`;
+      msg += `• Volume: *${ex.volumeThisWeek || 0} kg* vs *${ex.volumeLastWeek || 0} kg* (${vDiff >= 0 ? '+' : ''}${ex.volumeChangePercent || 0}%)\n`;
+      msg += `• Pembagian set:\n`;
+      (ex.muscles || []).forEach(m => {
+        msg += `  - ${escapeMarkdown(m.muscle)}: *${m.sets} set*\n`;
+      });
+      msg += `\n`;
+      
+      // 9. Daily Action Plan
+      msg += `📝 *DAILY ACTION PLAN*\n`;
+      (data.actionPlan || []).forEach(item => {
+        msg += `• [ ] ${escapeMarkdown(item.label)}\n`;
+      });
+      msg += `\n`;
+      
+      // 10. Alerts
+      if (data.alerts && data.alerts.length > 0) {
+        msg += `🚨 *PROGRESS ALERT*\n`;
+        data.alerts.forEach(a => {
+          msg += `• *${escapeMarkdown(a.title)}*\n`;
+          msg += `  _Penyebab: ${escapeMarkdown(a.cause)}_\n`;
+          msg += `  _Saran Coach: ${escapeMarkdown(a.recommendation)}_\n`;
+        });
       }
-      if (config.sleep) {
-        prompt += `== DATA ISTIRAHAT & TIDUR ==\n` +
-                  `- Rata-rata Tidur: ${avgSleep} jam/hari\n\n`;
-      }
-    }
-
-    prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). 
-ATURAN FORMATTING WAJIB:
-1. Jangan tulis paragraf panjang yang membosankan. Gunakan poin-poin pendek yang mudah dibaca.
-2. Gunakan tag <h3> dengan emoji untuk judul bagian (contoh: <h3>🔥 Kalori & Makro</h3>).
-3. Gunakan tag <ul> dan <li> untuk menjabarkan poin-poin penting atau tindakan konkret.
-4. Gunakan tag <strong> untuk menekankan angka atau pesan penting.
-5. Gunakan gaya bahasa gaul (lu/gue) yang asik dan menyemangati. Fokus pada data yang ada saja.`;
-
-    const rawHtml = await callGroqAPI([{ role: 'user', content: prompt }], 2500);
-    let html = '';
-    if (rawHtml) {
-      const cleanHtml = rawHtml.trim().replace(/```html\n?/gi, '').replace(/```\n?/gi, '').trim();
-      html = `
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.08);border:1px solid rgba(94,92,230,0.2);border-radius:8px;font-size:0.75rem;color:#5e5ce6;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          <b>Analisis Progress AI LebihFit</b> · Periode ${days === 1 ? 'Hari Ini' : days + ' Hari'} · ${new Date().toLocaleDateString('id-ID')}
-        </div>
-        ${cleanHtml}
-      `;
+    } else {
+      msg += `Gagal membuat analisis AI. Coba beberapa saat lagi atau periksa log data lu.`;
     }
 
     if (loadingMsgId) {
-      let msg = `✨ *Hasil Analisis Progress AI (${days} Hari)* ✨\n\n`;
-      if (html) {
-        msg += cleanHtmlToMarkdown(html);
-      } else {
-        msg += `Gagal membuat analisis AI. Coba beberapa saat lagi.`;
-      }
       return editMessageText(chatId, loadingMsgId, msg, {
         inline_keyboard: [
           [
@@ -3244,12 +3455,6 @@ ATURAN FORMATTING WAJIB:
         ]
       });
     } else {
-      let msg = `✨ *Hasil Analisis Progress AI (${days} Hari)* ✨\n\n`;
-      if (html) {
-        msg += cleanHtmlToMarkdown(html);
-      } else {
-        msg += `Gagal membuat analisis AI. Coba beberapa saat lagi.`;
-      }
       return sendMessage(chatId, msg, {
         inline_keyboard: [
           [
@@ -3432,50 +3637,107 @@ async function onPhysicalDescInput(chatId, userId, text) {
     const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
     const targetProtein = Math.round((profile && profile.targets) ? profile.targets.protein : 120);
 
-    // Build Gemini prompt requesting Markdown instead of HTML
-    let promptText = `Kamu adalah pelatih fitness personal dan ahli gizi klinis profesional. Analisis foto kondisi fisik tubuh user ini secara visual. ` +
-                     `Bandingkan kondisi fisiknya saat ini dengan data profil, catatan pribadinya, dan riwayat asupan/olahraganya selama ${days} hari terakhir. ` +
-                     `Berikan evaluasi yang objektif, jujur, edukatif, dan memotivasi untuk membantunya mencapai target kebugarannya.\n\n` +
-                     `== PROFIL PENGGUNA ==\n` +
-                     `- Tinggi Badan (TB): ${profile.tb || '?'} cm\n` +
-                     `- Berat Badan (BB): ${profile.bb || '?'} kg\n` +
-                     `- Usia: ${profile.usia || '?'} tahun\n` +
-                     `- Jenis Kelamin: ${profile.gender || 'pria'}\n` +
-                     `- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}\n` +
-                     `- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})\n\n` +
-                     `== RIWAYAT ${days} HARI TERAKHIR ==\n` +
-                     `- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${calTarget} kcal)\n` +
-                     `- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${targetProtein} g)\n` +
-                     `- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari\n` +
-                     `- Rata-rata Lemak: ${avgFat.toFixed(1)} g/hari\n` +
-                     `- Rata-rata Serat: ${avgFiber.toFixed(1)} g/hari\n` +
-                     `- Total Latihan: ${workoutCount + gymCount} sesi latihan beban (Gym: ${gymCount}, Workout: ${workoutCount}), serta ${cardioCount} sesi kardio\n` +
-                     `- Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari\n` +
-                     `- Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari\n\n`;
-                     
-    if (customDesc) {
-      promptText += `== CATATAN TAMBAHAN USER ==\n` +
-                    `"${customDesc}"\n\n`;
-    }
-    
-    promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format MARKDOWN TELEGRAM yang valid (hanya gunakan *tebal*, _miring_, atau \`code\`). Jangan gunakan tag HTML, dan jangan gunakan heading dengan simbol '#' atau '##' karena tidak didukung rapi di Telegram chat. Gunakan emoji di setiap poin untuk kerapihan.\n\n` +
-                  `Panduan format visual premium agar pembaca tertarik & tidak bosan:\n` +
-                  `1. Gunakan pembatas garis mendatar \`========================\` di antara section agar rapi.\n` +
-                  `2. Di awal section *🔍 Analisis Visual Tubuh*, buat summary box berisi status visual menggunakan inline code block agar memiliki background berbeda di Telegram, contoh:\n` +
-                  `   \`🔴 Komposisi: Skinny Fat\`\n` +
-                  `   \`🟡 Massa Otot: Rendah\`\n` +
-                  `   \`🟢 Definisi: Cukup\`\n` +
-                  `3. Di awal section *⚖️ Analisis Sinkronisasi*, jika ada ketidakcocokan data, buat sorotan mismatch utama dengan format:\n` +
-                  `   \`⚠️ Warning: Latihan beban 1x seminggu kurang untuk goal bulking!\`\n` +
-                  `4. Di awal section *💡 Saran Tindakan Konkret*, buat kesimpulan 1 kalimat tebal dan buat daftar langkah terstruktur menggunakan nomor emoji (1️⃣, 2️⃣, 3️⃣, 4️⃣). Contoh format langkah:\n` +
-                  `   1️⃣ *Ubah Frekuensi Latihan Beban*\n` +
-                  `   _Lakukan latihan minimal 3-4x seminggu dengan pola Upper/Lower split..._\n\n` +
-                  `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
+    // Build Gemini prompt requesting JSON
+    let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
+Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (otot, lemak, proporsi tubuh) dan mengaitkannya dengan data profil serta riwayat asupan/olahraga selama ${days} hari terakhir.
+Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberikan di bawah ini.
 
-    const rawMarkdown = await callGeminiVisionAPI(base64, mime, promptText, false);
-    
-    if (rawMarkdown) {
-      return sendMessage(chatId, rawMarkdown, mainMenuKeyboard());
+== PROFIL PENGGUNA ==
+- Tinggi Badan (TB): ${profile.tb || '?'} cm
+- Berat Badan (BB): ${profile.bb || '?'} kg
+- Usia: ${profile.usia || '?'} tahun
+- Jenis Kelamin: ${profile.gender || 'pria'}
+- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}
+- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})
+- Target Berat Badan: ${profile.targetBb || profile.bb || '?'} kg
+- Body Fat saat ini: ${profile.bodyFat || '?'} %
+
+== RIWAYAT ${days} HARI TERAKHIR ==
+- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${calTarget} kcal)
+- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${targetProtein} g)
+- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari
+- Rata-rata Lemak: ${avgFat.toFixed(1)} g/hari
+- Rata-rata Serat: ${avgFiber.toFixed(1)} g/hari
+- Total Latihan: ${workoutCount + gymCount} sesi latihan beban (Gym: ${gymCount}, Workout: ${workoutCount}), serta ${cardioCount} sesi kardio
+- Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari
+- Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari
+
+Catatan Tambahan User: "${customDesc || '-'}"
+
+== SKEMA JSON RESPONS (WAJIB PERSIS SEPERTI INI) ==
+{
+  "ringkasanSederhana": {
+    "pros": ["Asupan protein optimal", "Defisit kalori sudah tepat"],
+    "cons": ["Tidur terlalu rendah", "Lemak terlalu rendah", "Serat terlalu rendah"],
+    "focus": "Tidur + Lemak + Serat"
+  },
+  "targetMakro": {
+    "cal": 2000,
+    "protein": 170,
+    "carbs": 180,
+    "fat": 60,
+    "fiber": "25-35g",
+    "water": "3 Liter"
+  },
+  "makananRekomendasi": {
+    "category": "Sumber Lemak yang Direkomendasikan",
+    "foods": ["Telur utuh", "Alpukat", "Kacang tanah", "Kacang almond", "Ikan salmon", "Minyak zaitun"]
+  },
+  "prioritasPerbaikan": [
+    { "label": "Tidur", "impact": "Sangat Tinggi", "desc": "Tidur rata-rata hanya 5.7 jam. Sangat mengganggu recovery otot." },
+    { "label": "Serat", "impact": "Tinggi", "desc": "Tambahkan brokoli, bayam, wortel, apel, atau pisang." },
+    { "label": "Lemak", "impact": "Tinggi", "desc": "Asupan lemak terlalu rendah untuk produksi hormon sehat." }
+  ],
+  "perkiraanGoal": {
+    "currentBF": "16-18%",
+    "targetBF": "10-12%",
+    "weeks": "8-12 minggu",
+    "desc": "Dengan konsistensi tinggi pada defisit kalori dan latihan beban."
+  },
+  "kesalahanTerbesar": [
+    "Tidur hanya 5.7 jam",
+    "Lemak terlalu rendah",
+    "Serat terlalu rendah"
+  ],
+  "analisisRisiko": {
+    "muscleLoss": "Rendah",
+    "plateau": "Sedang",
+    "recoveryDisruption": "Tinggi",
+    "notes": "Risiko pemulihan terganggu tinggi karena kurang tidur."
+  },
+  "estimasiFisik30Hari": {
+    "waist": "turun 2-4 cm",
+    "weight": "turun 1.5-3 kg",
+    "bodyFat": "turun 1-2%",
+    "desc": "Otot perut bagian atas akan terlihat lebih jelas."
+  },
+  "nutrisiBerpotensiKurang": [
+    { "name": "Vitamin D", "sources": ["Salmon", "Susu", "Telur"] },
+    { "name": "Magnesium", "sources": ["Bayam", "Cokelat hitam", "Kacang-kacangan"] }
+  ],
+  "recoveryScore": {
+    "sleep": 45,
+    "protein": 95,
+    "calorie": 90,
+    "training": 85,
+    "total": 79
+  }
+}`;
+
+    const rawJson = await callGeminiVisionAPI(base64, mime, promptText, true);
+    let data = null;
+    try {
+      let cleanJson = rawJson.trim();
+      const match = cleanJson.match(/\{[\s\S]*\}/);
+      data = match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+    } catch (e) {
+      console.error("Failed to parse bot physical analysis JSON:", rawJson, e);
+      return sendMessage(chatId, '⚠️ Gagal membaca format data evaluasi dari AI. Silakan coba lagi.', mainMenuKeyboard());
+    }
+
+    if (data) {
+      const formattedMessage = formatPhysicalAnalysisBot(data);
+      return sendMessage(chatId, formattedMessage, mainMenuKeyboard());
     } else {
       return sendMessage(chatId, 'Gagal mendapatkan analisis dari AI. Silakan coba lagi nanti.', mainMenuKeyboard());
     }
@@ -3485,6 +3747,109 @@ async function onPhysicalDescInput(chatId, userId, text) {
     await setState(userId, null);
     return sendMessage(chatId, 'Gagal menjalankan evaluasi fisik: ' + err.message, mainMenuKeyboard());
   }
+}
+
+function formatPhysicalAnalysisBot(data) {
+  // 1. Ringkasan Super Singkat
+  const rs = data.ringkasanSederhana || {};
+  const pros = Array.isArray(rs.pros) ? rs.pros.map(p => `🟢 ${escapeMarkdown(p)}`).join('\n') : '';
+  const cons = Array.isArray(rs.cons) ? rs.cons.map(c => `⚠️ ${escapeMarkdown(c)}`).join('\n') : '';
+  const focus = escapeMarkdown(rs.focus || '--');
+
+  // 2. Recovery Score
+  const rec = data.recoveryScore || {};
+  const recTotal = rec.total || 0;
+  const bar = progressBar(recTotal);
+  const recSplit = `😴 Tidur: \`${rec.sleep || 0}\` | 🥩 Protein: \`${rec.protein || 0}\` | 🥗 Kalori: \`${rec.calorie || 0}\` | 🏋️ Latihan: \`${rec.training || 0}\``;
+
+  // 3. Target Makro Ideal
+  const tm = data.targetMakro || {};
+
+  // 4. Prioritas Perbaikan
+  let prioritasStr = '';
+  if (Array.isArray(data.prioritasPerbaikan)) {
+    const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
+    data.prioritasPerbaikan.forEach((p, idx) => {
+      const numEmoji = emojis[idx] || '🔹';
+      prioritasStr += `${numEmoji} *${escapeMarkdown(p.label)}* (Impact: *${escapeMarkdown(p.impact)}*)\n_${escapeMarkdown(p.desc)}_\n`;
+    });
+  }
+
+  // 5. Makanan yang Direkomendasikan
+  const mr = data.makananRekomendasi || {};
+  const category = escapeMarkdown(mr.category || 'Rekomendasi');
+  const foods = Array.isArray(mr.foods) ? mr.foods.map(f => escapeMarkdown(f)).join(', ') : '--';
+
+  // 6. Perkiraan Goal & Proyeksi
+  const pg = data.perkiraanGoal || {};
+  const ef = data.estimasiFisik30Hari || {};
+
+  // 7. Kesalahan & Analisis Risiko
+  const kesalahan = Array.isArray(data.kesalahanTerbesar) 
+    ? data.kesalahanTerbesar.map(k => `❌ ${escapeMarkdown(k)}`).join('\n') 
+    : '';
+
+  const ar = data.analisisRisiko || {};
+
+  // 8. Nutrisi Potensial Kurang
+  let nutrisiStr = '';
+  if (Array.isArray(data.nutrisiBerpotensiKurang)) {
+    data.nutrisiBerpotensiKurang.forEach(n => {
+      const sources = Array.isArray(n.sources) ? n.sources.join(', ') : '';
+      nutrisiStr += `⚠️ *${escapeMarkdown(n.name)}* ➔ Sumber: ${escapeMarkdown(sources)}\n`;
+    });
+  }
+
+  // Constructing the final message
+  let msg = `⚡ *RINGKASAN AI (3 DETIK BACA)*\n`;
+  if (pros) msg += `${pros}\n`;
+  if (cons) msg += `${cons}\n`;
+  msg += `🎯 Fokus Minggu Ini: \`${focus}\`\n\n`;
+
+  msg += `🏆 *Recovery Score: ${recTotal}/100*\n\`[${bar}]\`\n${recSplit}\n`;
+  msg += `────────────────────────\n`;
+  msg += `⚖️ *TARGET MAKRO IDEAL HARIAN*\n`;
+  msg += `🔥 Kalori: *${tm.cal || 0} kcal*\n`;
+  msg += `🥩 Protein: *${tm.protein || 0}g*\n`;
+  msg += `🍚 Karbo: *${tm.carbs || 0}g*\n`;
+  msg += `🥑 Lemak: *${tm.fat || 0}g*\n`;
+  msg += `🌾 Serat: *${escapeMarkdown(tm.fiber || '--')}* | 💧 Air: *${escapeMarkdown(tm.water || '--')}*\n`;
+  msg += `────────────────────────\n`;
+
+  if (prioritasStr) {
+    msg += `🛠️ *PRIORITAS PERBAIKAN*\n${prioritasStr}`;
+    msg += `────────────────────────\n`;
+  }
+
+  msg += `🥑 *MAKANAN REKOMENDASI*\n`;
+  msg += `*Kategori:* ${category}\n• ${foods}\n`;
+  msg += `────────────────────────\n`;
+
+  msg += `🔮 *PERKIRAAN GOAL & PROYEKSI*\n`;
+  msg += `• Body Fat Saat Ini: *${escapeMarkdown(pg.currentBF || '--')}*\n`;
+  msg += `• Target Body Fat: *${escapeMarkdown(pg.targetBF || '--')}*\n`;
+  msg += `• Estimasi Waktu: *${escapeMarkdown(pg.weeks || '--')}*\n`;
+  if (pg.desc) msg += `_${escapeMarkdown(pg.desc)}_\n`;
+  msg += `\n📅 *Jika Konsisten 30 Hari:*\n`;
+  msg += `• Lingkar Pinggang: *${escapeMarkdown(ef.waist || '--')}*\n`;
+  msg += `• Berat Badan: *${escapeMarkdown(ef.weight || '--')}*\n`;
+  msg += `• Body Fat: *${escapeMarkdown(ef.bodyFat || '--')}*\n`;
+  if (ef.desc) msg += `_${escapeMarkdown(ef.desc)}_\n`;
+  msg += `────────────────────────\n`;
+
+  msg += `⚠️ *KESALAHAN & ANALISIS RISIKO*\n`;
+  if (kesalahan) msg += `${kesalahan}\n\n`;
+  msg += `• Risiko Susut Otot: *${escapeMarkdown(ar.muscleLoss || 'Rendah')}*\n`;
+  msg += `• Risiko Plateau: *${escapeMarkdown(ar.plateau || 'Rendah')}*\n`;
+  msg += `• Gangguan Recovery: *${escapeMarkdown(ar.recoveryDisruption || 'Rendah')}*\n`;
+  if (ar.notes) msg += `💡 _${escapeMarkdown(ar.notes)}_\n`;
+  msg += `────────────────────────\n`;
+
+  if (nutrisiStr) {
+    msg += `🥛 *NUTRISI POTENSIAL KURANG*\n${nutrisiStr}`;
+  }
+
+  return msg;
 }
 
 module.exports = { handleMessage, handleCallback };

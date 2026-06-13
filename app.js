@@ -3014,6 +3014,12 @@ function prefillRecalcForm() {
     
     document.getElementById('r_tb').value = profile.tb;
     document.getElementById('r_bb').value = profile.bb;
+    if (document.getElementById('r_targetBb')) {
+        document.getElementById('r_targetBb').value = profile.targetBb || '';
+    }
+    if (document.getElementById('r_bodyFat')) {
+        document.getElementById('r_bodyFat').value = profile.bodyFat || '';
+    }
     document.getElementById('r_usia').value = profile.usia;
     document.getElementById('r_gender').value = profile.gender;
     document.getElementById('r_aktivitas').value = profile.aktivitas;
@@ -3033,6 +3039,8 @@ document.getElementById('recalcForm').addEventListener('submit', async (e) => {
     const profile = {
         tb: document.getElementById('r_tb').value,
         bb: document.getElementById('r_bb').value,
+        targetBb: document.getElementById('r_targetBb')?.value ? parseFloat(document.getElementById('r_targetBb').value) : null,
+        bodyFat: document.getElementById('r_bodyFat')?.value ? parseFloat(document.getElementById('r_bodyFat').value) : null,
         usia: document.getElementById('r_usia').value,
         gender: document.getElementById('r_gender').value,
         aktivitas: document.getElementById('r_aktivitas').value,
@@ -3841,67 +3849,183 @@ async function startProgressAnalysis() {
         const profile = getProfile() || {};
         const totalDays = Math.round((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
         
-        let prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Analisis data LebihFit berikut selama ${totalDays} hari terakhir dan berikan evaluasi mendalam, personal, serta tips konkret dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n` +
-                     `== PROFIL USER ==\n` +
-                     `Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'}kg, TB: ${profile.tb||'?'}cm, Usia: ${profile.usia||'?'}th, Goal: ${profile.target || 'maintenance'}, Aktivitas: ${profile.aktivitas || '?'}\n\n`;
+        let avgCal = 0, avgProtein = 0, avgCarbs = 0, avgFat = 0, avgFiber = 0, avgSugar = 0;
+        let avgSodium = 0, avgCalcium = 0, avgIron = 0, avgVitC = 0, avgVitD = 0, avgZinc = 0;
         
-        if (foodChecked) {
-            const avgCal = logs.reduce((s, d) => s + (d.totals ? d.totals.cal || 0 : 0), 0) / totalDays;
-            const avgProtein = logs.reduce((s, d) => s + (d.totals ? d.totals.protein || 0 : 0), 0) / totalDays;
-            const avgCarbs = logs.reduce((s, d) => s + (d.totals ? d.totals.carbs || 0 : 0), 0) / totalDays;
-            const avgFat = logs.reduce((s, d) => s + (d.totals ? d.totals.fat || 0 : 0), 0) / totalDays;
-            const avgFiber = logs.reduce((s, d) => s + (d.totals ? d.totals.fiber || 0 : 0), 0) / totalDays;
-            const avgSugar = logs.reduce((s, d) => s + (d.totals ? d.totals.sugar || 0 : 0), 0) / totalDays;
-            
-            prompt += `== DATA ASUPAN MAKANAN & GIZI (Rata-rata Harian) ==\n` +
-                      `- Asupan Kalori: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
-                      `- Protein: ${avgProtein.toFixed(1)}g/hari (target: ${profile.targets?.protein || 120}g)\n` +
-                      `- Karbohidrat: ${avgCarbs.toFixed(1)}g/hari\n` +
-                      `- Lemak: ${avgFat.toFixed(1)}g/hari\n` +
-                      `- Serat: ${avgFiber.toFixed(1)}g/hari\n` +
-                      `- Gula: ${avgSugar.toFixed(1)}g/hari\n\n`;
+        if (logs.length > 0) {
+            avgCal = logs.reduce((s, d) => s + (d.totals ? d.totals.cal || 0 : 0), 0) / totalDays;
+            avgProtein = logs.reduce((s, d) => s + (d.totals ? d.totals.protein || 0 : 0), 0) / totalDays;
+            avgCarbs = logs.reduce((s, d) => s + (d.totals ? d.totals.carbs || 0 : 0), 0) / totalDays;
+            avgFat = logs.reduce((s, d) => s + (d.totals ? d.totals.fat || 0 : 0), 0) / totalDays;
+            avgFiber = logs.reduce((s, d) => s + (d.totals ? d.totals.fiber || 0 : 0), 0) / totalDays;
+            avgSugar = logs.reduce((s, d) => s + (d.totals ? d.totals.sugar || 0 : 0), 0) / totalDays;
+            avgSodium = logs.reduce((s, d) => s + (d.totals ? d.totals.sodium || 0 : 0), 0) / totalDays;
+            avgCalcium = logs.reduce((s, d) => s + (d.totals ? d.totals.calcium || 0 : 0), 0) / totalDays;
+            avgIron = logs.reduce((s, d) => s + (d.totals ? d.totals.iron || 0 : 0), 0) / totalDays;
+            avgVitC = logs.reduce((s, d) => s + (d.totals ? d.totals.vitC || 0 : 0), 0) / totalDays;
+            avgVitD = logs.reduce((s, d) => s + (d.totals ? d.totals.vitD || 0 : 0), 0) / totalDays;
+            avgZinc = logs.reduce((s, d) => s + (d.totals ? d.totals.zinc || 0 : 0), 0) / totalDays;
         }
-        
-        if (actChecked || sleepChecked) {
-            let workoutCount = 0, gymCount = 0, cardioCount = 0, otherCount = 0, sleepData = [], totalBurnedKcal = 0;
-            Object.values(allActs).forEach(dayActs => {
+
+        let activitiesSummary = '';
+        Object.keys(allActs).sort().forEach(date => {
+            const dayActs = allActs[date] || [];
+            if (dayActs.length > 0) {
+                activitiesSummary += `Tanggal ${date}:\n`;
                 dayActs.forEach(a => {
-                    if (a.type === 'workout') { workoutCount++; }
-                    else if (a.type === 'gym') { gymCount++; }
-                    else if (a.type === 'cardio') { cardioCount++; }
-                    else if (a.type === 'other') { otherCount++; }
-                    else if (a.type === 'sleep') { sleepData.push(a.hours); }
-                    if (a.burn && a.burn.kcal) {
-                        totalBurnedKcal += parseFloat(a.burn.kcal);
+                    if (a.type === 'gym') {
+                        activitiesSummary += `- Gym: Otot ${(a.muscles || []).map(m => m.muscle).join(', ')}\n`;
+                        (a.muscles || []).forEach(m => {
+                            (m.variations || []).forEach(v => {
+                                const setsStr = (v.sets || []).map(s => `${s.reps} reps @ ${s.weight}kg`).join(', ');
+                                activitiesSummary += `  * ${v.name || 'Gerakan'}: ${setsStr}\n`;
+                            });
+                        });
+                    } else if (a.type === 'workout') {
+                        activitiesSummary += `- Workout:\n`;
+                        (a.exercises || []).forEach(ex => {
+                            const setsStr = (ex.sets || []).map(s => `${s.reps} reps @ ${s.weight}kg`).join(', ');
+                            activitiesSummary += `  * ${ex.name}: ${setsStr}\n`;
+                        });
+                    } else if (a.type === 'cardio') {
+                        activitiesSummary += `- Kardio: ${a.name}, ${a.durationMin} m, ${a.distanceKm || '--'} km, Intensitas ${a.intensity}, Burn ${a.burn?.kcal || 0} kcal\n`;
+                    } else if (a.type === 'sleep') {
+                        activitiesSummary += `- Tidur: ${a.hours} jam, Kualitas ${a.quality}\n`;
+                    } else if (a.type === 'other') {
+                        activitiesSummary += `- Aktivitas Lain: ${a.name}, ${a.durationMin} m, Intensitas ${a.intensity}, Burn ${a.burn?.kcal || 0} kcal\n`;
                     }
                 });
-            });
-            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
-            const avgBurn = (totalBurnedKcal / totalDays).toFixed(0);
-            
-            if (actChecked) {
-                prompt += `== DATA OLAHRAGA & KEGIATAN ==\n` +
-                          `- Total Latihan: ${workoutCount + gymCount} sesi (Workout: ${workoutCount}, Gym: ${gymCount})\n` +
-                          `- Sesi Kardio: ${cardioCount} kali, Aktivitas Lainnya: ${otherCount} kali\n` +
-                          `- Rata-rata Kalori Terbakar: ${avgBurn} kcal/hari dari kegiatan olahraga\n\n`;
             }
-            if (sleepChecked) {
-                prompt += `== DATA ISTIRAHAT & TIDUR ==\n` +
-                          `- Rata-rata Tidur: ${avgSleep} jam/hari\n\n`;
-            }
+        });
+
+        let prompt = `Kamu adalah AI Personal Coach, ahli gizi, dan pelatih fitness profesional yang asik, cerdas, dan bersahabat.
+Analisis data LebihFit berikut selama ${totalDays} hari terakhir dan kembalikan respons dalam format JSON valid (dan HANYA JSON valid).
+
+== PROFIL USER ==
+- Gender: ${profile.gender || '?'}, BB: ${profile.bb||'?'} kg, TB: ${profile.tb||'?'} cm, Usia: ${profile.usia||'?'} tahun
+- Goal Target: ${profile.target || 'maintenance'}, Level Aktivitas: ${profile.aktivitas || '?'}
+- Target Kalori Harian: ${profile.targets?.cal || 2000} kcal
+- Target Protein Harian: ${profile.targets?.protein || 120} g
+- Target Berat Badan: ${profile.targetBb || profile.bb || '?'} kg
+- Body Fat saat ini: ${profile.bodyFat || '?'} %
+- Catatan Tambahan Profil: ${profile.catatan || '-'}
+
+== DATA ASUPAN MAKANAN HARIANS (RATA-RATA) ==
+- Kalori: ${Math.round(avgCal)} kcal/hari
+- Protein: ${avgProtein.toFixed(1)} g/hari
+- Karbohidrat: ${avgCarbs.toFixed(1)} g/hari
+- Lemak: ${avgFat.toFixed(1)} g/hari
+- Serat: ${avgFiber.toFixed(1)} g/hari
+- Gula: ${avgSugar.toFixed(1)} g/hari
+- Sodium: ${avgSodium.toFixed(1)} mg/hari
+- Kalsium: ${avgCalcium.toFixed(1)} mg/hari
+- Besi: ${avgIron.toFixed(1)} mg/hari
+- Vitamin C: ${avgVitC.toFixed(1)} mg/hari
+- Vitamin D: ${avgVitD.toFixed(1)} mcg/hari
+- Zinc: ${avgZinc.toFixed(1)} mg/hari
+
+== DATA KEGIATAN & ISTIRAHAT ==
+${activitiesSummary}
+
+== INSTRUKSI KALKULASI & ATURAN ANALISIS ==
+1. Hitung skorHarian (0-100) untuk nutrisi, protein, recovery (tidur vs intensitas latihan), aktivitas, dan konsistensi. Berikan status: "Sangat Baik" (85-100), "Perlu Perbaikan" (70-84), "Bermasalah" (<70).
+2. Tentukan statusGoal sesuai goal target (misal: "Cutting Agresif"). Tandai checklist yang sudah atau belum tercapai (defisit kalori, protein, aktivitas, tidur). Estimasi probabilitas keberhasilan besok.
+3. Hitung prediksiBerat: hitung rata-rata surplus/defisit harian (TDEE - Kalori makan + Kalori bakar olahraga). Estimasi penurunan/kenaikan lemak per minggu (Defisit/Surplus * 7 / 7700). Berikan prediksi perubahan berat badan dalam 30 hari dan 60 hari.
+4. Tentukan bodyFatEstimation: jika user tidak memasukkan Body Fat %, estimasikan secara ilmiah. Hitung Lean Mass dan Fat Mass (kg). Estimasi berapa minggu lagi untuk mencapai body fat target tertentu (misal: target 15%, 12%, 10% untuk pria; 24%, 20%, 18% untuk wanita).
+5. Lakukan analisisMakro secara pintar. Berikan peringatan jika lemak < 0.6g/kg BB, karbohidrat terlalu rendah untuk latihan beban, protein optimal, atau protein berlebih.
+6. Lakukan analisisMikro secara presisi. Bandingkan asupan harian dengan kebutuhan standar (Vit C: 90mg, Kalium: 4700mg, Magnesium: 350mg, Kalsium: 1000mg). Berikan gap (kekurangan) dan sebutkan rekomendasi makanan Indonesia yang kaya zat gizi tersebut.
+7. Hitung recovery score (0-100) berdasarkan durasi tidur (idealnya 7-9 jam), frekuensi latihan, intensitas, dan defisit kalori. Tuliskan penyebab pemulihan kurang maksimal.
+8. Lakukan analisisLatihan secara mendalam: hitung total volume latihan beban minggu ini (set * reps * weight) dan bandingkan dengan data sesi sebelumnya jika ada, hitung perubahan persen (progressive overload), dan hitung distribusi set per kelompok otot (misal: Back 12 set, Biceps 8 set).
+9. Buat actionPlan harian yang konkret dan mudah dilakukan (3-5 poin).
+10. Berikan progressAlert jika berat badan stag (plateau) atau turun terlalu cepat (risiko otot susut), beserta solusi kalorinya (misal: "Turunkan 150 kcal" atau "Naikkan 200 kcal").
+11. Hitung progressMeter: persentase progres menuju target berat badan, sisa kg, dan estimasi tanggal selesai secara logis.
+
+Kembalikan respons dalam JSON dengan format persis seperti ini:
+{
+  "skorHarian": {
+    "nutrisi": 92,
+    "protein": 100,
+    "recovery": 75,
+    "aktivitas": 88,
+    "konsistensi": 95,
+    "overallScore": 90,
+    "status": "Sangat Baik",
+    "statusColor": "green"
+  },
+  "statusGoal": {
+    "targetName": "Cutting Aggressive",
+    "checklist": [
+      { "label": "Defisit kalori tercapai", "achieved": true },
+      { "label": "Protein tercapai", "achieved": true },
+      { "label": "Aktivitas tercapai", "achieved": true },
+      { "label": "Tidur kurang 1 jam", "achieved": false }
+    ],
+    "tomorrowProbability": 90
+  },
+  "prediksiBerat": {
+    "weeklyDeficit": 4200,
+    "estFatLossPerWeek": 0.55,
+    "forecast30Days": -2.2,
+    "forecast60Days": -4.4
+  },
+  "bodyFatEstimation": {
+    "currentWeight": 82,
+    "currentBF": 18.0,
+    "leanMass": 67.2,
+    "fatMass": 14.8,
+    "targets": [
+      { "bf": 15, "estWeeks": 4 },
+      { "bf": 12, "estWeeks": 9 }
+    ]
+  },
+  "analisisMakro": [
+    { "label": "Protein Optimal", "status": "success", "desc": "Asupan protein lu cukup untuk mempertahankan massa otot." }
+  ],
+  "analisisMikro": [
+    { "name": "Vitamin C", "current": 78, "target": 90, "unit": "mg", "gap": 12, "foods": ["Jeruk", "Brokoli"] }
+  ],
+  "recovery": {
+    "score": 68,
+    "status": "Cukup Pemulihan",
+    "causes": ["Defisit kalori terlalu besar", "Tidur harian kurang dari 7 jam"]
+  },
+  "analisisLatihan": {
+    "summary": "Volume latihan meningkat, progres overload berjalan.",
+    "muscles": [
+      { "muscle": "Back", "sets": 12 }
+    ],
+    "volumeThisWeek": 4200,
+    "volumeLastWeek": 3800,
+    "volumeChangePercent": 10.5
+  },
+  "actionPlan": [
+    { "label": "Target protein minimal 170g", "done": false }
+  ],
+  "alerts": [
+    { "title": "Berat Badan Plateau", "type": "warning", "cause": "Kalori under-reporting atau retensi air", "recommendation": "Turunkan asupan kalori 150 kcal untuk minggu depan." }
+  ],
+  "progressMeter": {
+    "targetWeight": 75,
+    "currentWeight": 82,
+    "percent": 54,
+    "remaining": 7.0,
+    "estCompletion": "12 September 2026"
+  }
+}`;
+
+        const rawJson = await callAI([{ role: 'user', content: prompt }], true, 'llama-3.3-70b-versatile');
+        let data = null;
+        try {
+            let cleanJson = rawJson.trim();
+            const match = cleanJson.match(/\{[\s\S]*\}/);
+            data = match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+        } catch (e) {
+            console.error("Failed to parse progress analysis JSON:", rawJson, e);
+            throw new Error("Format analisis dari AI tidak valid. Silakan coba lagi.");
         }
         
-        prompt += `Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). 
-ATURAN FORMATTING WAJIB:
-1. Jangan tulis paragraf panjang yang membosankan. Gunakan poin-poin pendek yang mudah dibaca.
-2. Gunakan tag <h3> dengan emoji untuk judul bagian (contoh: <h3>🔥 Kalori & Makro</h3>).
-3. Gunakan tag <ul> dan <li> untuk menjabarkan poin-poin penting atau tindakan konkret.
-4. Gunakan tag <strong> untuk menekankan angka atau pesan penting.
-5. Gunakan gaya bahasa gaul (lu/gue) yang asik dan menyemangati. Fokus pada data yang ada saja.`;
-        
-        const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
-        if (rawHtml) {
-            const finalHtml = styleAIHtml(rawHtml);
+        if (data) {
+            const finalHtml = renderProgressAnalysisUI(data);
             resultTextEl.innerHTML = finalHtml;
             
             if (typeof DB !== 'undefined') {
@@ -3926,6 +4050,314 @@ ATURAN FORMATTING WAJIB:
         console.error('startProgressAnalysis error:', err);
         resultTextEl.innerHTML = `<p style="color:var(--danger);">Error: ${err.message}</p>`;
     }
+}
+
+function renderProgressAnalysisUI(data) {
+    if (!data) return '<p style="color:var(--danger)">Gagal memuat analisis.</p>';
+    
+    // 1. Score Harian
+    const sh = data.skorHarian || {};
+    const scoreColorMap = {
+        green: 'var(--success)',
+        yellow: '#ff9f0a',
+        red: 'var(--danger)'
+    };
+    const scoreColor = scoreColorMap[sh.statusColor] || 'var(--accent)';
+    
+    let scoresHtml = '';
+    const scoreFields = [
+        { label: 'Nutrisi', val: sh.nutrisi },
+        { label: 'Protein', val: sh.protein },
+        { label: 'Recovery', val: sh.recovery },
+        { label: 'Aktivitas', val: sh.aktivitas },
+        { label: 'Konsistensi', val: sh.konsistensi }
+    ];
+    scoreFields.forEach(f => {
+        const val = f.val !== undefined ? f.val : 0;
+        let pctColor = 'var(--success)';
+        if (val < 70) pctColor = 'var(--danger)';
+        else if (val < 85) pctColor = '#ff9f0a';
+        
+        scoresHtml += `
+            <div style="flex:1; min-width:80px; text-align:center; padding:10px; background:var(--surface2); border:1px solid var(--border);">
+                <div style="font-size:0.75rem; color:var(--text2); text-transform:uppercase; margin-bottom:4px;">${f.label}</div>
+                <div style="font-size:1.4rem; font-weight:800; color:${pctColor};">${val}</div>
+            </div>
+        `;
+    });
+
+    // 2. Goal Status Checklist
+    const sg = data.statusGoal || {};
+    let checklistHtml = '';
+    (sg.checklist || []).forEach(item => {
+        const icon = item.achieved ? '✅' : '❌';
+        const color = item.achieved ? 'var(--text)' : 'var(--text3)';
+        checklistHtml += `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; color:${color}; font-size:0.9rem;">
+                <span>${icon}</span>
+                <span>${item.label}</span>
+            </div>
+        `;
+    });
+
+    // 3. Weight Prediction
+    const pb = data.prediksiBerat || {};
+    const fatLossDir = pb.estFatLossPerWeek >= 0 ? 'turun' : 'naik';
+    const absFatLoss = Math.abs(pb.estFatLossPerWeek || 0).toFixed(2);
+    
+    // 4. Body Fat Estimation
+    const bf = data.bodyFatEstimation || {};
+    let bfTimelineHtml = '';
+    (bf.targets || []).forEach(t => {
+        bfTimelineHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; border-bottom:1px dashed var(--border);">
+                <span style="color:var(--text2);">Target BF ${t.bf}%</span>
+                <span style="font-weight:700; color:var(--accent);">${t.estWeeks} minggu lagi</span>
+            </div>
+        `;
+    });
+
+    // 5. Smart Macro Analysis
+    let macroAnalysisHtml = '';
+    (data.analisisMakro || []).forEach(item => {
+        const icon = item.status === 'success' ? '🟢' : item.status === 'warning' ? '⚠️' : '🚨';
+        macroAnalysisHtml += `
+            <div style="margin-bottom:10px; padding:10px; background:var(--surface2); border-left:3px solid ${item.status === 'success' ? 'var(--success)' : item.status === 'warning' ? '#ff9f0a' : 'var(--danger)'};">
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text); display:flex; align-items:center; gap:6px;">
+                    <span>${icon}</span> <span>${item.label}</span>
+                </div>
+                <div style="font-size:0.82rem; color:var(--text2); margin-top:2px;">${item.desc}</div>
+            </div>
+        `;
+    });
+
+    // 6. Micro Nutrient Breakdown
+    let microHtml = '';
+    (data.analisisMikro || []).forEach(m => {
+        const gapColor = m.gap > 0 ? '#ff9f0a' : 'var(--success)';
+        const pct = Math.min(100, Math.round((m.current / m.target) * 100));
+        microHtml += `
+            <div style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+                    <span style="font-weight:600; color:var(--text);">${m.name}</span>
+                    <span style="color:var(--text2);">${m.current}/${m.target} ${m.unit} ${m.gap > 0 ? `<span style="color:#ff3366;">(Kurang ${m.gap} ${m.unit})</span>` : '<span style="color:var(--success);">(Cukup)</span>'}</span>
+                </div>
+                <div style="width:100%; height:6px; background:var(--border); overflow:hidden;">
+                    <div style="width:${pct}%; height:100%; background:${gapColor};"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text3); margin-top:2px;">Sumber makanan: ${(m.foods || []).join(', ')}</div>
+            </div>
+        `;
+    });
+
+    // 7. Recovery Score
+    const rec = data.recovery || {};
+    let recCausesHtml = '';
+    (rec.causes || []).forEach(c => {
+        recCausesHtml += `<li style="font-size:0.82rem; color:var(--text2); margin-left:14px; margin-bottom:2px;">${c}</li>`;
+    });
+
+    // 8. Deep Training Analysis
+    const ex = data.analisisLatihan || {};
+    let musclesHtml = '';
+    (ex.muscles || []).forEach(m => {
+        musclesHtml += `
+            <div style="background:var(--surface); border:1px solid var(--border); padding:6px 10px; text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text2); text-transform:uppercase;">${m.muscle}</div>
+                <div style="font-size:1.1rem; font-weight:700; color:var(--accent);">${m.sets} Set</div>
+            </div>
+        `;
+    });
+    const volDiff = (ex.volumeThisWeek || 0) - (ex.volumeLastWeek || 0);
+    const volDir = volDiff >= 0 ? '+' : '-';
+    const volPct = ex.volumeChangePercent || 0;
+
+    // 9. Daily Action Plan
+    let actionPlanHtml = '';
+    (data.actionPlan || []).forEach(item => {
+        actionPlanHtml += `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:0.88rem;">
+                <span style="color:var(--accent);">🎯</span>
+                <span style="color:var(--text);">${item.label}</span>
+            </div>
+        `;
+    });
+
+    // 10. Progress Alert
+    let alertHtml = '';
+    if (data.alerts && data.alerts.length > 0) {
+        data.alerts.forEach(a => {
+            alertHtml += `
+                <div style="background:rgba(255,51,102,0.08); border:1px solid var(--danger); padding:12px 14px; margin-bottom:16px; position:relative;">
+                    <div style="font-weight:700; color:var(--danger); font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                        <span>🚨</span> <span>${a.title}</span>
+                    </div>
+                    <div style="font-size:0.82rem; color:var(--text2); margin-top:4px;"><b>Penyebab:</b> ${a.cause}</div>
+                    <div style="font-size:0.82rem; color:var(--success); margin-top:2px;"><b>Saran Coach:</b> ${a.recommendation}</div>
+                </div>
+            `;
+        });
+    }
+
+    // 11. Goal Progress Meter
+    const pm = data.progressMeter || {};
+    const remainingText = pm.remaining !== undefined ? `${Math.abs(pm.remaining).toFixed(1)} kg lagi` : '--';
+    const completionText = pm.estCompletion || '--';
+    const pmPercent = pm.percent !== undefined ? pm.percent : 0;
+    
+    let html = `
+        <div style="display:flex; flex-direction:column; gap:16px; font-family:var(--font); color:var(--text);">
+            
+            <!-- Overall Score & Status -->
+            <div style="background:linear-gradient(135deg, var(--surface2), var(--surface)); border:1px solid var(--border); padding:20px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:16px;">
+                <div>
+                    <div style="font-size:0.75rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Skor Progress Harian</div>
+                    <div style="display:flex; align-items:baseline; gap:8px;">
+                        <span style="font-size:2.8rem; font-weight:900; color:${scoreColor}; line-height:1;">${sh.overallScore || 0}</span>
+                        <span style="font-size:1rem; color:var(--text3);">/100</span>
+                    </div>
+                    <div style="margin-top:6px; display:inline-flex; align-items:center; gap:6px; padding:3px 10px; background:rgba(0,240,255,0.05); border:1px solid var(--border); font-size:0.8rem; font-weight:700; color:${scoreColor}; text-transform:uppercase;">
+                        ${sh.status || 'Sedang'}
+                    </div>
+                </div>
+                <div style="flex:1; min-width:300px; display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;">
+                    ${scoresHtml}
+                </div>
+            </div>
+
+            <!-- Alerts ( Plateaus / Warnings ) -->
+            ${alertHtml}
+
+            <!-- 2-Column Dashboard Grid -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+                
+                <!-- Left Column -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    
+                    <!-- Goal Status Checklist -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🎯 Status Goal: ${sg.targetName || 'Maintenance'}</h4>
+                        <div style="margin-bottom:12px;">
+                            ${checklistHtml}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; border-top:1px solid var(--border); padding-top:10px; color:var(--text2);">
+                            <span>Probabilitas progress besok:</span>
+                            <span style="font-weight:700; color:var(--success); font-size:1rem;">${sg.tomorrowProbability || 0}%</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Meter Goal -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">⚖️ Progress Meter Goal</h4>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:6px; color:var(--text2);">
+                            <span>Target: ${pm.targetWeight || '--'} kg</span>
+                            <span>Saat ini: ${pm.currentWeight || '--'} kg</span>
+                        </div>
+                        <div style="width:100%; height:10px; background:var(--surface2); border:1px solid var(--border); overflow:hidden; margin-bottom:10px;">
+                            <div style="width:${pmPercent}%; height:100%; background:linear-gradient(90deg, var(--accent2), var(--accent));"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                            <span style="color:var(--text2);">Progres: <b style="color:var(--text);">${pmPercent}%</b></span>
+                            <span style="color:var(--text2);">Sisa: <b style="color:var(--accent);">${remainingText}</b></span>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--text3); border-top:1px solid var(--border); padding-top:8px; margin-top:8px; text-align:center;">
+                            📅 Estimasi selesai target: <b>${completionText}</b>
+                        </div>
+                    </div>
+
+                    <!-- Weight Prediction & Body Composition -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">📈 Prediksi & Komposisi Tubuh</h4>
+                        <div style="background:var(--surface2); padding:10px; margin-bottom:12px; font-size:0.82rem; color:var(--text2); line-height:1.4;">
+                            • Rata-rata defisit mingguan: <b>${pb.weeklyDeficit || 0} kcal</b><br>
+                            • Estimasi lemak ${fatLossDir}: <b>${absFatLoss} kg/minggu</b><br>
+                            • Prediksi 30 hari: <b style="color:${pb.forecast30Days <= 0 ? 'var(--success)' : 'var(--danger)'};">${pb.forecast30Days > 0 ? '+' : ''}${pb.forecast30Days} kg</b><br>
+                            • Prediksi 60 hari: <b style="color:${pb.forecast60Days <= 0 ? 'var(--success)' : 'var(--danger)'};">${pb.forecast60Days > 0 ? '+' : ''}${pb.forecast60Days} kg</b>
+                        </div>
+                        <div style="font-size:0.82rem; margin-bottom:8px;">
+                            • BF saat ini: <b>${bf.currentBF || '--'}%</b> (Lean: <b>${bf.leanMass || '--'} kg</b> | Fat: <b>${bf.fatMass || '--'} kg</b>)
+                        </div>
+                        <div>
+                            ${bfTimelineHtml}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    
+                    <!-- Smart Macro Analysis -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🔥 Analisis Makro Pintar</h4>
+                        <div>
+                            ${macroAnalysisHtml}
+                        </div>
+                    </div>
+
+                    <!-- Micro Nutrient Breakdown -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🥛 Analisis Gizi Mikro</h4>
+                        <div>
+                            ${microHtml}
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Recovery & Deep Training Analysis & Daily Action Plan -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+                
+                <!-- Recovery Card -->
+                <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                    <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                    <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">😴 Recovery & Pemulihan</h4>
+                    <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
+                        <span style="font-size:2rem; font-weight:900; color:${rec.score >= 80 ? 'var(--success)' : rec.score >= 60 ? '#ff9f0a' : 'var(--danger)'};">${rec.score || 0}</span>
+                        <span style="font-size:0.85rem; color:var(--text2);">/100 (${rec.status || 'Cukup'})</span>
+                    </div>
+                    <ul style="padding-left:0; list-style:none;">
+                        ${recCausesHtml}
+                    </ul>
+                </div>
+
+                <!-- Deep Training Analysis -->
+                <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                    <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                    <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🏋️ Deep Training Analysis</h4>
+                    <div style="font-size:0.82rem; color:var(--text2); margin-bottom:10px; line-height:1.4;">
+                        • ${ex.summary || 'Latihan tercatat.'}
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap:8px; margin-bottom:12px;">
+                        ${musclesHtml}
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--text3); border-top:1px solid var(--border); padding-top:8px;">
+                        • Volume beban: <b>${ex.volumeThisWeek || 0} kg</b> vs <b>${ex.volumeLastWeek || 0} kg</b> (Progressive Overload: <b style="color:${volDiff >= 0 ? 'var(--success)' : 'var(--danger)'};">${volDir}${volPct}%</b>)
+                    </div>
+                </div>
+
+                <!-- Daily Action Plan -->
+                <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                    <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                    <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">📝 Daily Action Plan</h4>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        ${actionPlanHtml}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    `;
+    
+    return html;
 }
 
 function renderProgressAnalysisChart(foodChecked, actChecked, sleepChecked, dateSeries, logs, allActs) {
@@ -4192,52 +4624,104 @@ async function startPhysicalAnalysis() {
         const base64Data = imgPreview.src.split(',')[1];
         const mimeType = imgPreview.src.split(',')[0].split(':')[1].split(';')[0];
         
-        // Build the prompt for Gemini Flash
-        let promptText = `Kamu adalah pelatih fitness personal dan ahli gizi klinis profesional. Analisis foto kondisi fisik tubuh user ini secara visual. ` +
-                         `Bandingkan kondisi fisiknya saat ini dengan data profil, catatan pribadinya, dan riwayat asupan/olahraganya selama ${days} hari terakhir. ` +
-                         `Berikan evaluasi yang objektif, jujur, edukatif, dan memotivasi untuk membantunya mencapai target kebugarannya.\n\n` +
-                         `== PROFIL PENGGUNA ==\n` +
-                         `- Tinggi Badan (TB): ${profile.tb || '?'} cm\n` +
-                         `- Berat Badan (BB): ${profile.bb || '?'} kg\n` +
-                         `- Usia: ${profile.usia || '?'} tahun\n` +
-                         `- Jenis Kelamin: ${profile.gender || 'pria'}\n` +
-                         `- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}\n` +
-                         `- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})\n\n` +
-                         `== RIWAYAT ${days} HARI TERAKHIR ==\n` +
-                         `- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)\n` +
-                         `- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${profile.targets?.protein || 120} g)\n` +
-                         `- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari\n` +
-                         `- Rata-rata Lemak: ${avgFat.toFixed(1)} g/hari\n` +
-                         `- Rata-rata Serat: ${avgFiber.toFixed(1)} g/hari\n` +
-                         `- Total Latihan: ${workoutCount + gymCount} sesi latihan beban (Gym: ${gymCount}, Workout: ${workoutCount}), serta ${cardioCount} sesi kardio\n` +
-                         `- Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari\n` +
-                         `- Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari\n\n`;
-                         
-        if (customDesc) {
-            promptText += `== CATATAN TAMBAHAN USER ==\n` +
-                          `"${customDesc}"\n\n`;
-        }
-        
-        promptText += `Tulis laporan evaluasi fisik & kebugaran ini dalam format HTML VALID yang indah dan terstruktur (TANPA markdown, TANPA kode \`\`\`html). Gunakan struktur class CSS berikut:\n` +
-                      `- Bungkus seluruh laporan di dalam \`<div class="feedback-container">\`\n` +
-                      `- Gunakan \`<div class="feedback-card">\` untuk setiap dari 3 section utama.\n` +
-                      `- Judul section menggunakan \`<h3 class="feedback-title">\` (sertakan emoji/icon yang sesuai).\n` +
-                      `- Di bagian awal section "Analisis Visual Tubuh", buat tag \`<div class="feedback-badge-row">\` yang berisi 2-3 badge \`<span class="feedback-pill danger|warning|success|info">\` untuk menyimpulkan secara cepat kondisi visual (misal: Skinny Fat, Massa Otot Rendah, dll).\n` +
-                      `- Untuk poin-poin analisis detail (seperti Distribusi Lemak, Massa Otot, dll), gunakan list terstruktur dengan class \`<ul class="feedback-list">\` dan tag \`<li>\`.\n` +
-                      `- Di bagian awal section "Analisis Sinkronisasi Data & Goals", jika ada mismatch besar antara latihan/nutrisi dengan goals, buat box warning menggunakan \`<div class="feedback-warning-box">\` untuk memaparkan ketidakcocokan utama secara menonjol.\n` +
-                      `- Di section "Saran Tindakan Konkret", buat daftar langkah terstruktur menggunakan class \`<div class="feedback-steps">\` yang membungkus beberapa \`<div class="feedback-step">\`. Struktur per langkah:\n` +
-                      `  \`<div class="feedback-step">\`\n` +
-                      `    \`<div class="step-number">1</div>\` (angka berurutan)\n` +
-                      `    \`<div class="step-content">\`\n` +
-                      `      \`<h4>Judul Langkah Singkat & Jelas</h4>\`\n` +
-                      `      \`<p>Penjelasan detail saran tindakan...</p>\`\n` +
-                      `    \`</div>\`\n` +
-                      `  \`</div>\`\n\n` +
-                      `Gaya bahasa: Gunakan bahasa Indonesia yang santai tapi profesional, akrab (lu/kamu), memotivasi, dan langsung to-the-point. Jangan gunakan kata pembuka/penutup formal.`;
+        // Build the prompt for Gemini Flash requesting JSON
+        let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
+Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (otot, lemak, proporsi tubuh) dan mengaitkannya dengan data profil serta riwayat asupan/olahraga selama ${days} hari terakhir.
+Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberikan di bawah ini.
+
+== PROFIL PENGGUNA ==
+- Tinggi Badan (TB): ${profile.tb || '?'} cm
+- Berat Badan (BB): ${profile.bb || '?'} kg
+- Usia: ${profile.usia || '?'} tahun
+- Jenis Kelamin: ${profile.gender || 'pria'}
+- Level Aktivitas Harian: ${profile.aktivitas || 'sedentary'}
+- Target / Goal Kebugaran: ${profile.target || 'maintenance'} (${profile.catatan || 'tanpa catatan khusus'})
+
+== RIWAYAT ${days} HARI TERAKHIR ==
+- Rata-rata Kalori Asupan: ${Math.round(avgCal)} kcal/hari (target: ${profile.targets?.cal || 2000} kcal)
+- Rata-rata Protein: ${avgProtein.toFixed(1)} g/hari (target: ${profile.targets?.protein || 120} g)
+- Rata-rata Karbohidrat: ${avgCarbs.toFixed(1)} g/hari
+- Rata-rata Lemak: ${avgFat.toFixed(1)} g/hari
+- Rata-rata Serat: ${avgFiber.toFixed(1)} g/hari
+- Total Latihan: ${workoutCount + gymCount} sesi latihan beban (Gym: ${gymCount}, Workout: ${workoutCount}), serta ${cardioCount} sesi kardio
+- Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari
+- Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari
+
+Catatan Tambahan User: "${customDesc || '-'}"
+
+== SKEMA JSON RESPONS (WAJIB PERSIS SEPERTI INI) ==
+{
+  "ringkasanSederhana": {
+    "pros": ["Asupan protein optimal", "Defisit kalori sudah tepat"],
+    "cons": ["Tidur terlalu rendah", "Lemak terlalu rendah", "Serat terlalu rendah"],
+    "focus": "Tidur + Lemak + Serat"
+  },
+  "targetMakro": {
+    "cal": 2000,
+    "protein": 170,
+    "carbs": 180,
+    "fat": 60,
+    "fiber": "25-35g",
+    "water": "3 Liter"
+  },
+  "makananRekomendasi": {
+    "category": "Sumber Lemak yang Direkomendasikan",
+    "foods": ["Telur utuh", "Alpukat", "Kacang tanah", "Kacang almond", "Ikan salmon", "Minyak zaitun"]
+  },
+  "prioritasPerbaikan": [
+    { "label": "Tidur", "impact": "Sangat Tinggi", "desc": "Tidur rata-rata hanya 5.7 jam. Sangat mengganggu recovery otot." },
+    { "label": "Serat", "impact": "Tinggi", "desc": "Tambahkan brokoli, bayam, wortel, apel, atau pisang." },
+    { "label": "Lemak", "impact": "Tinggi", "desc": "Asupan lemak terlalu rendah untuk produksi hormon sehat." }
+  ],
+  "perkiraanGoal": {
+    "currentBF": "16-18%",
+    "targetBF": "10-12%",
+    "weeks": "8-12 minggu",
+    "desc": "Dengan konsistensi tinggi pada defisit kalori dan latihan beban."
+  },
+  "kesalahanTerbesar": [
+    "Tidur hanya 5.7 jam",
+    "Lemak terlalu rendah",
+    "Serat terlalu rendah"
+  ],
+  "analisisRisiko": {
+    "muscleLoss": "Rendah",
+    "plateau": "Sedang",
+    "recoveryDisruption": "Tinggi",
+    "notes": "Risiko pemulihan terganggu tinggi karena kurang tidur."
+  },
+  "estimasiFisik30Hari": {
+    "waist": "turun 2-4 cm",
+    "weight": "turun 1.5-3 kg",
+    "bodyFat": "turun 1-2%",
+    "desc": "Otot perut bagian atas akan terlihat lebih jelas."
+  },
+  "nutrisiBerpotensiKurang": [
+    { "name": "Vitamin D", "sources": ["Salmon", "Susu", "Telur"] },
+    { "name": "Magnesium", "sources": ["Bayam", "Cokelat hitam", "Kacang-kacangan"] }
+  ],
+  "recoveryScore": {
+    "sleep": 45,
+    "protein": 95,
+    "calorie": 90,
+    "training": 85,
+    "total": 79
+  }
+}`;
                       
-        const rawHtml = await analyzePhysicalPhotoAI(base64Data, mimeType, promptText);
-        if (rawHtml) {
-            resultTextEl.innerHTML = styleAIHtml(rawHtml);
+        const rawJson = await analyzePhysicalPhotoAI(base64Data, mimeType, promptText, true);
+        let data = null;
+        try {
+            let cleanJson = rawJson.trim();
+            const match = cleanJson.match(/\{[\s\S]*\}/);
+            data = match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+        } catch (e) {
+            console.error("Failed to parse physical analysis JSON:", rawJson, e);
+            throw new Error("Format evaluasi dari AI tidak valid. Silakan coba lagi.");
+        }
+
+        if (data) {
+            resultTextEl.innerHTML = renderPhysicalAnalysisUI(data);
         } else {
             resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;
         }
@@ -4245,4 +4729,278 @@ async function startPhysicalAnalysis() {
         console.error('startPhysicalAnalysis error:', err);
         resultTextEl.innerHTML = `<p style="color:var(--danger);">Error: ${err.message}</p>`;
     }
+}
+
+function renderPhysicalAnalysisUI(data) {
+    if (!data) return '<p style="color:var(--danger)">Gagal memuat analisis fisik.</p>';
+
+    // 1. Ringkasan Super Singkat
+    const rs = data.ringkasanSederhana || {};
+    let prosHtml = (rs.pros || []).map(p => `<li style="font-size:0.85rem; color:var(--success); margin-bottom:4px; list-style:none;">🟢 ${p}</li>`).join('');
+    let consHtml = (rs.cons || []).map(c => `<li style="font-size:0.85rem; color:#ff3366; margin-bottom:4px; list-style:none;">⚠️ ${c}</li>`).join('');
+    
+    // 2. Recovery Score
+    const rec = data.recoveryScore || {};
+    const recTotal = rec.total || 0;
+    let recColor = 'var(--success)';
+    if (recTotal < 70) recColor = 'var(--danger)';
+    else if (recTotal < 85) recColor = '#ff9f0a';
+    
+    let recSplitHtml = '';
+    const recFields = [
+        { label: 'Tidur', val: rec.sleep },
+        { label: 'Protein', val: rec.protein },
+        { label: 'Kalori', val: rec.calorie },
+        { label: 'Latihan', val: rec.training }
+    ];
+    recFields.forEach(f => {
+        recSplitHtml += `
+            <div style="flex:1; min-width:65px; text-align:center; padding:6px; background:var(--surface2); border:1px solid var(--border);">
+                <div style="font-size:0.7rem; color:var(--text2); text-transform:uppercase; margin-bottom:2px;">${f.label}</div>
+                <div style="font-weight:700; font-size:1.1rem; color:var(--accent);">${f.val || 0}</div>
+            </div>
+        `;
+    });
+
+    // 3. Target Makro Ideal
+    const tm = data.targetMakro || {};
+    
+    // 4. Makanan yang Direkomendasikan
+    const mr = data.makananRekomendasi || {};
+    let foodsHtml = (mr.foods || []).map(f => `
+        <div style="background:var(--surface2); border:1px solid var(--border); padding:6px 12px; font-size:0.85rem; color:var(--text); text-align:center;">
+            ${f}
+        </div>
+    `).join('');
+
+    // 5. Prioritas Perbaikan
+    let prioritasHtml = '';
+    (data.prioritasPerbaikan || []).forEach((p, idx) => {
+        const impactColors = {
+            'Sangat Tinggi': 'var(--danger)',
+            'Tinggi': '#ff9f0a',
+            'Sedang': 'var(--warning)',
+            'Rendah': 'var(--success)'
+        };
+        const badgeColor = impactColors[p.impact] || 'var(--accent)';
+        
+        prioritasHtml += `
+            <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:var(--surface2); border-left:3px solid ${badgeColor}; margin-bottom:8px;">
+                <div style="font-weight:900; font-size:1.2rem; color:${badgeColor}; line-height:1; width:20px;">#${idx+1}</div>
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:2px;">
+                        <span style="font-weight:700; font-size:0.9rem; color:var(--text);">${p.label}</span>
+                        <span style="font-size:0.7rem; font-weight:700; color:${badgeColor}; text-transform:uppercase; background:rgba(255,255,255,0.03); padding:2px 6px; border:1px solid ${badgeColor};">Impact: ${p.impact}</span>
+                    </div>
+                    <div style="font-size:0.82rem; color:var(--text2);">${p.desc}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    // 6. Perkiraan Goal & 7. Estimasi Fisik 30 Hari
+    const pg = data.perkiraanGoal || {};
+    const ef = data.estimasiFisik30Hari || {};
+
+    // 8. Kesalahan Terbesar
+    let kesalahanHtml = (data.kesalahanTerbesar || []).map(k => `
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text2); margin-bottom:4px;">
+            <span style="color:var(--danger);">❌</span>
+            <span>${k}</span>
+        </div>
+    `).join('');
+
+    // 9. Analisis Risiko
+    const ar = data.analisisRisiko || {};
+    const getRiskColor = (level) => {
+        if (level === 'Tinggi') return 'var(--danger)';
+        if (level === 'Sedang') return '#ff9f0a';
+        return 'var(--success)';
+    };
+
+    // 10. Nutrisi Potensial Kurang
+    let nutrisiKurangHtml = '';
+    (data.nutrisiBerpotensiKurang || []).forEach(n => {
+        nutrisiKurangHtml += `
+            <div style="margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed var(--border);">
+                <div style="font-weight:700; font-size:0.85rem; color:var(--accent2); margin-bottom:2px;">⚠️ Potensi Kurang: ${n.name}</div>
+                <div style="font-size:0.78rem; color:var(--text3);">Saran Makanan: ${(n.sources || []).join(', ')}</div>
+            </div>
+        `;
+    });
+
+    let html = `
+        <div style="display:flex; flex-direction:column; gap:16px; font-family:var(--font); color:var(--text);">
+            
+            <!-- Ringkasan Super Singkat & Recovery Score -->
+            <div style="background:linear-gradient(135deg, var(--surface2), var(--surface)); border:1px solid var(--border); padding:16px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:stretch; gap:16px;">
+                
+                <!-- 3-Second Summary -->
+                <div style="flex:1; min-width:260px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:700;">⚡ Ringkasan AI (3 Detik Baca)</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                            <div>
+                                <div style="font-size:0.7rem; color:var(--text3); text-transform:uppercase; margin-bottom:4px; font-weight:700;">Kelebihan</div>
+                                <ul style="padding:0; margin:0;">${prosHtml}</ul>
+                            </div>
+                            <div>
+                                <div style="font-size:0.7rem; color:var(--text3); text-transform:uppercase; margin-bottom:4px; font-weight:700;">Kekurangan</div>
+                                <ul style="padding:0; margin:0;">${consHtml}</ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(0,240,255,0.05); border:1px solid var(--border); padding:8px 12px; font-size:0.82rem; font-weight:700; color:var(--accent); text-align:center;">
+                        🎯 Fokus Minggu Ini: ${rs.focus || '--'}
+                    </div>
+                </div>
+
+                <!-- Recovery Score split -->
+                <div style="width:240px; display:flex; flex-direction:column; justify-content:space-between; border-left:1px solid var(--border); padding-left:16px;">
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; font-weight:700;">Recovery Score</div>
+                        <div style="display:flex; align-items:baseline; gap:6px;">
+                            <span style="font-size:2.4rem; font-weight:900; color:${recColor}; line-height:1;">${recTotal}</span>
+                            <span style="font-size:0.85rem; color:var(--text3);">/100</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        ${recSplitHtml}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target Makro Ideal Harian -->
+            <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">⚖️ Target Makro Ideal Harian</h4>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-bottom:10px;">
+                    <div style="background:var(--surface2); border:1px solid var(--border); padding:8px; text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text2); text-transform:uppercase;">Kalori</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:var(--accent);">${tm.cal || 0} kcal</div>
+                    </div>
+                    <div style="background:var(--surface2); border:1px solid var(--border); padding:8px; text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text2); text-transform:uppercase;">Protein</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:var(--accent);">${tm.protein || 0}g</div>
+                    </div>
+                    <div style="background:var(--surface2); border:1px solid var(--border); padding:8px; text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text2); text-transform:uppercase;">Karbo</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:var(--accent);">${tm.carbs || 0}g</div>
+                    </div>
+                    <div style="background:var(--surface2); border:1px solid var(--border); padding:8px; text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text2); text-transform:uppercase;">Lemak</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:var(--accent);">${tm.fat || 0}g</div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text2); border-top:1px solid var(--border); padding-top:8px;">
+                    <span>Target Serat: <b>${tm.fiber || '--'}</b></span>
+                    <span>Target Air: <b>${tm.water || '--'}</b></span>
+                </div>
+            </div>
+
+            <!-- Two Column Layout -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+                
+                <!-- Left Column -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    
+                    <!-- Prioritas Perbaikan -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🛠️ Prioritas Perbaikan</h4>
+                        <div>
+                            ${prioritasHtml}
+                        </div>
+                    </div>
+
+                    <!-- Makanan yang Direkomendasikan -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🥑 Makanan yang Direkomendasikan</h4>
+                        <div style="font-size:0.8rem; color:var(--text2); margin-bottom:8px; font-weight:700;">
+                            Kategori: ${mr.category || 'Belanjaan Sehat'}
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap:8px;">
+                            ${foodsHtml}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    
+                    <!-- Perkiraan Waktu & Estimasi Fisik 30 Hari -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🔮 Perkiraan Goal & Estimasi Fisik</h4>
+                        <div style="background:var(--surface2); padding:12px; margin-bottom:12px; font-size:0.82rem; line-height:1.4;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px solid var(--border); padding-bottom:4px;">
+                                <span style="color:var(--text2);">Body Fat Saat Ini:</span>
+                                <span style="font-weight:700; color:var(--text);">${pg.currentBF || '--'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px solid var(--border); padding-bottom:4px;">
+                                <span style="color:var(--text2);">Target Body Fat:</span>
+                                <span style="font-weight:700; color:var(--text);">${pg.targetBF || '--'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px solid var(--border); padding-bottom:4px;">
+                                <span style="color:var(--text2);">Estimasi Waktu:</span>
+                                <span style="font-weight:700; color:var(--accent);">${pg.weeks || '--'}</span>
+                            </div>
+                            <div style="font-size:0.78rem; color:var(--text3); margin-top:4px;">
+                                ${pg.desc || ''}
+                            </div>
+                        </div>
+                        <div style="background:rgba(0,240,255,0.03); border:1px dashed var(--accent2); padding:10px; font-size:0.82rem; line-height:1.4;">
+                            <div style="font-weight:700; color:var(--accent2); margin-bottom:4px; font-size:0.85rem;">Jika Konsisten 30 Hari:</div>
+                            • Lingkar Pinggang: <b style="color:var(--success);">${ef.waist || '--'}</b><br>
+                            • Berat Badan: <b style="color:var(--success);">${ef.weight || '--'}</b><br>
+                            • Body Fat %: <b style="color:var(--success);">${ef.bodyFat || '--'}</b><br>
+                            <span style="font-size:0.75rem; color:var(--text3); display:block; margin-top:4px;">${ef.desc || ''}</span>
+                        </div>
+                    </div>
+
+                    <!-- Kesalahan Terbesar & Analisis Risiko -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">⚠️ Kesalahan & Analisis Risiko</h4>
+                        <div style="margin-bottom:12px;">
+                            ${kesalahanHtml}
+                        </div>
+                        <div style="background:var(--surface2); padding:10px; font-size:0.8rem; line-height:1.4;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                <span style="color:var(--text2);">Risiko Susut Otot:</span>
+                                <span style="font-weight:700; color:${getRiskColor(ar.muscleLoss)};">${ar.muscleLoss || 'Rendah'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                <span style="color:var(--text2);">Risiko Plateau:</span>
+                                <span style="font-weight:700; color:${getRiskColor(ar.plateau)};">${ar.plateau || 'Rendah'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                <span style="color:var(--text2);">Gangguan Recovery:</span>
+                                <span style="font-weight:700; color:${getRiskColor(ar.recoveryDisruption)};">${ar.recoveryDisruption || 'Rendah'}</span>
+                            </div>
+                            <div style="font-size:0.75rem; color:var(--text3); border-top:1px solid var(--border); padding-top:4px; margin-top:4px;">
+                                💡 ${ar.notes || ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nutrisi Potensial Kurang -->
+                    <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
+                        <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
+                        <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🥛 Nutrisi Potensial Kurang</h4>
+                        <div>
+                            ${nutrisiKurangHtml}
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    `;
+
+    return html;
 }

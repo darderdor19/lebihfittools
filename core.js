@@ -343,7 +343,7 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
   }
 }
 
-async function analyzePhysicalPhotoAI(base64, mime, promptText) {
+async function analyzePhysicalPhotoAI(base64, mime, promptText, jsonMode = false) {
   let key = getVisionKey();
   if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
       key = process.env.GEMINI_API_KEY;
@@ -360,6 +360,13 @@ async function analyzePhysicalPhotoAI(base64, mime, promptText) {
       ]
     }]
   };
+
+  if (jsonMode) {
+    body.generationConfig = {
+      responseMimeType: "application/json",
+      temperature: 0.0
+    };
+  }
 
   const res = await fetch(endpoint, {
     method: 'POST',
