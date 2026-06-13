@@ -12,6 +12,7 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      height: 100dvh;
       background: var(--bg);
       color: var(--text);
       overflow: hidden;
@@ -22,6 +23,7 @@
       display: flex;
       flex: 1;
       height: calc(100vh - 60px);
+      height: calc(100dvh - 60px);
       overflow: hidden;
       position: relative;
     }
@@ -427,6 +429,7 @@
       border-top: 1px solid var(--border);
       padding: 18px 24px;
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+      flex-shrink: 0;
     }
     .input-container {
       max-width: 800px;
@@ -457,6 +460,7 @@
       line-height: 1.5;
       font-family: var(--font);
       padding: 2px 4px;
+      text-align: center;
     }
     .btn-send {
       background: linear-gradient(135deg, var(--accent3), var(--accent2));
@@ -552,6 +556,111 @@
       .message-bubble {
         max-width: 85%;
       }
+      .chat-footer {
+        padding: 10px 12px;
+      }
+    }
+
+    /* Custom Confirmation Modal */
+    .confirm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(6, 11, 17, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+    }
+    .confirm-modal.hidden {
+      display: none !important;
+    }
+    .confirm-card {
+      background: rgba(11, 20, 31, 0.95);
+      border: 1px solid rgba(255, 74, 74, 0.3);
+      border-radius: var(--radius);
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(255, 74, 74, 0.08);
+      position: relative;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .confirm-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: #ff4a4a;
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+    }
+    .confirm-icon-wrap {
+      width: 56px;
+      height: 56px;
+      background: rgba(255, 74, 74, 0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px auto;
+      border: 1px solid rgba(255, 74, 74, 0.2);
+    }
+    .confirm-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .confirm-card p {
+      color: var(--text2);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .confirm-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-cancel {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-cancel:hover {
+      background: var(--surface3);
+      color: var(--text);
+    }
+    .btn-confirm-delete {
+      flex: 1;
+      background: linear-gradient(135deg, #ff4a4a, #c02626);
+      border: 1px solid #ff4a4a;
+      color: white;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: 0 4px 15px rgba(255, 74, 74, 0.25);
+    }
+    .btn-confirm-delete:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 74, 74, 0.4);
     }
 
     /* Animations */
@@ -641,6 +750,21 @@
       </footer>
     </div>
 
+  </div>
+
+  <!-- CUSTOM CONFIRMATION MODAL -->
+  <div id="confirmModal" class="confirm-modal hidden">
+    <div class="confirm-card">
+      <div class="confirm-icon-wrap">
+        <i data-lucide="trash-2" style="width: 28px; height: 28px; color: var(--danger);"></i>
+      </div>
+      <h3>Hapus Chat?</h3>
+      <p>Apakah Kamu yakin ingin menghapus percakapan ini secara permanen dari riwayat chat Kamu?</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" onclick="closeConfirmModal()">Batal</button>
+        <button class="btn-confirm-delete" id="confirmDeleteBtn">Hapus</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -799,7 +923,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
         delBtn.onclick = (e) => {
           e.stopPropagation();
-          deleteSession(sid);
+          openConfirmModal(sid);
         };
         
         item.appendChild(span);
@@ -858,23 +982,39 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       if(window.lucide) lucide.createIcons();
     }
 
-    // Delete Session
-    async function deleteSession(sessionId) {
-      if (confirm('Apakah Kamu yakin ingin menghapus percakapan ini dari riwayat?')) {
-        try {
-          await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions/${sessionId}.json`, {
-            method: 'DELETE'
-          });
-          
-          delete sessions[sessionId];
-          renderSidebarList();
-          
-          if (activeSessionId === sessionId) {
-            startNewChat();
-          }
-        } catch (e) {
-          console.error('Failed to delete session:', e);
+    // Custom confirmation modal handlers for deleting a session
+    let deleteTargetSessionId = null;
+
+    function openConfirmModal(sessionId) {
+      deleteTargetSessionId = sessionId;
+      const modal = document.getElementById('confirmModal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      const modal = document.getElementById('confirmModal');
+      modal.classList.add('hidden');
+      deleteTargetSessionId = null;
+    }
+
+    async function executeSessionDeletion() {
+      if (!deleteTargetSessionId) return;
+      const sessionId = deleteTargetSessionId;
+      closeConfirmModal();
+      
+      try {
+        await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions/${sessionId}.json`, {
+          method: 'DELETE'
+        });
+        
+        delete sessions[sessionId];
+        renderSidebarList();
+        
+        if (activeSessionId === sessionId) {
+          startNewChat();
         }
+      } catch (err) {
+        console.error('Delete error:', err);
       }
     }
 
