@@ -17,6 +17,113 @@
       overflow: hidden;
     }
 
+    /* Layout */
+    .app-layout {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Sidebar */
+    .chat-sidebar {
+      width: 260px;
+      background: #080d15;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .btn-new-chat {
+      background: transparent;
+      color: var(--accent);
+      border: 1px dashed var(--accent);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: 0.2s;
+      outline: none;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+    }
+    .btn-new-chat:hover {
+      background: rgba(0, 240, 255, 0.05);
+      border-style: solid;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+    }
+    .sidebar-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: 0.2s;
+      gap: 8px;
+    }
+    .history-item:hover, .history-item.active {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .history-item span {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-delete-session {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      transition: 0.2s;
+    }
+    .btn-delete-session:hover {
+      color: var(--danger);
+    }
+
+    /* Main Chat */
+    .main-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+    }
+
     /* Header */
     .chat-header {
       background: var(--surface);
@@ -27,6 +134,7 @@
       justify-content: space-between;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
       position: relative;
+      height: 60px;
     }
     .chat-header::before {
       content: '';
@@ -42,7 +150,7 @@
       align-items: center;
       gap: 10px;
     }
-    .header-logo i {
+    .header-logo i.logo-icon {
       color: var(--accent);
       filter: drop-shadow(0 0 8px var(--accent));
     }
@@ -53,40 +161,16 @@
       letter-spacing: 2px;
       text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
     }
-    .header-logo span {
-      font-size: 0.75rem;
-      color: var(--text2);
-      font-family: monospace;
-      background: var(--surface2);
-      padding: 3px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-    }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .btn-header {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text2);
-      padding: 8px 14px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      transition: 0.2s;
-    }
-    .btn-header:hover {
-      border-color: var(--accent);
+    .hamburger-btn {
+      display: none;
+      background: none;
+      border: none;
       color: var(--text);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+      cursor: pointer;
+      padding: 4px;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
     }
 
     /* Chat Area */
@@ -349,6 +433,26 @@
       margin-bottom: 24px;
     }
 
+    /* Mobile Responsive Sidebar */
+    @media (max-width: 768px) {
+      .chat-sidebar {
+        position: fixed;
+        left: -260px;
+        top: 60px;
+        bottom: 0;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+      }
+      .chat-sidebar.open {
+        left: 0;
+      }
+      .hamburger-btn {
+        display: flex !important;
+      }
+      .message-bubble {
+        max-width: 85%;
+      }
+    }
+
     /* Animations */
     @keyframes bounce {
       0%, 100% { transform: translateY(0); }
@@ -379,144 +483,30 @@
   <!-- HEADER -->
   <header class="chat-header">
     <div class="header-logo">
-      <i data-lucide="message-square" style="width: 24px; height: 24px;"></i>
+      <button class="hamburger-btn" onclick="toggleChatSidebar()"><i data-lucide="menu"></i></button>
+      <i data-lucide="message-square" class="logo-icon" style="width: 24px; height: 24px;"></i>
       <h1>AI Consultant</h1>
-      <span id="modelBadge">Google: Gemini 2.5 Pro</span>
-    </div>
-    <div class="header-actions">
-      <button class="btn-header" onclick="resetChatHistory()"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Reset Chat</button>
-      <button class="btn-header" onclick="window.close()"><i data-lucide="x" style="width:14px;height:14px"></i> Tutup</button>
     </div>
   </header>
 
-  <!-- CHAT AREA -->
-  <main class="chat-container" id="chatContainer">
-    <!-- Welcome Screen -->
-    <div class="welcome-container" id="welcomeContainer">
-      <i data-lucide="message-square" class="welcome-icon" style="width: 64px; height: 64px;"></i>
-      <h2>Konsultasi AI LebihFit</h2>
-      <p>Tanyakan apa saja seputar nutrisi, rancangan diet, program latihan beban/kardio, perbaikan tidur, dan strategi pemulihan otot (recovery) Kamu secara personal.</p>
-      <div class="suggestion-grid">
-        <div class="suggestion-card" onclick="useSuggestion('Buat program latihan beban fat loss untuk pemula, 3 hari seminggu.')">
-          <span class="suggestion-title">Program Latihan</span>
-          <span class="suggestion-text">"Buat program latihan beban fat loss untuk pemula..."</span>
-        </div>
-        <div class="suggestion-card" onclick="useSuggestion('Bagaimana cara menghitung kebutuhan protein harian saya jika targetnya bulking?')">
-          <span class="suggestion-title">Diet & Nutrisi</span>
-          <span class="suggestion-text">"Bagaimana cara menghitung kebutuhan protein harian..."</span>
-        </div>
-        <div class="suggestion-card" onclick="useSuggestion('Berikan tips meningkatkan kualitas tidur malam (deep sleep) jika saya sering lembur.')">
-          <span class="suggestion-title">Pola Tidur</span>
-          <span class="suggestion-text">"Berikan tips meningkatkan kualitas tidur malam..."</span>
-        </div>
-        <div class="suggestion-card" onclick="useSuggestion('Apa saja tanda-tanda tubuh saya mengalami overtraining saat latihan beban?')">
-          <span class="suggestion-title">Recovery</span>
-          <span class="suggestion-text">"Apa saja tanda-tanda overtraining..."</span>
-        </div>
+  <!-- APP LAYOUT -->
+  <div class="app-layout">
+    
+    <!-- SIDEBAR FOR HISTORY -->
+    <aside class="chat-sidebar" id="chatSidebar">
+      <button class="btn-new-chat" onclick="startNewChat()"><i data-lucide="plus" style="width:16px;height:16px"></i> Chat Baru</button>
+      <div class="sidebar-title">Riwayat Chat</div>
+      <div class="history-list" id="historyList">
+        <!-- Loaded Firebase Sessions -->
       </div>
-    </div>
-  </main>
+    </aside>
 
-  <!-- INPUT AREA -->
-  <footer class="chat-footer">
-    <div class="input-container">
-      <textarea id="chatInput" class="chat-textarea" placeholder="Tanyakan seputar program diet atau latihanmu..." rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
-      <button id="sendBtn" class="btn-send" onclick="sendChatMessage()"><i data-lucide="send" style="width:18px;height:18px"></i></button>
-    </div>
-  </footer>
-
-  <script>
-    // Constants
-    const MODEL_NAME = 'lf_openroutermodel';
-    const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
-
-    // System prompt context
-    const SYSTEM_PROMPT = `Kamu adalah AI Consultant LebihFit. Kamu adalah pakar gizi klinis, pelatih kebugaran (fitness coach), dan konsultan kesehatan profesional. 
-Tugasmu adalah memberikan saran kesehatan, nutrisi, rancangan diet, perbaikan pola tidur, dan rancangan program latihan beban/kardio yang ilmiah, realistis, dan aman bagi pengguna.
-Tulis jawaban dalam bahasa Indonesia gaul yang ramah, sopan, memotivasi, dan mudah dipahami (gunakan panggilan 'Lu' atau 'Kamu').
-Hubungkan saranmu dengan konsep gaya hidup sehat jangka panjang. 
-Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutrisi, ingatkan pengguna secara ramah bahwa tugasmu khusus membantu konsultasi seputar kesehatan dan kebugaran di LebihFit.`;
-
-    let chatHistory = [];
-    let userEmail = '';
-    let userName = 'Bro';
-    let safeEmail = '';
-
-    // Initialize Page
-    document.addEventListener('DOMContentLoaded', () => {
-      if(window.lucide) lucide.createIcons();
-      getUserSession();
-    });
-
-    // Get User Session and load history
-    function getUserSession() {
-      // Get session from localStorage
-      const email = localStorage.getItem('lf_user_email');
-      const name = localStorage.getItem('lf_user_name');
-      
-      if (!email) {
-        // Alihkan langsung ke dashboard utama jika belum login
-        window.location.href = 'index.html';
-      } else {
-        document.getElementById('authOverlay').classList.add('hidden');
-        userEmail = email.replace(/\"/g, '');
-        userName = name ? name.replace(/\"/g, '') : 'Bro';
-        safeEmail = userEmail.replace(/[.#$[\]]/g, '_');
-        
-        loadChatHistoryFromFirebase();
-        updateHeaderBadge();
-      }
-    }
-
-    // Load history from Firebase REST API
-    async function loadChatHistoryFromFirebase() {
-      try {
-        const response = await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_history.json`);
-        const data = await response.json();
-        if (data && Array.isArray(data)) {
-          chatHistory = data;
-          if (chatHistory.length > 0) {
-            document.getElementById('welcomeContainer').style.display = 'none';
-            chatHistory.forEach(msg => {
-              appendMessageUI(msg.role, msg.content);
-            });
-            scrollToBottom();
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load chat history from Firebase:', e);
-      }
-    }
-
-    // Save history to Firebase REST API
-    async function saveChatHistoryToFirebase() {
-      try {
-        await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_history.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(chatHistory)
-        });
-      } catch (e) {
-        console.error('Failed to save chat history to Firebase:', e);
-      }
-    }
-
-    // Reset history
-    async function resetChatHistory() {
-      if (confirm('Apakah Kamu yakin ingin menghapus riwayat chat ini?')) {
-        chatHistory = [];
-        // Save empty array to Firebase
-        await saveChatHistoryToFirebase();
-        
-        // Clear UI bubbles and show welcome
-        const container = document.getElementById('chatContainer');
-        container.innerHTML = '';
-        
-        // Recreate welcome
-        const welcome = document.createElement('div');
-        welcome.className = 'welcome-container';
-        welcome.id = 'welcomeContainer';
-        welcome.innerHTML = `
+    <!-- MAIN CHAT PANEL -->
+    <div class="main-chat">
+      <!-- CHAT BUBBLES CONTAINER -->
+      <main class="chat-container" id="chatContainer">
+        <!-- Welcome Screen -->
+        <div class="welcome-container" id="welcomeContainer">
           <i data-lucide="message-square" class="welcome-icon" style="width: 64px; height: 64px;"></i>
           <h2>Konsultasi AI LebihFit</h2>
           <p>Tanyakan apa saja seputar nutrisi, rancangan diet, program latihan beban/kardio, perbaikan tidur, dan strategi pemulihan otot (recovery) Kamu secara personal.</p>
@@ -538,25 +528,245 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
               <span class="suggestion-text">"Apa saja tanda-tanda overtraining..."</span>
             </div>
           </div>
-        `;
-        container.appendChild(welcome);
-        if(window.lucide) lucide.createIcons();
+        </div>
+      </main>
+
+      <!-- INPUT AREA -->
+      <footer class="chat-footer">
+        <div class="input-container">
+          <textarea id="chatInput" class="chat-textarea" placeholder="Tanyakan seputar program diet atau latihanmu..." rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
+          <button id="sendBtn" class="btn-send" onclick="sendChatMessage()"><i data-lucide="send" style="width:18px;height:18px"></i></button>
+        </div>
+      </footer>
+    </div>
+
+  </div>
+
+  <script>
+    // Constants
+    const MODEL_NAME = 'lf_openroutermodel';
+    const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+    // System prompt context
+    const SYSTEM_PROMPT = `Kamu adalah AI Consultant LebihFit. Kamu adalah pakar gizi klinis, pelatih kebugaran (fitness coach), dan konsultan kesehatan profesional. 
+Tugasmu adalah memberikan saran kesehatan, nutrisi, rancangan diet, perbaikan pola tidur, dan rancangan program latihan beban/kardio yang ilmiah, realistis, dan aman bagi pengguna.
+Tulis jawaban dalam bahasa Indonesia gaul yang ramah, sopan, memotivasi, dan mudah dipahami (gunakan panggilan 'Lu' atau 'Kamu').
+Hubungkan saranmu dengan konsep gaya hidup sehat jangka panjang. 
+Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutrisi, ingatkan pengguna secara ramah bahwa tugasmu khusus membantu konsultasi seputar kesehatan dan kebugaran di LebihFit.`;
+
+    let sessions = {};
+    let chatHistory = [];
+    let activeSessionId = null;
+    let userEmail = '';
+    let userName = 'Bro';
+    let safeEmail = '';
+
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', () => {
+      if(window.lucide) lucide.createIcons();
+      getUserSession();
+    });
+
+    // Toggle Mobile Sidebar
+    function toggleChatSidebar() {
+      const sidebar = document.getElementById('chatSidebar');
+      sidebar.classList.toggle('open');
+    }
+
+    // Close Mobile Sidebar
+    function closeChatSidebar() {
+      const sidebar = document.getElementById('chatSidebar');
+      sidebar.classList.remove('open');
+    }
+
+    // Get User Session and load list of sessions
+    function getUserSession() {
+      const email = localStorage.getItem('lf_user_email');
+      const name = localStorage.getItem('lf_user_name');
+      
+      if (!email) {
+        window.location.href = 'index.html';
+      } else {
+        userEmail = email.replace(/\"/g, '');
+        userName = name ? name.replace(/\"/g, '') : 'Bro';
+        safeEmail = userEmail.replace(/[.#$[\]]/g, '_');
+        
+        loadAllSessionsFromFirebase();
       }
     }
 
-    // Update Header Badge
-    function updateHeaderBadge() {
-      const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-pro';
-      const badge = document.getElementById('modelBadge');
+    // Load list of all chat sessions from Firebase REST API
+    async function loadAllSessionsFromFirebase() {
+      try {
+        const response = await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions.json`);
+        const data = await response.json();
+        sessions = data || {};
+        renderSidebarList();
+        
+        // Load the most recent session if exists
+        const sessionIds = Object.keys(sessions).sort((a,b) => sessions[b].createdAt.localeCompare(sessions[a].createdAt));
+        if (sessionIds.length > 0) {
+          loadSession(sessionIds[0]);
+        } else {
+          startNewChat();
+        }
+      } catch (e) {
+        console.error('Failed to load sessions from Firebase:', e);
+        startNewChat();
+      }
+    }
+
+    // Load a specific session
+    function loadSession(sessionId) {
+      activeSessionId = sessionId;
+      const session = sessions[sessionId];
+      chatHistory = session.messages || [];
       
-      const modelNames = {
-        'google/gemini-2.5-pro': 'Gemini 2.5 Pro',
-        'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
-        'deepseek/deepseek-chat': 'DeepSeek V3',
-        'meta-llama/llama-3.3-70b-instruct': 'Llama 3.3 70B'
-      };
+      // Clear chat window
+      const container = document.getElementById('chatContainer');
+      container.innerHTML = '';
       
-      badge.innerText = modelNames[model] || model.split('/').pop();
+      if (chatHistory.length > 0) {
+        chatHistory.forEach(msg => {
+          appendMessageUI(msg.role, msg.content);
+        });
+      } else {
+        startNewChatUI();
+      }
+      
+      // Update active list state
+      document.querySelectorAll('.history-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      const activeItem = document.getElementById(`session-${sessionId}`);
+      if (activeItem) activeItem.classList.add('active');
+      
+      scrollToBottom();
+      closeChatSidebar();
+    }
+
+    // Render list in sidebar
+    function renderSidebarList() {
+      const listContainer = document.getElementById('historyList');
+      listContainer.innerHTML = '';
+      
+      const sortedIds = Object.keys(sessions).sort((a,b) => {
+        const timeA = sessions[a].createdAt || '';
+        const timeB = sessions[b].createdAt || '';
+        return timeB.localeCompare(timeA);
+      });
+      
+      if (sortedIds.length === 0) {
+        listContainer.innerHTML = '<div style="font-size:0.8rem;color:var(--text3);text-align:center;padding:20px 0;">Belum ada riwayat.</div>';
+        return;
+      }
+
+      sortedIds.forEach(sid => {
+        const session = sessions[sid];
+        const item = document.createElement('div');
+        item.className = `history-item ${activeSessionId === sid ? 'active' : ''}`;
+        item.id = `session-${sid}`;
+        item.onclick = () => loadSession(sid);
+        
+        const span = document.createElement('span');
+        span.innerText = session.title || 'Chat Tanpa Judul';
+        
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-delete-session';
+        delBtn.title = 'Hapus Percakapan';
+        delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteSession(sid);
+        };
+        
+        item.appendChild(span);
+        item.appendChild(delBtn);
+        listContainer.appendChild(item);
+      });
+      
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // New Chat Setup
+    function startNewChat() {
+      activeSessionId = null;
+      chatHistory = [];
+      
+      document.querySelectorAll('.history-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      
+      startNewChatUI();
+      closeChatSidebar();
+    }
+
+    // Reset UI to welcome screen
+    function startNewChatUI() {
+      const container = document.getElementById('chatContainer');
+      container.innerHTML = '';
+      
+      const welcome = document.createElement('div');
+      welcome.className = 'welcome-container';
+      welcome.id = 'welcomeContainer';
+      welcome.innerHTML = `
+        <i data-lucide="message-square" class="welcome-icon" style="width: 64px; height: 64px;"></i>
+        <h2>Konsultasi AI LebihFit</h2>
+        <p>Tanyakan apa saja seputar nutrisi, rancangan diet, program latihan beban/kardio, perbaikan tidur, dan strategi pemulihan otot (recovery) Kamu secara personal.</p>
+        <div class="suggestion-grid">
+          <div class="suggestion-card" onclick="useSuggestion('Buat program latihan beban fat loss untuk pemula, 3 hari seminggu.')">
+            <span class="suggestion-title">Program Latihan</span>
+            <span class="suggestion-text">"Buat program latihan beban fat loss untuk pemula..."</span>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Bagaimana cara menghitung kebutuhan protein harian saya jika targetnya bulking?')">
+            <span class="suggestion-title">Diet & Nutrisi</span>
+            <span class="suggestion-text">"Bagaimana cara menghitung kebutuhan protein harian..."</span>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Berikan tips meningkatkan kualitas tidur malam (deep sleep) jika saya sering lembur.')">
+            <span class="suggestion-title">Pola Tidur</span>
+            <span class="suggestion-text">"Berikan tips meningkatkan kualitas tidur malam..."</span>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Apa saja tanda-tanda tubuh saya mengalami overtraining saat latihan beban?')">
+            <span class="suggestion-title">Recovery</span>
+            <span class="suggestion-text">"Apa saja tanda-tanda overtraining..."</span>
+          </div>
+        </div>
+      `;
+      container.appendChild(welcome);
+      if(window.lucide) lucide.createIcons();
+    }
+
+    // Delete Session
+    async function deleteSession(sessionId) {
+      if (confirm('Apakah Kamu yakin ingin menghapus percakapan ini dari riwayat?')) {
+        try {
+          await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions/${sessionId}.json`, {
+            method: 'DELETE'
+          });
+          
+          delete sessions[sessionId];
+          renderSidebarList();
+          
+          if (activeSessionId === sessionId) {
+            startNewChat();
+          }
+        } catch (e) {
+          console.error('Failed to delete session:', e);
+        }
+      }
+    }
+
+    // Save Session to Firebase REST API
+    async function saveSessionToFirebase(sessionId) {
+      try {
+        await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions/${sessionId}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sessions[sessionId])
+        });
+      } catch (e) {
+        console.error('Failed to save session to Firebase:', e);
+      }
     }
 
     // Auto grow input
@@ -607,6 +817,7 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
       str = str.replace(/<\/ol>\s*<ol>/g, ''); // Join lists
 
       // Bold **text**
+      str = str.replace(/\*\*(.*?)\*\"/g, '<strong>$1</strong>');
       str = str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       // Bold *text*
       str = str.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
@@ -652,10 +863,29 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
       input.disabled = true;
       document.getElementById('sendBtn').disabled = true;
 
+      // Handle New Session Creation if activeSessionId is null
+      let isNewSession = false;
+      if (!activeSessionId) {
+        activeSessionId = 'session_' + Date.now();
+        const sessionTitle = text.slice(0, 26) + (text.length > 26 ? '...' : '');
+        sessions[activeSessionId] = {
+          id: activeSessionId,
+          title: sessionTitle,
+          messages: [],
+          createdAt: new Date().toISOString()
+        };
+        isNewSession = true;
+      }
+
       // Append user bubble
       appendMessageUI('user', text);
       chatHistory.push({ role: 'user', content: text });
-      saveChatHistoryToFirebase();
+      
+      // Update session array and save to Firebase
+      sessions[activeSessionId].messages = chatHistory;
+      await saveSessionToFirebase(activeSessionId);
+      if (isNewSession) renderSidebarList();
+
       scrollToBottom();
 
       // Typing bubble
@@ -687,7 +917,6 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
           ...chatHistory
         ];
 
-        // Call our Vercel Serverless Function Proxy instead of OpenRouter directly
         const response = await fetch('/api/consultant', {
           method: 'POST',
           headers: {
@@ -709,7 +938,10 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
           const aiResponse = resData.choices[0].message.content;
           appendMessageUI('assistant', aiResponse);
           chatHistory.push({ role: 'assistant', content: aiResponse });
-          saveChatHistoryToFirebase();
+          
+          // Update session and save to Firebase
+          sessions[activeSessionId].messages = chatHistory;
+          await saveSessionToFirebase(activeSessionId);
         } else {
           console.error('API Error:', resData);
           appendMessageUI('assistant', '⚠️ Gagal mendapatkan jawaban dari AI. Periksa apakah variable *OPENROUTER_API_KEY* sudah di-set di Vercel, lalu coba lagi.');
