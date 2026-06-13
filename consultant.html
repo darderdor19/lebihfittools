@@ -84,7 +84,7 @@
       padding: 10px 12px;
       background: transparent;
       border: 1px solid transparent;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       color: var(--text2);
       cursor: pointer;
       font-size: 0.85rem;
@@ -175,6 +175,37 @@
       margin-right: 8px;
     }
 
+    /* Dashboard Button in Header */
+    .btn-dashboard {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      color: var(--accent);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      text-decoration: none;
+      box-shadow: inset 0 0 8px rgba(0, 240, 255, 0.05);
+    }
+    .btn-dashboard:hover {
+      background: rgba(0, 240, 255, 0.12);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+      color: var(--text);
+    }
+    @media (max-width: 480px) {
+      .btn-dashboard span {
+        display: none;
+      }
+      .btn-dashboard {
+        padding: 8px;
+      }
+    }
+
     /* Chat Area */
     .chat-container {
       flex: 1;
@@ -183,69 +214,130 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      background: radial-gradient(circle at center, rgba(11, 18, 28, 0.3) 0%, var(--bg) 100%);
+      background: radial-gradient(circle at 50% 20%, rgba(0, 240, 255, 0.08) 0%, var(--bg) 100%);
+      position: relative;
+    }
+    .chat-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-position: center top;
+      pointer-events: none;
+      opacity: 0.8;
+      z-index: 0;
     }
 
     /* Welcome Area */
     .welcome-container {
-      max-width: 600px;
+      max-width: 800px;
       margin: auto;
-      text-align: center;
+      width: 100%;
       padding: 40px 20px;
       animation: fadeIn 0.5s ease;
+      position: relative;
+      z-index: 1;
     }
-    .welcome-icon {
-      color: var(--accent);
-      filter: drop-shadow(0 0 15px var(--accent));
-      margin-bottom: 20px;
-      display: inline-block;
+    .welcome-glow {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -30%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, rgba(0, 166, 184, 0.03) 50%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(40px);
+      pointer-events: none;
+      z-index: 0;
     }
-    .welcome-container h2 {
-      font-size: 1.75rem;
-      font-weight: 900;
-      margin-bottom: 12px;
+    .welcome-header {
+      text-align: left;
+      margin-bottom: 36px;
+      margin-top: 20px;
+    }
+    .hey-title {
+      font-size: 2.5rem;
+      font-weight: 800;
       color: var(--text);
-      letter-spacing: 1px;
+      line-height: 1.2;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
     }
-    .welcome-container p {
+    .help-title {
+      font-size: 2.5rem;
+      font-weight: 800;
       color: var(--text2);
-      font-size: 0.95rem;
-      line-height: 1.6;
-      margin-bottom: 30px;
+      opacity: 0.85;
+      line-height: 1.2;
+      letter-spacing: -0.5px;
     }
-    .suggestion-grid {
+    .suggestion-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
     }
     .suggestion-card {
-      background: var(--surface);
+      background: rgba(11, 18, 28, 0.7);
       border: 1px solid var(--border);
-      padding: 16px;
-      border-radius: var(--radius);
+      padding: 20px;
+      border-radius: 16px;
       text-align: left;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     }
     .suggestion-card:hover {
       border-color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.05);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0, 240, 255, 0.12);
+      background: rgba(11, 18, 28, 0.85);
     }
-    .suggestion-title {
-      font-size: 0.85rem;
+    .suggestion-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
       font-weight: 700;
-      color: var(--accent2);
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      width: fit-content;
     }
-    .suggestion-text {
-      font-size: 0.85rem;
-      color: var(--text);
-      line-height: 1.4;
+    .badge-blue {
+      background: rgba(0, 240, 255, 0.1);
+      color: #00f0ff;
+      border: 1px solid rgba(0, 240, 255, 0.2);
+    }
+    .badge-orange {
+      background: rgba(255, 107, 107, 0.1);
+      color: #ff6b6b;
+      border: 1px solid rgba(255, 107, 107, 0.2);
+    }
+    .badge-green {
+      background: rgba(0, 255, 204, 0.1);
+      color: #00ffcc;
+      border: 1px solid rgba(0, 255, 204, 0.2);
+    }
+    .suggestion-description {
+      font-size: 0.82rem;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    .welcome-input-placeholder {
+      margin-top: 12px;
+      width: 100%;
     }
 
     /* Messages Bubble */
@@ -479,22 +571,38 @@
       padding: 18px 24px;
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
       flex-shrink: 0;
+      transition: all 0.3s ease;
     }
     .input-container {
       max-width: 800px;
       margin: auto;
       display: flex;
+      flex-direction: column;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 16px;
       gap: 12px;
-      align-items: flex-end;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 8px 12px;
-      transition: 0.2s;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
     }
     .input-container:focus-within {
       border-color: var(--accent);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+      background: rgba(15, 23, 42, 0.85);
+    }
+    .input-main-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      width: 100%;
+    }
+    .input-ai-icon {
+      color: var(--accent);
+      margin-top: 4px;
+      flex-shrink: 0;
     }
     .chat-textarea {
       flex: 1;
@@ -502,31 +610,54 @@
       border: none;
       color: var(--text);
       resize: none;
-      height: 24px;
-      max-height: 120px;
+      height: 36px;
+      max-height: 150px;
       outline: none;
       font-size: 0.95rem;
       line-height: 1.5;
       font-family: var(--font);
-      padding: 2px 4px;
+      padding: 4px 0;
+    }
+    .input-actions-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .btn-input-attachment {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text2);
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-input-attachment:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
     }
     .btn-send {
-      background: linear-gradient(135deg, var(--accent3), var(--accent2));
-      color: var(--text);
-      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
       width: 36px;
       height: 36px;
-      border-radius: var(--radius-sm);
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: 0.2s;
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
     }
     .btn-send:hover {
       transform: scale(1.05);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
     }
     .btn-send:disabled {
       background: var(--border);
@@ -535,6 +666,10 @@
       cursor: not-allowed;
       box-shadow: none;
       transform: none;
+    }
+    .btn-send i {
+      stroke-width: 2.5px;
+      color: var(--bg) !important;
     }
 
     /* Auth Overlay */
@@ -745,6 +880,10 @@
       <i data-lucide="message-square" class="logo-icon" style="width: 24px; height: 24px;"></i>
       <h1>AI Consultant</h1>
     </div>
+    <a href="index.html" class="btn-dashboard">
+      <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+      <span>Dashboard</span>
+    </a>
   </header>
 
   <!-- APP LAYOUT -->
@@ -765,35 +904,45 @@
       <main class="chat-container" id="chatContainer">
         <!-- Welcome Screen -->
         <div class="welcome-container" id="welcomeContainer">
-          <i data-lucide="message-square" class="welcome-icon" style="width: 64px; height: 64px;"></i>
-          <h2>Konsultasi AI LebihFit</h2>
-          <p>Tanyakan apa saja seputar nutrisi, rancangan diet, program latihan beban/kardio, perbaikan tidur, dan strategi pemulihan otot (recovery) Kamu secara personal.</p>
-          <div class="suggestion-grid">
+          <div class="welcome-glow"></div>
+          <div class="welcome-header">
+            <h2 class="hey-title">Hey! <span id="welcomeUserName">Bro</span></h2>
+            <h3 class="help-title">What can I help with?</h3>
+          </div>
+          <div class="suggestion-row">
             <div class="suggestion-card" onclick="useSuggestion('Buat program latihan beban fat loss untuk pemula, 3 hari seminggu.')">
-              <span class="suggestion-title">Program Latihan</span>
-              <span class="suggestion-text">"Buat program latihan beban fat loss untuk pemula..."</span>
+              <span class="suggestion-badge badge-blue">Program Latihan</span>
+              <span class="suggestion-description">Buat program latihan fat loss pemula</span>
             </div>
             <div class="suggestion-card" onclick="useSuggestion('Bagaimana cara menghitung kebutuhan protein harian saya jika targetnya bulking?')">
-              <span class="suggestion-title">Diet & Nutrisi</span>
-              <span class="suggestion-text">"Bagaimana cara menghitung kebutuhan protein harian..."</span>
+              <span class="suggestion-badge badge-orange">Diet & Nutrisi</span>
+              <span class="suggestion-description">Cara hitung kebutuhan protein harian</span>
             </div>
             <div class="suggestion-card" onclick="useSuggestion('Berikan tips meningkatkan kualitas tidur malam (deep sleep) jika saya sering lembur.')">
-              <span class="suggestion-title">Pola Tidur</span>
-              <span class="suggestion-text">"Berikan tips meningkatkan kualitas tidur malam..."</span>
-            </div>
-            <div class="suggestion-card" onclick="useSuggestion('Apa saja tanda-tanda tubuh saya mengalami overtraining saat latihan beban?')">
-              <span class="suggestion-title">Recovery</span>
-              <span class="suggestion-text">"Apa saja tanda-tanda overtraining..."</span>
+              <span class="suggestion-badge badge-green">Recovery & Tidur</span>
+              <span class="suggestion-description">Tips tidur nyenyak & pemulihan otot</span>
             </div>
           </div>
+          <div id="welcomeInputPlaceholder" class="welcome-input-placeholder"></div>
         </div>
       </main>
 
       <!-- INPUT AREA -->
       <footer class="chat-footer">
-        <div class="input-container">
-          <textarea id="chatInput" class="chat-textarea" placeholder="Tanyakan seputar program diet atau latihanmu..." rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
-          <button id="sendBtn" class="btn-send" onclick="sendChatMessage()"><i data-lucide="send" style="width:18px;height:18px"></i></button>
+        <div class="input-container" id="chatInputContainer">
+          <div class="input-main-row">
+            <i data-lucide="sparkles" class="input-ai-icon" style="width: 20px; height: 20px;"></i>
+            <textarea id="chatInput" class="chat-textarea" placeholder="Tanya apa saja ke LebihFit AI......" rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
+          </div>
+          <div class="input-actions-row">
+            <button class="btn-input-attachment" onclick="handleAttachmentClick()">
+              <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i>
+              <span>Attach file</span>
+            </button>
+            <button id="sendBtn" class="btn-send" onclick="sendChatMessage()">
+              <i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>
+            </button>
+          </div>
         </div>
       </footer>
     </div>
@@ -814,6 +963,9 @@
       </div>
     </div>
   </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast" class="toast hidden"></div>
 
   <script>
     // Constants
@@ -885,6 +1037,10 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         userName = name ? name.replace(/\"/g, '') : 'Bro';
         safeEmail = userEmail.replace(/[.#$[\]]/g, '_');
         
+        // Dynamically update user name on load
+        const welcomeUser = document.getElementById('welcomeUserName');
+        if (welcomeUser) welcomeUser.textContent = userName;
+        
         loadAllSessionsFromFirebase();
       }
     }
@@ -927,6 +1083,9 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       } else {
         startNewChatUI();
       }
+      
+      // Update input box placement
+      updateInputBoxPlacement();
       
       // Update active list state
       document.querySelectorAll('.history-item').forEach(item => {
@@ -1004,29 +1163,32 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       welcome.className = 'welcome-container';
       welcome.id = 'welcomeContainer';
       welcome.innerHTML = `
-        <i data-lucide="message-square" class="welcome-icon" style="width: 64px; height: 64px;"></i>
-        <h2>Konsultasi AI LebihFit</h2>
-        <p>Tanyakan apa saja seputar nutrisi, rancangan diet, program latihan beban/kardio, perbaikan tidur, dan strategi pemulihan otot (recovery) Kamu secara personal.</p>
-        <div class="suggestion-grid">
+        <div class="welcome-glow"></div>
+        <div class="welcome-header">
+          <h2 class="hey-title">Hey! <span id="welcomeUserName">${userName}</span></h2>
+          <h3 class="help-title">What can I help with?</h3>
+        </div>
+        <div class="suggestion-row">
           <div class="suggestion-card" onclick="useSuggestion('Buat program latihan beban fat loss untuk pemula, 3 hari seminggu.')">
-            <span class="suggestion-title">Program Latihan</span>
-            <span class="suggestion-text">"Buat program latihan beban fat loss untuk pemula..."</span>
+            <span class="suggestion-badge badge-blue">Program Latihan</span>
+            <span class="suggestion-description">Buat program latihan fat loss pemula</span>
           </div>
           <div class="suggestion-card" onclick="useSuggestion('Bagaimana cara menghitung kebutuhan protein harian saya jika targetnya bulking?')">
-            <span class="suggestion-title">Diet & Nutrisi</span>
-            <span class="suggestion-text">"Bagaimana cara menghitung kebutuhan protein harian..."</span>
+            <span class="suggestion-badge badge-orange">Diet & Nutrisi</span>
+            <span class="suggestion-description">Cara hitung kebutuhan protein harian</span>
           </div>
           <div class="suggestion-card" onclick="useSuggestion('Berikan tips meningkatkan kualitas tidur malam (deep sleep) jika saya sering lembur.')">
-            <span class="suggestion-title">Pola Tidur</span>
-            <span class="suggestion-text">"Berikan tips meningkatkan kualitas tidur malam..."</span>
-          </div>
-          <div class="suggestion-card" onclick="useSuggestion('Apa saja tanda-tanda tubuh saya mengalami overtraining saat latihan beban?')">
-            <span class="suggestion-title">Recovery</span>
-            <span class="suggestion-text">"Apa saja tanda-tanda overtraining..."</span>
+            <span class="suggestion-badge badge-green">Recovery & Tidur</span>
+            <span class="suggestion-description">Tips tidur nyenyak & pemulihan otot</span>
           </div>
         </div>
+        <div id="welcomeInputPlaceholder" class="welcome-input-placeholder"></div>
       `;
       container.appendChild(welcome);
+      
+      // Update position of input box
+      updateInputBoxPlacement();
+      
       if(window.lucide) lucide.createIcons();
     }
 
@@ -1081,7 +1243,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
 
     // Auto grow input
     function autoGrowInput(element) {
-      element.style.height = "24px";
+      element.style.height = "36px";
       element.style.height = (element.scrollHeight - 12) + "px";
     }
 
@@ -1327,7 +1489,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
 
       // Disable input & send
       input.value = '';
-      input.style.height = '24px';
+      input.style.height = '36px';
       input.disabled = true;
       document.getElementById('sendBtn').disabled = true;
 
@@ -1348,6 +1510,9 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       // Append user bubble
       appendMessageUI('user', text);
       chatHistory.push({ role: 'user', content: text });
+      
+      // Update position of the input box to footer
+      updateInputBoxPlacement();
       
       // Update session array and save to Firebase
       sessions[activeSessionId].messages = chatHistory;
@@ -1436,6 +1601,46 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         input.focus();
         scrollToBottom();
       }
+    }
+
+    // Swaps placement of the input box between the welcome screen and the footer
+    function updateInputBoxPlacement() {
+      const welcome = document.getElementById('welcomeContainer');
+      const inputContainer = document.getElementById('chatInputContainer');
+      const footer = document.querySelector('.chat-footer');
+      
+      if (chatHistory.length === 0) {
+        // Place inside welcome container placeholder
+        const placeholder = document.getElementById('welcomeInputPlaceholder');
+        if (placeholder && inputContainer) {
+          placeholder.appendChild(inputContainer);
+        }
+        if (footer) footer.style.display = 'none';
+        if (welcome) welcome.style.display = 'block';
+      } else {
+        // Place inside footer
+        if (footer && inputContainer) {
+          footer.appendChild(inputContainer);
+          footer.style.display = 'block';
+        }
+        if (welcome) welcome.style.display = 'none';
+      }
+    }
+
+    // Attachment button click handler
+    function handleAttachmentClick() {
+      showToast('Fitur analisis gambar & tracker diet lengkap tersedia di Dashboard!', 'info');
+    }
+
+    // Show custom toast notifications
+    function showToast(msg, type = 'info') {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.className = `toast ${type}`;
+      t.classList.remove('hidden');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.add('hidden'), 3500);
     }
   </script>
 </body>

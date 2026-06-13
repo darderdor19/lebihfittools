@@ -4,7 +4,7 @@
   --bg:#060b11;--surface:#0b121c;--surface2:#121e2c;--border:#1a2d42;
   --accent:#00f0ff;--accent2:#00a6b8;--accent3:#005c66;--success:#00ffcc;--warning:#00d4ff;--danger:#ff3366;
   --text:#e0f7fa;--text2:#8caebf;--text3:#4a6b7c;
-  --radius:2px;--radius-sm:0px;
+  --radius:12px;--radius-sm:8px;
   --font:'Inter',sans-serif;
 }
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;letter-spacing:0.3px}
