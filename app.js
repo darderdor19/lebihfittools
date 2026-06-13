@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxuDjmrJWTYXY5PGJOA7Y6Lp7IzZNwt-i7MX1yiKTxZjjbpZZlk5Pe0o0N5l-3AGQs2/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyvX93Dx936kVdgUcx_dFJu1WJBvkS0jNtxW9PnhAaLnWvxN1p1-77mCfgOHmd9bDll/exec";
 let tempAuthEmail = "";
 let tempAuthName = "";
 
