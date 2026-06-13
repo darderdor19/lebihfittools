@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Consultant - LebihFit</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.2">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -1051,13 +1051,21 @@
   <header class="chat-header">
     <div class="header-logo">
       <button class="hamburger-btn" onclick="toggleChatSidebar()"><i data-lucide="menu"></i></button>
-      <i data-lucide="message-square" class="logo-icon" style="width: 24px; height: 24px;"></i>
-      <h1>AI Consultant</h1>
+      <div onclick="startNewChat()" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+        <i data-lucide="message-square" class="logo-icon" style="width: 24px; height: 24px;"></i>
+        <h1>AI Consultant</h1>
+      </div>
     </div>
-    <a href="index.html" class="btn-dashboard">
-      <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
-      <span>Dashboard</span>
-    </a>
+    <div style="display: flex; gap: 8px;">
+      <button onclick="forceRefreshPage()" class="btn-dashboard" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text2);">
+        <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+        <span>Refresh</span>
+      </button>
+      <a href="index.html" class="btn-dashboard">
+        <i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i>
+        <span>Dashboard</span>
+      </a>
+    </div>
   </header>
 
   <!-- APP LAYOUT -->
@@ -1151,7 +1159,7 @@
       <p>Apakah Kamu yakin ingin menghapus percakapan ini secara permanen dari riwayat chat Kamu?</p>
       <div class="confirm-actions">
         <button class="btn-cancel" onclick="closeConfirmModal()">Batal</button>
-        <button class="btn-confirm-delete" id="confirmDeleteBtn">Hapus</button>
+        <button class="btn-confirm-delete" id="confirmDeleteBtn" onclick="executeSessionDeletion()">Hapus</button>
       </div>
     </div>
   </div>
@@ -1215,6 +1223,11 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       updateInputBoxPlacement();
     });
 
+    // Force Refresh page bypassing mobile cache
+    function forceRefreshPage() {
+      window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+    }
+
     // Toggle Mobile Sidebar
     function toggleChatSidebar() {
       const sidebar = document.getElementById('chatSidebar');
@@ -1255,7 +1268,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         renderSidebarList();
         
         // Load the most recent session if exists
-        const sessionIds = Object.keys(sessions).sort((a,b) => sessions[b].createdAt.localeCompare(sessions[a].createdAt));
+        const sessionIds = Object.keys(sessions).sort((a,b) => (sessions[b].createdAt || '').localeCompare(sessions[a].createdAt || ''));
         if (sessionIds.length > 0) {
           loadSession(sessionIds[0]);
         } else {

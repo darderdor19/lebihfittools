@@ -3108,7 +3108,11 @@ function saveApiKey() {
 }
 
 function openConsultantPage() {
-    window.open('consultant.html', '_blank');
+    window.open('consultant.html?v=' + Date.now(), '_blank');
+}
+
+function forceRefreshPage() {
+    window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
 }
 
 function updateApiStatus(hasKey) {

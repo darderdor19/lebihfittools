@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.4s ease-out;">
@@ -174,7 +174,10 @@
     <header class="mobile-topbar">
       <button class="hamburger" onclick="toggleSidebar()"><i data-lucide="menu" style="width:24px;height:24px;"></i></button>
       <span class="mobile-logo" onclick="showPage('dashboard')" style="cursor: pointer; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 6px;"><i data-lucide="flame" style="width:22px;height:22px;color:var(--accent);"></i> LebihFit</span>
-      <button class="mobile-add" onclick="openMobileAddSelect()"><i data-lucide="plus" style="width:24px;height:24px;"></i></button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="mobile-add" onclick="forceRefreshPage()" style="background: none; border: none; color: var(--text2); display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: pointer; padding: 0; outline: none;"><i data-lucide="refresh-cw" style="width:20px;height:20px;"></i></button>
+        <button class="mobile-add" onclick="openMobileAddSelect()"><i data-lucide="plus" style="width:24px;height:24px;"></i></button>
+      </div>
     </header>
 
     <!-- OVERLAY for mobile sidebar -->
@@ -1390,7 +1393,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="core.js?v=3"></script>
-  <script src="app.js?v=9"></script>
+  <script src="core.js?v=4"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
