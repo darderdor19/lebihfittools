@@ -1754,3 +1754,21 @@ a{color:var(--accent);text-decoration:none}
   color: var(--text2);
   margin: 0;
 }
+
+/* ===== COLLAPSIBLE LOG HISTORY ===== */
+.history-details-group summary::-webkit-details-marker {
+  display: none;
+}
+.history-details-group summary {
+  list-style: none;
+}
+.history-details-group[open] .history-chevron {
+  transform: rotate(180deg);
+}
+@keyframes slideDownDetails {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.history-details-content {
+  animation: slideDownDetails 0.25s ease-out;
+}

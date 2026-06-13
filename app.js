@@ -1465,7 +1465,7 @@ function renderActivityHistory() {
         return;
     }
     const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    listEl.innerHTML = datesWithActs.map(date => {
+    listEl.innerHTML = datesWithActs.map((date, index) => {
         const [y, m, d] = date.split('-');
         const acts = allActs[date];
         const actHtml = acts.map(act => {
@@ -1516,10 +1516,19 @@ function renderActivityHistory() {
                 <span style="color:var(--text2);">${detail}</span>
             </div>`;
         }).join('');
-        return `<div class="history-item" style="padding:12px 0;border-bottom:1px solid var(--border);">
-            <div style="font-weight:700;font-size:0.9rem;">${parseInt(d)} ${months[parseInt(m)-1]} ${y}</div>
-            ${actHtml}
-        </div>`;
+        const isOpen = index === 0 ? 'open' : '';
+        return `<details class="history-details-group" ${isOpen} style="border-bottom:1px solid var(--border); padding: 8px 0;">
+            <summary class="history-date-header" style="list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight:700; font-size:0.9rem; color: var(--text1); padding: 6px 0; outline: none; user-select: none;">
+                <span>${parseInt(d)} ${months[parseInt(m)-1]} ${y}</span>
+                <span style="font-size:0.75rem; color:var(--text3); display:inline-flex; align-items:center; gap:4px;">
+                    <span>${acts.length} kegiatan</span>
+                    <i data-lucide="chevron-down" class="history-chevron" style="width:14px; height:14px; transition: transform 0.2s;"></i>
+                </span>
+            </summary>
+            <div class="history-details-content" style="margin-top: 8px;">
+                ${actHtml}
+            </div>
+        </details>`;
     }).join('');
     
     // Render the dual-axis activity and sleep chart
