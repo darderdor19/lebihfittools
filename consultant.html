@@ -648,6 +648,64 @@
       justify-content: space-between;
       align-items: center;
       width: 100%;
+      position: relative;
+    }
+    /* Attachment Options Menu */
+    .attachment-menu {
+      position: absolute;
+      bottom: 50px;
+      left: 0;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 100;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 240, 255, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      min-width: 180px;
+      animation: scaleUp 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-origin: bottom left;
+    }
+    .attachment-menu.hidden {
+      display: none !important;
+    }
+    .attachment-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      color: var(--text2);
+      font-size: 0.85rem;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      border-radius: 8px;
+      transition: 0.2s;
+      font-weight: 500;
+      font-family: var(--font);
+    }
+    .attachment-menu-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+    .attachment-menu-item i {
+      flex-shrink: 0;
+    }
+    @keyframes scaleUp {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
     .btn-input-attachment {
       background: rgba(255, 255, 255, 0.05);
@@ -1057,18 +1115,32 @@
             <textarea id="chatInput" class="chat-textarea" placeholder="Tanya apa saja ke LebihFit AI......" rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
           </div>
           <div class="input-actions-row">
-            <button class="btn-input-attachment" onclick="handleAttachmentClick()">
+            <button id="attachmentBtn" class="btn-input-attachment" onclick="toggleAttachmentMenu(event)">
               <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i>
               <span>Attach file</span>
             </button>
+            
+            <!-- Attachment Options Menu -->
+            <div id="attachmentMenu" class="attachment-menu hidden">
+              <button class="attachment-menu-item" onclick="triggerFileAttachment()">
+                <i data-lucide="image" style="width: 16px; height: 16px; color: var(--accent);"></i>
+                <span>Pilih dari Galeri</span>
+              </button>
+              <button class="attachment-menu-item" onclick="triggerCameraAttachment()">
+                <i data-lucide="camera" style="width: 16px; height: 16px; color: var(--accent2);"></i>
+                <span>Ambil dari Kamera</span>
+              </button>
+            </div>
+
             <button id="sendBtn" class="btn-send" onclick="sendChatMessage()">
               <i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>
             </button>
           </div>
         </div>
 
-        <!-- Hidden file input for image attachment -->
+        <!-- Hidden file inputs for image attachment (gallery vs camera) -->
         <input type="file" id="imageAttachmentInput" accept="image/*" style="display:none;" onchange="handleFileSelected(this)">
+        <input type="file" id="cameraAttachmentInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileSelected(this)">
       </footer>
     </div>
 
@@ -1812,10 +1884,41 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       }
     }
 
-    // Attachment button click handler
-    function handleAttachmentClick() {
-      document.getElementById('imageAttachmentInput').click();
+    // Toggle Attachment Popover Menu
+    function toggleAttachmentMenu(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('attachmentMenu');
+      if (menu) menu.classList.toggle('hidden');
     }
+
+    // Trigger File input click (Gallery)
+    function triggerFileAttachment() {
+      document.getElementById('imageAttachmentInput').click();
+      hideAttachmentMenu();
+    }
+
+    // Trigger Camera input click (Direct camera capture)
+    function triggerCameraAttachment() {
+      document.getElementById('cameraAttachmentInput').click();
+      hideAttachmentMenu();
+    }
+
+    // Hide Menu helper
+    function hideAttachmentMenu() {
+      const menu = document.getElementById('attachmentMenu');
+      if (menu) menu.classList.add('hidden');
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('attachmentMenu');
+      const btn = document.getElementById('attachmentBtn');
+      if (menu && !menu.classList.contains('hidden')) {
+        if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+          hideAttachmentMenu();
+        }
+      }
+    });
 
     // File selected handler
     function handleFileSelected(input) {
@@ -1857,6 +1960,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       attachedImageBase64 = null;
       attachedImageName = '';
       document.getElementById('imageAttachmentInput').value = '';
+      document.getElementById('cameraAttachmentInput').value = '';
       const preview = document.getElementById('attachmentPreview');
       preview.innerHTML = '';
       preview.classList.add('hidden');
