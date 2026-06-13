@@ -4652,7 +4652,23 @@ async function startPhysicalAnalysis() {
         ].join('|');
         const currentHash = hashString(inputString);
 
-        const cached = DB.get('lf_physical_analysis_cache');
+        let cached = null;
+        if (typeof fbDb !== 'undefined' && fbDb) {
+            const email = localStorage.getItem('lf_user_email');
+            if (email) {
+                const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+                try {
+                    const snapshot = await fbDb.ref(`users/${safeEmail}/lf_physical_analysis_cache`).once('value');
+                    cached = snapshot.val();
+                } catch (e) {
+                    console.error("Firebase read error:", e);
+                }
+            }
+        }
+        if (!cached) {
+            cached = DB.get('lf_physical_analysis_cache');
+        }
+
         if (cached && cached.hash === currentHash) {
             console.log("[lebihfit] Loading physical analysis from cache");
             resultTextEl.innerHTML = renderPhysicalAnalysisUI(cached.data);
@@ -4756,7 +4772,15 @@ Catatan Tambahan User: "${customDesc || '-'}"
         }
 
         if (data) {
-            DB.set('lf_physical_analysis_cache', { hash: currentHash, data: data });
+            const cacheObj = { hash: currentHash, data: data };
+            if (typeof fbDb !== 'undefined' && fbDb) {
+                const email = localStorage.getItem('lf_user_email');
+                if (email) {
+                    const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+                    fbDb.ref(`users/${safeEmail}/lf_physical_analysis_cache`).set(cacheObj).catch(console.error);
+                }
+            }
+            DB.set('lf_physical_analysis_cache', cacheObj);
             resultTextEl.innerHTML = renderPhysicalAnalysisUI(data);
         } else {
             resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;
