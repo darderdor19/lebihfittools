@@ -1,13 +1,13 @@
 // ===== FIREBASE CONFIG (TUGAS USER) =====
 // Paste firebaseConfig Anda di dalam kurung kurawal di bawah ini:
 const firebaseConfig = {
-  apiKey: "AIzaSyAL69COk7XKUnKalpBY9QmLSMddHv0lEe4",
-  authDomain: "lebihfit-tools-final.firebaseapp.com",
-  databaseURL: "https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "lebihfit-tools-final",
-  storageBucket: "lebihfit-tools-final.firebasestorage.app",
-  messagingSenderId: "806088947698",
-  appId: "1:806088947698:web:1c4af66a443d96b9071d6b"
+  apiKey: "AIzaSyAf6sIX9am_Gmv4xf0FiHRZX1V-w7NzIcM",
+  authDomain: "lebihfittools.firebaseapp.com",
+  databaseURL: "https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "lebihfittools",
+  storageBucket: "lebihfittools.firebasestorage.app",
+  messagingSenderId: "842679721902",
+  appId: "1:842679721902:web:99f81ad767dc372739323f"
 };
 
 let fbDb = null;
