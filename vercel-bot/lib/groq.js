@@ -42,33 +42,37 @@ Tugas kamu adalah menghitung kandungan nutrisi makro dan mikro secara presisi be
 Nama Makanan / Deskripsi: "${text}"
 
 == DATABASE REFERENCE (Per 100g): ==
-- Singkong (mentah/rebus): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
+- Singkong (mentah/rebus/air-fryer tanpa minyak): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
 - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
-- Dada Ayam (rebus/panggang, matang): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
+- Dada Ayam Fillet MENTAH (raw): 120 kcal | Karbo: 0g | Protein: 23g | Lemak: 2.5g | Serat: 0g | Gula: 0g | Sodium: 65mg | Kalsium: 10mg | Besi: 0.7mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.8mg
+- Dada Ayam MATANG (rebus/panggang/air-fryer tanpa minyak): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
 - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
 - Minyak Goreng / Margarin (per 10g / 1 sdm): 88 kcal | Karbo: 0g | Protein: 0g | Lemak: 10g | Serat: 0g | Gula: 0g | Sodium: 0mg | Kalsium: 0mg | Besi: 0mg | VitC: 0mg | VitD: 0mcg | Zinc: 0mg
 
 == INSTRUKSI KALKULASI SECARA KETAT ==
-1. Ekstrak berat makanan dalam gram (misal: "500gram" -> 500g, "1 kg" -> 1000g). Jika tidak disebutkan beratnya, estimasikan berat standar (misal: 1 piring nasi = 200g, 1 potong ayam = 100g).
-2. Lakukan perkalian matematis secara eksak: (Berat Gizi per 100g) * (Total Berat / 100).
-   - CONTOH: Jika pengguna memasukkan "Singkong 500 gram rebus tanpa minyak", maka faktor pengalinya adalah 5.0.
+1. Ekstrak berat makanan dalam gram (misal: "545 gram" -> 545g, "500gram" -> 500g). Jika tidak disebutkan beratnya, gunakan estimasi porsi standar.
+2. Bedakan Berat Mentah vs Matang secara logis:
+   - Jika deskripsi mengandung kata "fillet", "mentah", "raw", gunakan data "MENTAH".
+   - Jika matang atau tidak disebutkan secara spesifik, asumsikan berat yang diinput adalah berat mentah sebelum dimasak kecuali konteksnya jelas-jelas matang.
+3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK (sama seperti rebus/panggang kering). JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
+4. Lakukan perkalian matematis secara eksak: (Berat Gizi per 100g) * (Total Berat / 100).
+   - CONTOH 1: "dada ayam fillet 545 gram dimasak air-fryer tanpa minyak" (Fillet = Mentah, Air-fryer = Tanpa minyak):
+     - Faktor pengali = 5.45
+     - Kalori = 120 * 5.45 = 654 kcal
+     - Protein = 23 * 5.45 = 125.4g
+     - Lemak = 2.5 * 5.45 = 13.6g
+     - Karbo = 0 * 5.45 = 0g
+   - CONTOH 2: "singkong 500gram dimasak air-fryer tanpa minyak":
+     - Faktor pengali = 5.0
      - Kalori = 160 * 5.0 = 800 kcal
      - Karbohidrat = 38 * 5.0 = 190g
      - Protein = 1.3 * 5.0 = 6.5g
      - Lemak = 0.3 * 5.0 = 1.5g
-     - Serat = 1.8 * 5.0 = 9.0g
-     - Gula = 1.7 * 5.0 = 8.5g
-     - Sodium = 14 * 5.0 = 70mg
-     - Kalsium = 16 * 5.0 = 80mg
-     - Besi = 0.3 * 5.0 = 1.5mg
-     - Vit C = 20 * 5.0 = 100mg
-     - Vit D = 0 * 5.0 = 0mcg
-     - Zinc = 0.3 * 5.0 = 1.5mg
-3. Jika terdapat minyak goreng atau bumbu berminyak dalam deskripsi cara masak, tambahkan kalori and lemak secara proporsional (contoh: digoreng -> tambahkan 1 sdm / 10g minyak = +88 kcal dan +10g lemak).
-4. Untuk makanan lain yang tidak ada di daftar di atas, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
-5. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
+5. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
+6. Untuk makanan lain, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
+7. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
-Semua nilai numerik dibulatkan ke 1 angka di belakang koma (misal: 6.5).`;
+Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
   const content = await callGroq([{ role: 'user', content: prompt }], true, 600);
   return JSON.parse(content);
 }
