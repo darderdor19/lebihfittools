@@ -384,7 +384,7 @@ async function triggerActivityAI(type) {
             type: 'workout',
             exercises: [..._workoutSession],
             durationMin: estimatedDuration,
-            intensity: 'medium',
+            intensity: document.getElementById('workoutIntensity').value,
             burn: null,
             createdAt: Date.now()
         };
@@ -420,7 +420,7 @@ async function triggerActivityAI(type) {
             type: 'gym',
             muscles: muscleData,
             durationMin: estimatedDuration,
-            intensity: 'medium',
+            intensity: document.getElementById('gymIntensity').value,
             burn: null,
             createdAt: Date.now()
         };
@@ -473,7 +473,7 @@ async function triggerActivityAI(type) {
         else if (type === 'cardio') met = MET_CARDIO[intensity] || 7.0;
         else if (type === 'other') met = MET_OTHER[intensity] || 5.5;
         
-        const burn = calcBurnedCalories(met, item.durationMin || 30);
+        const burn = calcBurnedCalories(met, item.durationMin || 30, intensity);
         _currentActivityAiResult = {
             type: type,
             burn: burn,
@@ -622,22 +622,39 @@ function addWorkoutExercise() {
 // ===== CALORIE BURN CALCULATION =====
 // Formula: kcal = MET × weightKg × durationHours
 // MET values per intensity
-const MET_WORKOUT = { low: 3.5, medium: 5.5, high: 8.0 };
-const MET_GYM     = { low: 3.0, medium: 5.0, high: 6.5 };
-const MET_CARDIO  = { low: 4.5, medium: 7.0, high: 9.5 };
-const MET_OTHER   = { low: 3.5, medium: 5.5, high: 7.5 };
-// Ratio of energy from fat/carb/protein during exercise
-const BURN_RATIO  = { fat: 0.30, carb: 0.60, protein: 0.10 }; // kcal proportion
-// Fat: 9 kcal/g, Carb: 4 kcal/g, Protein: 4 kcal/g
+const MET_WORKOUT = { low: 3.5, medium: 5.0, high: 6.0 };
+const MET_GYM     = { low: 3.5, medium: 5.0, high: 6.0 };
+const MET_CARDIO  = { low: 3.0, medium: 5.0, high: 8.3 };
+const MET_OTHER   = { low: 3.0, medium: 5.0, high: 6.0 };
 
-function calcBurnedCalories(met, durationMin) {
+function calcBurnedCalories(met, durationMin, intensity = 'medium') {
     const profile = getProfile() || {};
     const weight = parseFloat(profile.bb) || 70;
     const kcal = met * weight * (durationMin / 60);
-    const fatG    = (kcal * BURN_RATIO.fat) / 9;
-    const carbG   = (kcal * BURN_RATIO.carb) / 4;
-    const proteinG= (kcal * BURN_RATIO.protein) / 4;
-    return { kcal: Math.round(kcal), fatG: fatG.toFixed(1), carbG: carbG.toFixed(1), proteinG: proteinG.toFixed(1) };
+    
+    // Dynamic ratio based on intensity
+    let fatRatio = 0.30;
+    let carbRatio = 0.65;
+    let proteinRatio = 0.05;
+    
+    if (intensity === 'low') {
+        fatRatio = 0.40;
+        carbRatio = 0.55;
+    } else if (intensity === 'high') {
+        fatRatio = 0.20;
+        carbRatio = 0.75;
+    }
+    
+    const fatG    = (kcal * fatRatio) / 9;
+    const carbG   = (kcal * carbRatio) / 4;
+    const proteinG= (kcal * proteinRatio) / 4;
+    
+    return { 
+        kcal: Math.round(kcal), 
+        fatG: parseFloat(fatG.toFixed(1)), 
+        carbG: parseFloat(carbG.toFixed(1)), 
+        proteinG: parseFloat(proteinG.toFixed(1)) 
+    };
 }
 
 function renderBurnPreview(containerId, burn, durationMin, intensity) {
@@ -662,7 +679,7 @@ function previewWorkoutBurn() {
     const dur = parseFloat(document.getElementById('workoutDuration').value) || 0;
     const intensity = document.getElementById('workoutIntensity').value;
     if (!dur) { document.getElementById('workoutBurnPreview').innerHTML = ''; return; }
-    const burn = calcBurnedCalories(MET_WORKOUT[intensity], dur);
+    const burn = calcBurnedCalories(MET_WORKOUT[intensity], dur, intensity);
     renderBurnPreview('workoutBurnPreview', burn, dur, intensity);
 }
 
@@ -670,7 +687,7 @@ function previewGymBurn() {
     const dur = parseFloat(document.getElementById('gymDuration').value) || 0;
     const intensity = document.getElementById('gymIntensity').value;
     if (!dur) { document.getElementById('gymBurnPreview').innerHTML = ''; return; }
-    const burn = calcBurnedCalories(MET_GYM[intensity], dur);
+    const burn = calcBurnedCalories(MET_GYM[intensity], dur, intensity);
     renderBurnPreview('gymBurnPreview', burn, dur, intensity);
 }
 
@@ -746,7 +763,7 @@ async function handleWorkoutOrGymSave(type) {
             type: 'workout',
             exercises: [..._workoutSession],
             durationMin: estimatedDuration,
-            intensity: 'medium',
+            intensity: document.getElementById('workoutIntensity').value,
             burn: null,
             createdAt: Date.now()
         };
@@ -782,7 +799,7 @@ async function handleWorkoutOrGymSave(type) {
             type: 'gym',
             muscles: muscleData,
             durationMin: estimatedDuration,
-            intensity: 'medium',
+            intensity: document.getElementById('gymIntensity').value,
             burn: null,
             createdAt: Date.now()
         };

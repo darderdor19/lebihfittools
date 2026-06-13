@@ -505,6 +505,7 @@ Tugas kamu adalah menganalisis rincian latihan pengguna dan menghitung pembakara
 == DATA LATIHAN (${activity.type.toUpperCase()}) ==
 ${workoutDetails}
 - Durasi Latihan: ${activity.durationMin || 30} menit
+- Tingkat Intensitas yang Dipilih: ${activity.intensity || 'medium'}
 
 == FORMULA PERHITUNGAN KALORI (WAJIB DIIKUTI) ==
 Gunakan rumus ilmiah standar: Kcal = MET * Berat Badan (kg) * (Durasi (menit) / 60)
@@ -514,20 +515,22 @@ Di mana nilai MET ditentukan secara logis berdasarkan jenis dan intensitas latih
    - Intensitas Sedang (latihan beban standar, rest time 60-90s): MET = 5.0
    - Intensitas Tinggi (circuit training, superset, rest time pendek <60s): MET = 6.0
 2. CARDIO (Lari, bersepeda, berenang, dll):
-   - Intensitas Ringan (jalan santai, sepedahan santai): MET = 4.0
-   - Intensitas Sedang (jogging, kardio sedang): MET = 7.0
-   - Intensitas Tinggi (lari cepat, HIIT, kardio berat): MET = 10.0
+   - Intensitas Ringan (jalan santai, sepedahan santai): MET = 3.0
+   - Intensitas Sedang (jogging, kardio sedang): MET = 5.0
+   - Intensitas Tinggi (lari cepat, HIIT, kardio berat): MET = 8.3
 3. OTHER (Aktivitas lain):
    - Gunakan MET berkisar 3.0 - 6.0 sesuai jenis aktivitas dan intensitasnya.
 
 == FORMULA PEMBAGIAN MAKRO YANG TERBAKAR (WAJIB DIIKUTI) ==
-Bagi energi kalori (kcal) yang terbakar menjadi gram makronutrisi sebagai berikut:
+Beni/kalori (kcal) yang terbakar dibagi menjadi gram makronutrisi sebagai berikut:
 - Protein terbakar: 5% dari total kalori -> gram protein = (Kcal * 0.05) / 4
 - Lemak terbakar (tergantung intensitas):
   - Intensitas Ringan: 40% dari total kalori -> gram lemak = (Kcal * 0.40) / 9
   - Intensitas Sedang: 30% dari total kalori -> gram lemak = (Kcal * 0.30) / 9
   - Intensitas Tinggi: 20% dari total kalori -> gram lemak = (Kcal * 0.20) / 9
 - Karbohidrat terbakar: sisa persentase kalori -> gram karbohidrat = (Kcal * (100% - 5% - %Persentase Lemak)) / 4
+
+SANGAT PENTING: Untuk gram makronutrisi, Anda WAJIB membagi persentase kalori dengan nilai kalorinya (Lemak dibagi 9, Karbohidrat dan Protein dibagi 4). JANGAN langsung mengembalikan nilai kalori sebagai gram!
 
 == TUGAS ==
 1. Tentukan tingkat intensitas latihan secara logis dari beban, repetisi, set, atau deskripsi latihan.
@@ -540,19 +543,43 @@ Jawab HANYA dengan JSON valid format berikut tanpa markdown/teks lain:
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
+  
+  let parsed = null;
   try {
     if (typeof raw === 'string') {
       const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        return JSON.parse(match[0]);
-      }
-      return JSON.parse(raw);
+      parsed = match ? JSON.parse(match[0]) : JSON.parse(raw);
+    } else {
+      parsed = raw;
     }
-    return raw;
   } catch (e) {
     console.error("Parse Error. Raw data:", raw);
     throw new Error("Gagal membaca hasil analisis AI (Format JSON tidak valid).");
   }
+
+  // Programmatic macro recalculation to guarantee 100% mathematical consistency and correct density division!
+  if (parsed && typeof parsed.kcal === 'number') {
+    const kcal = parsed.kcal;
+    const intensity = activity.intensity || 'medium';
+    
+    let fatRatio = 0.30;
+    let carbRatio = 0.65;
+    let proteinRatio = 0.05;
+    
+    if (intensity === 'low') {
+        fatRatio = 0.40;
+        carbRatio = 0.55;
+    } else if (intensity === 'high') {
+        fatRatio = 0.20;
+        carbRatio = 0.75;
+    }
+    
+    parsed.fatG = parseFloat(((kcal * fatRatio) / 9).toFixed(1));
+    parsed.carbG = parseFloat(((kcal * carbRatio) / 4).toFixed(1));
+    parsed.proteinG = parseFloat(((kcal * proteinRatio) / 4).toFixed(1));
+  }
+  
+  return parsed;
 }
 
 // ===== TOAST =====

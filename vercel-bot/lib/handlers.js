@@ -1848,17 +1848,31 @@ const MUSCLE_LABELS = {
   abs: 'Abs (Perut)', traps: 'Traps (Pundak)', leg: 'Leg (Kaki)'
 };
 
-const MET_WORKOUT = { low: 3.5, medium: 5.5, high: 8.0 };
-const MET_GYM     = { low: 3.0, medium: 5.0, high: 6.5 };
-const MET_CARDIO  = { low: 4.5, medium: 7.0, high: 9.5 };
-const MET_OTHER   = { low: 3.5, medium: 5.5, high: 7.5 };
-const BURN_RATIO  = { fat: 0.30, carb: 0.60, protein: 0.10 };
+const MET_WORKOUT = { low: 3.5, medium: 5.0, high: 6.0 };
+const MET_GYM     = { low: 3.5, medium: 5.0, high: 6.0 };
+const MET_CARDIO  = { low: 3.0, medium: 5.0, high: 8.3 };
+const MET_OTHER   = { low: 3.0, medium: 5.0, high: 6.0 };
 
-function calcBurnedCalories(met, durationMin, weight = 70) {
+function calcBurnedCalories(met, durationMin, weight = 70, intensity = 'medium') {
   const kcal = met * weight * (durationMin / 60);
-  const fatG    = (kcal * BURN_RATIO.fat) / 9;
-  const carbG   = (kcal * BURN_RATIO.carb) / 4;
-  const proteinG= (kcal * BURN_RATIO.protein) / 4;
+  
+  // Dynamic ratio based on intensity
+  let fatRatio = 0.30;
+  let carbRatio = 0.65;
+  let proteinRatio = 0.05;
+  
+  if (intensity === 'low') {
+    fatRatio = 0.40;
+    carbRatio = 0.55;
+  } else if (intensity === 'high') {
+    fatRatio = 0.20;
+    carbRatio = 0.75;
+  }
+
+  const fatG    = (kcal * fatRatio) / 9;
+  const carbG   = (kcal * carbRatio) / 4;
+  const proteinG= (kcal * proteinRatio) / 4;
+  
   return { 
     kcal: Math.round(kcal), 
     fatG: parseFloat(fatG.toFixed(1)), 
@@ -2172,7 +2186,7 @@ async function saveWorkoutSession(chatId, userId, email) {
 
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
-  const burn = calcBurnedCalories(MET_WORKOUT[draft.intensity], draft.durationMin, weight);
+  const burn = calcBurnedCalories(MET_WORKOUT[draft.intensity], draft.durationMin, weight, draft.intensity);
 
   const today = todayKey();
   const actId = generateId();
@@ -2366,7 +2380,7 @@ async function saveGymSession(chatId, userId, email) {
 
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
-  const burn = calcBurnedCalories(MET_GYM[draft.intensity], draft.durationMin, weight);
+  const burn = calcBurnedCalories(MET_GYM[draft.intensity], draft.durationMin, weight, draft.intensity);
 
   const today = todayKey();
   const actId = generateId();
@@ -2831,7 +2845,7 @@ async function saveCardioSession(chatId, userId, email) {
 
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
-  const burn = calcBurnedCalories(MET_CARDIO[draft.intensity], draft.durationMin, weight);
+  const burn = calcBurnedCalories(MET_CARDIO[draft.intensity], draft.durationMin, weight, draft.intensity);
 
   const today = todayKey();
   const actId = generateId();
@@ -2963,7 +2977,7 @@ async function saveOtherSession(chatId, userId, email) {
 
   const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
   const weight = (profile && profile.bb) ? parseFloat(profile.bb) : 70;
-  const burn = calcBurnedCalories(MET_OTHER[draft.intensity], draft.durationMin, weight);
+  const burn = calcBurnedCalories(MET_OTHER[draft.intensity], draft.durationMin, weight, draft.intensity);
 
   const today = todayKey();
   const actId = generateId();
