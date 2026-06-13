@@ -382,28 +382,77 @@
       padding: 8px 14px;
       border-radius: 4px;
     }
-    .message-bubble h2, .message-bubble h3, .message-bubble h4 {
-      margin-top: 18px;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-    .message-bubble h2 {
-      font-size: 1.35rem;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding-bottom: 6px;
-    }
-    .message-bubble h3 {
+    
+    /* Premium Markdown HUD Elements */
+    .markdown-h2 {
       font-size: 1.15rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       color: var(--accent);
+      background: linear-gradient(90deg, rgba(0, 240, 255, 0.08), transparent);
+      border-left: 3px solid var(--accent);
+      padding: 10px 16px;
+      margin: 24px 0 14px 0;
+      border-radius: 0 6px 6px 0;
+      box-shadow: inset 1px 0 0 rgba(0, 240, 255, 0.1);
     }
-    .message-bubble h4 {
-      font-size: 1rem;
-      color: var(--accent2);
+    .markdown-h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: var(--accent2);
+      background: linear-gradient(90deg, rgba(186, 85, 211, 0.08), transparent);
+      border-left: 3px solid var(--accent2);
+      padding: 8px 12px;
+      margin: 20px 0 10px 0;
+      border-radius: 0 4px 4px 0;
+      box-shadow: inset 1px 0 0 rgba(186, 85, 211, 0.1);
+    }
+    .markdown-h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 16px 0 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding-bottom: 4px;
+    }
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(8, 13, 21, 0.4);
+    }
+    .markdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      text-align: left;
+    }
+    .markdown-table th {
+      background: var(--surface2);
+      color: var(--accent);
+      font-weight: 700;
+      padding: 10px 14px;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    .markdown-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text2);
+    }
+    .markdown-table tr:last-child td {
+      border-bottom: none;
+    }
+    .markdown-table tr:hover td {
+      background: rgba(0, 240, 255, 0.02);
+      color: var(--text);
     }
 
     /* Typing Indicator */
@@ -1058,46 +1107,187 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       container.scrollTop = container.scrollHeight;
     }
 
-    // Simple markdown parser
+    // Premium Markdown and Table Parser
     function parseMarkdown(text) {
       if (!text) return '';
+      
+      let lines = text.split('\n');
+      let html = [];
+      let inList = false;
+      let listType = null; // 'ul' or 'ol'
+      let inCodeBlock = false;
+      let codeContent = [];
+      let inTable = false;
+      let tableRows = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let trimmed = line.trim();
+
+        // Handle Code Blocks
+        if (trimmed.startsWith('```')) {
+          if (inCodeBlock) {
+            inCodeBlock = false;
+            html.push(`<pre style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); padding:14px; border-radius:8px; overflow-x:auto; font-family:monospace; font-size:0.85rem; margin:14px 0; color:#e0f7fa;">${codeContent.join('\n')}</pre>`);
+            codeContent = [];
+          } else {
+            inCodeBlock = true;
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          let escapedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          codeContent.push(escapedLine);
+          continue;
+        }
+
+        // Escape general HTML
+        line = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        // Handle Tables
+        if (trimmed.startsWith('|')) {
+          if (!inTable) {
+            inTable = true;
+            tableRows = [];
+          }
+          if (!trimmed.match(/^\|?\s*:?-+:?\s*\|/)) {
+            tableRows.push(trimmed);
+          }
+          continue;
+        } else if (inTable) {
+          inTable = false;
+          html.push(renderHTMLTable(tableRows));
+          tableRows = [];
+        }
+
+        // Handle Horizontal Rule
+        if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+          html.push('<hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">');
+          continue;
+        }
+
+        // Handle Headings
+        if (trimmed.startsWith('#')) {
+          if (inList) { html.push(`</${listType}>`); inList = false; }
+          
+          let level = 0;
+          while (trimmed.charAt(level) === '#') level++;
+          let headerText = trimmed.slice(level).trim();
+          headerText = parseInlineMarkdown(headerText);
+          
+          if (level === 1) {
+            html.push(`<h2 class="markdown-h1">${headerText}</h2>`);
+          } else if (level === 2) {
+            html.push(`<h2 class="markdown-h2">${headerText}</h2>`);
+          } else if (level === 3) {
+            html.push(`<h3 class="markdown-h3">${headerText}</h3>`);
+          } else {
+            html.push(`<h4 class="markdown-h4">${headerText}</h4>`);
+          }
+          continue;
+        }
+
+        // Handle Blockquotes
+        if (trimmed.startsWith('&gt;')) {
+          if (inList) { html.push(`</${listType}>`); inList = false; }
+          let quoteText = trimmed.slice(4).trim();
+          html.push(`<blockquote class="markdown-quote">${parseInlineMarkdown(quoteText)}</blockquote>`);
+          continue;
+        }
+
+        // Handle Bullet Lists
+        let bulletMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
+        if (bulletMatch) {
+          let itemText = bulletMatch[2];
+          if (!inList || listType !== 'ul') {
+            if (inList) html.push(`</${listType}>`);
+            html.push('<ul class="markdown-ul">');
+            inList = true;
+            listType = 'ul';
+          }
+          html.push(`<li>${parseInlineMarkdown(itemText)}</li>`);
+          continue;
+        }
+
+        // Handle Numbered Lists
+        let numMatch = line.match(/^(\s*)(\d+)\.\s+(.+)$/);
+        if (numMatch) {
+          let itemText = numMatch[3];
+          if (!inList || listType !== 'ol') {
+            if (inList) html.push(`</${listType}>`);
+            html.push('<ol class="markdown-ol">');
+            inList = true;
+            listType = 'ol';
+          }
+          html.push(`<li>${parseInlineMarkdown(itemText)}</li>`);
+          continue;
+        }
+
+        // Empty line ends lists
+        if (trimmed === '') {
+          if (inList) {
+            html.push(`</${listType}>`);
+            inList = false;
+          }
+          continue;
+        }
+
+        // Plain Paragraph
+        if (inList) {
+          html.push(`</${listType}>`);
+          inList = false;
+        }
+        html.push(`<p class="markdown-p">${parseInlineMarkdown(line)}</p>`);
+      }
+
+      // Close open tags
+      if (inCodeBlock) {
+        html.push(`<pre style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); padding:14px; border-radius:8px; overflow-x:auto; font-family:monospace; font-size:0.85rem; margin:14px 0; color:#e0f7fa;">${codeContent.join('\n')}</pre>`);
+      }
+      if (inTable) {
+        html.push(renderHTMLTable(tableRows));
+      }
+      if (inList) {
+        html.push(`</${listType}>`);
+      }
+
+      return html.join('\n');
+    }
+
+    function parseInlineMarkdown(text) {
       let str = text;
-      // Escape HTML tags
-      str = str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      
-      // Code blocks
-      str = str.replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface2); border:1px solid var(--border); padding:10px; border-radius:4px; overflow-x:auto; font-family:monospace; font-size:0.85rem; margin:8px 0;">$1</pre>');
-      
-      // Headers
-      str = str.replace(/^\s*###\s+(.+)$/gm, '<h4>$1</h4>');
-      str = str.replace(/^\s*##\s+(.+)$/gm, '<h3>$1</h3>');
-      str = str.replace(/^\s*#\s+(.+)$/gm, '<h2>$1</h2>');
-
-      // Bullet list items
-      str = str.replace(/^\s*[-*+]\s+(.+)$/gm, '<li>$1</li>');
-      str = str.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-      str = str.replace(/<\/ul>\s*<ul>/g, ''); // Join lists
-
-      // Numbered list items
-      str = str.replace(/^\s*(\d+)\.\s+(.+)$/gm, '<li>$2</li>');
-      str = str.replace(/(<li>.*<\/li>)/gs, '<ol>$1</ol>');
-      str = str.replace(/<\/ol>\s*<ol>/g, ''); // Join lists
-
-      // Bold **text**
-      str = str.replace(/\*\*(.*?)\*\"/g, '<strong>$1</strong>');
       str = str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Bold *text*
-      str = str.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-
-      // Paragraph conversion
-      const paragraphs = str.split('\n\n');
-      str = paragraphs.map(p => {
-        const trimmed = p.trim();
-        if (trimmed.startsWith('<pre') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol>') || trimmed.startsWith('<h2') || trimmed.startsWith('<h3') || trimmed.startsWith('<h4')) return p;
-        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-      }).join('');
-
+      str = str.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      str = str.replace(/_(.*?)_/g, '<em>$1</em>');
+      str = str.replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em; color:var(--accent);">$1</code>');
       return str;
+    }
+
+    function renderHTMLTable(rows) {
+      if (rows.length === 0) return '';
+      let html = ['<div class="table-container"><table class="markdown-table">'];
+      
+      let headers = rows[0].split('|').map(s => s.trim()).filter(s => s !== '');
+      html.push('<thead><tr>');
+      headers.forEach(h => {
+        html.push(`<th>${parseInlineMarkdown(h)}</th>`);
+      });
+      html.push('</tr></thead><tbody>');
+
+      for (let i = 1; i < rows.length; i++) {
+        let cells = rows[i].split('|').map(s => s.trim()).filter(s => s !== '');
+        if (cells.length > 0) {
+          html.push('<tr>');
+          cells.forEach(c => {
+            html.push(`<td>${parseInlineMarkdown(c)}</td>`);
+          });
+          html.push('</tr>');
+        }
+      }
+      
+      html.push('</tbody></table></div>');
+      return html.join('');
     }
 
     // Append bubble UI
