@@ -56,19 +56,24 @@ async function initApp() {
             const fromParam = urlParams.get('from');
             const toParam = urlParams.get('to');
             
-            if (pageParam === 'history') {
-                showPage('history');
-                if (fromParam && toParam) {
-                    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-                    document.getElementById('pCustom').classList.add('active');
-                    document.getElementById('customDateRange').classList.remove('hidden');
-                    document.getElementById('dateFrom').value = fromParam;
-                    document.getElementById('dateTo').value = toParam;
-                    loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
-                } else if (rangeParam) {
-                    setPeriod(rangeParam);
+            const validPages = ['dashboard', 'log', 'activity', 'history', 'progress', 'calculator', 'settings'];
+            if (pageParam && validPages.includes(pageParam)) {
+                if (pageParam === 'history') {
+                    showPage('history');
+                    if (fromParam && toParam) {
+                        document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+                        document.getElementById('pCustom').classList.add('active');
+                        document.getElementById('customDateRange').classList.remove('hidden');
+                        document.getElementById('dateFrom').value = fromParam;
+                        document.getElementById('dateTo').value = toParam;
+                        loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
+                    } else if (rangeParam) {
+                        setPeriod(rangeParam);
+                    } else {
+                        setPeriod('7');
+                    }
                 } else {
-                    setPeriod('7');
+                    showPage(pageParam);
                 }
             } else {
                 showPage('dashboard');
