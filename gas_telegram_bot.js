@@ -11,7 +11,7 @@
 // ====================================================
 
 const PROPS = PropertiesService.getScriptProperties();
-const FB_URL = 'https://lebihfit-tools-final-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 // ID Spreadsheet LebihFit Database (ambil dari URL spreadsheet lu)
 // Contoh: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
