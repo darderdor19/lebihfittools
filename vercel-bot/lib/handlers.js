@@ -76,7 +76,8 @@ function mainMenuKeyboard() {
         { text: '⚙️ Settings', callback_data: 'settings' }
       ],
       [
-        { text: '🌐 Buka Web App', url: 'https://darderdor19.github.io/lebihfittools/' }
+        { text: '🌐 Buka Web App', url: 'https://darderdor19.github.io/lebihfittools/' },
+        { text: '💬 AI Consultant', url: 'https://darderdor19.github.io/lebihfittools/consultant.html' }
       ]
     ]
   };
