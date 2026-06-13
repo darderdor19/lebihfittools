@@ -4623,6 +4623,41 @@ async function startPhysicalAnalysis() {
         // Prepare base64 image details
         const base64Data = imgPreview.src.split(',')[1];
         const mimeType = imgPreview.src.split(',')[0].split(':')[1].split(';')[0];
+
+        // Cache system to save Gemini tokens
+        function hashString(str) {
+            let hash = 0x811c9dc5;
+            for (let i = 0; i < str.length; i++) {
+                hash ^= str.charCodeAt(i);
+                hash = Math.imul(hash, 0x01000193);
+            }
+            return (hash >>> 0).toString(16);
+        }
+
+        const inputString = [
+            base64Data,
+            days.toString(),
+            customDesc || '',
+            JSON.stringify(profile),
+            avgCal.toFixed(0),
+            avgProtein.toFixed(1),
+            avgCarbs.toFixed(1),
+            avgFat.toFixed(1),
+            avgFiber.toFixed(1),
+            workoutCount.toString(),
+            gymCount.toString(),
+            cardioCount.toString(),
+            avgSleep.toString(),
+            avgBurn.toString()
+        ].join('|');
+        const currentHash = hashString(inputString);
+
+        const cached = DB.get('lf_physical_analysis_cache');
+        if (cached && cached.hash === currentHash) {
+            console.log("[lebihfit] Loading physical analysis from cache");
+            resultTextEl.innerHTML = renderPhysicalAnalysisUI(cached.data);
+            return;
+        }
         
         // Build the prompt for Gemini Flash requesting JSON
         let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
@@ -4721,6 +4756,7 @@ Catatan Tambahan User: "${customDesc || '-'}"
         }
 
         if (data) {
+            DB.set('lf_physical_analysis_cache', { hash: currentHash, data: data });
             resultTextEl.innerHTML = renderPhysicalAnalysisUI(data);
         } else {
             resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;

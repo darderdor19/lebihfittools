@@ -3637,6 +3637,41 @@ async function onPhysicalDescInput(chatId, userId, text) {
     const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
     const targetProtein = Math.round((profile && profile.targets) ? profile.targets.protein : 120);
 
+    // Cache system to save Gemini tokens
+    function hashString(str) {
+      let hash = 0x811c9dc5;
+      for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+      }
+      return (hash >>> 0).toString(16);
+    }
+
+    const inputString = [
+      base64,
+      days.toString(),
+      customDesc || '',
+      JSON.stringify(profile),
+      avgCal.toFixed(0),
+      avgProtein.toFixed(1),
+      avgCarbs.toFixed(1),
+      avgFat.toFixed(1),
+      avgFiber.toFixed(1),
+      workoutCount.toString(),
+      gymCount.toString(),
+      cardioCount.toString(),
+      avgSleep.toString(),
+      avgBurn.toString()
+    ].join('|');
+    const currentHash = hashString(inputString);
+
+    const cached = await getFirebase(`users/${safe(email)}/lf_physical_analysis_cache`);
+    if (cached && cached.hash === currentHash) {
+      console.log("[lebihfit bot] Loading physical analysis from cache");
+      const formattedMessage = formatPhysicalAnalysisBot(cached.data);
+      return sendMessage(chatId, formattedMessage, mainMenuKeyboard());
+    }
+
     // Build Gemini prompt requesting JSON
     let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
 Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (otot, lemak, proporsi tubuh) dan mengaitkannya dengan data profil serta riwayat asupan/olahraga selama ${days} hari terakhir.
@@ -3736,6 +3771,7 @@ Catatan Tambahan User: "${customDesc || '-'}"
     }
 
     if (data) {
+      await setFirebase(`users/${safe(email)}/lf_physical_analysis_cache`, { hash: currentHash, data: data });
       const formattedMessage = formatPhysicalAnalysisBot(data);
       return sendMessage(chatId, formattedMessage, mainMenuKeyboard());
     } else {
