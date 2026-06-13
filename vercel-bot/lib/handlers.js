@@ -699,10 +699,11 @@ async function callGeminiVisionAPI(base64Image, mimeType, prompt, jsonMode = fal
     }]
   };
 
+  body.generationConfig = {
+    temperature: 0.0
+  };
   if (jsonMode) {
-    body.generationConfig = {
-      responseMimeType: "application/json"
-    };
+    body.generationConfig.responseMimeType = "application/json";
   }
 
   const res = await fetch(endpoint, {

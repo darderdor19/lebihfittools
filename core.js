@@ -260,7 +260,7 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
     endpoint = 'https://openrouter.ai/api/v1/chat/completions';
   }
 
-  const body = { model: model, messages, max_tokens: 2500, temperature: 0.1 };
+  const body = { model: model, messages, max_tokens: 2500, temperature: 0 };
   if (json && !isVision) body.response_format = { type: 'json_object' };
   
   const res = await fetch(endpoint, {
@@ -308,7 +308,7 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
     }],
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: 0.1
+      temperature: 0.0
     }
   };
 

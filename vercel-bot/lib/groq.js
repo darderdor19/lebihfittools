@@ -10,7 +10,7 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400) {
     model: 'llama-3.3-70b-versatile',
     messages,
     max_tokens: maxTokens,
-    temperature: 0.1
+    temperature: 0
   };
   if (jsonMode) body.response_format = { type: 'json_object' };
 
