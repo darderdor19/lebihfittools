@@ -455,7 +455,8 @@ Jika ditanya hal yang di luar topik kesehatan, kebugaran, diet, tidur, atau nutr
       const name = localStorage.getItem('lf_user_name');
       
       if (!email) {
-        document.getElementById('authOverlay').classList.remove('hidden');
+        // Alihkan langsung ke dashboard utama jika belum login
+        window.location.href = 'index.html';
       } else {
         document.getElementById('authOverlay').classList.add('hidden');
         userEmail = email.replace(/\"/g, '');
