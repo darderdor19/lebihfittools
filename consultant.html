@@ -597,6 +597,7 @@
       transition: all 0.3s ease;
     }
     .input-container {
+      width: 100%;
       max-width: 800px;
       margin: auto;
       display: flex;
@@ -629,6 +630,7 @@
     }
     .chat-textarea {
       flex: 1;
+      min-width: 0;
       background: transparent;
       border: none;
       color: var(--text);
@@ -795,7 +797,7 @@
       margin-bottom: 24px;
     }
 
-    /* Mobile Responsive Sidebar */
+    /* Mobile Responsive Layouts */
     @media (max-width: 768px) {
       .chat-sidebar {
         position: fixed;
@@ -812,9 +814,52 @@
       }
       .message-bubble {
         max-width: 85%;
+        padding: 12px 16px;
+        font-size: 0.9rem;
       }
       .chat-footer {
-        padding: 10px 12px;
+        padding: 8px 12px;
+      }
+      .chat-container {
+        padding: 12px;
+      }
+      .welcome-container {
+        padding: 16px 8px;
+        margin: 0 auto;
+      }
+      .hey-title, .help-title {
+        font-size: 1.8rem;
+      }
+      .suggestion-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+      .suggestion-card {
+        padding: 14px 16px;
+        gap: 8px;
+      }
+      .input-container {
+        padding: 12px;
+        border-radius: 16px;
+        gap: 8px;
+      }
+      .chat-textarea {
+        height: 36px;
+      }
+    }
+    @media (max-width: 480px) {
+      .hey-title, .help-title {
+        font-size: 1.5rem;
+      }
+      .welcome-header {
+        margin-bottom: 20px;
+      }
+      .btn-dashboard span {
+        display: none;
+      }
+      .btn-dashboard {
+        padding: 8px;
       }
     }
 
@@ -1096,6 +1141,11 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     document.addEventListener('DOMContentLoaded', () => {
       if(window.lucide) lucide.createIcons();
       getUserSession();
+    });
+
+    // Handle responsive resize adjustment
+    window.addEventListener('resize', () => {
+      updateInputBoxPlacement();
     });
 
     // Toggle Mobile Sidebar
@@ -1731,15 +1781,27 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       const welcome = document.getElementById('welcomeContainer');
       const inputContainer = document.getElementById('chatInputContainer');
       const footer = document.querySelector('.chat-footer');
+      const isMobile = window.innerWidth <= 768;
       
       if (chatHistory.length === 0) {
-        // Place inside welcome container placeholder
-        const placeholder = document.getElementById('welcomeInputPlaceholder');
-        if (placeholder && inputContainer) {
-          placeholder.appendChild(inputContainer);
+        if (isMobile) {
+          // On mobile, keep input container in the footer to prevent vertical overflow/keyboard clipping
+          if (footer && inputContainer) {
+            footer.appendChild(inputContainer);
+            footer.style.display = 'block';
+          }
+          if (welcome) welcome.style.display = 'block';
+          const placeholder = document.getElementById('welcomeInputPlaceholder');
+          if (placeholder) placeholder.innerHTML = '';
+        } else {
+          // Place inside welcome container placeholder
+          const placeholder = document.getElementById('welcomeInputPlaceholder');
+          if (placeholder && inputContainer) {
+            placeholder.appendChild(inputContainer);
+          }
+          if (footer) footer.style.display = 'none';
+          if (welcome) welcome.style.display = 'block';
         }
-        if (footer) footer.style.display = 'none';
-        if (welcome) welcome.style.display = 'block';
       } else {
         // Place inside footer
         if (footer && inputContainer) {
