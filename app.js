@@ -1117,7 +1117,7 @@ function renderGymMuscleInputs() {
 
             ${variations.map((v, vi) => `
                 <div class="gym-variation-row" id="gymVar_${muscle}_${vi}">
-                    <input type="text" class="gym-variation-input" placeholder="Nama gerakan (mis: Bench Press)" value="${v.name}" oninput="updateGymVarName('${muscle}',${vi},this.value)">
+                    <input type="text" id="gymVarName_${muscle}_${vi}" class="gym-variation-input" placeholder="Nama gerakan (mis: Bench Press)" value="${v.name}" oninput="updateGymVarName('${muscle}',${vi},this.value)">
                     <button class="gym-remove-var" onclick="removeGymVariation('${muscle}',${vi})" title="Hapus variasi">✕</button>
                 </div>
                 <div class="gym-sets-per-var">
@@ -1125,11 +1125,11 @@ function renderGymMuscleInputs() {
                     <div class="gym-per-set-row" style="margin-bottom: 4px; display:flex; align-items:center; gap:8px;">
                         <span class="gym-per-set-label" style="min-width:40px; font-size:0.78rem; font-weight:700; color:var(--accent2);">Set ${si + 1}</span>
                         <div style="display:flex;align-items:center;gap:4px;">
-                            <input type="number" class="set-input" style="max-width:70px;" placeholder="Reps" value="${s.reps || ''}" min="1" oninput="updateGymSetReps('${muscle}',${vi},${si},this.value)">
+                            <input type="number" id="gymReps_${muscle}_${vi}_${si}" class="set-input" style="max-width:70px;" placeholder="Reps" value="${s.reps || ''}" min="1" oninput="updateGymSetReps('${muscle}',${vi},${si},this.value)">
                             <span style="font-size:0.8rem;color:var(--text3);">reps</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:4px;">
-                            <input type="number" class="set-input" style="max-width:75px;" placeholder="Beban" value="${s.weight || ''}" min="0" oninput="updateGymSetWeight('${muscle}',${vi},${si},this.value)">
+                            <input type="number" id="gymWeight_${muscle}_${vi}_${si}" class="set-input" style="max-width:75px;" placeholder="Beban" value="${s.weight || ''}" min="0" oninput="updateGymSetWeight('${muscle}',${vi},${si},this.value)">
                             <span style="font-size:0.8rem;color:var(--text3);">kg</span>
                         </div>
                         ${si > 0 ? `<button class="gym-remove-set" onclick="removeGymSet('${muscle}',${vi},${si})" title="Hapus set" style="background:none; border:none; color:var(--text3); cursor:pointer; padding:4px;">✕</button>` : ''}
@@ -1163,6 +1163,14 @@ function addGymVariation(muscle) {
     _gymSelectedMuscles[muscle].push({ name: '', sets: [{ set: 1, reps: 0, weight: 0 }] });
     renderGymMuscleInputs();
     clearActivityAiPreview('gym');
+    setTimeout(() => {
+        const inputIdx = _gymSelectedMuscles[muscle].length - 1;
+        const el = document.getElementById(`gymVarName_${muscle}_${inputIdx}`);
+        if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, 50);
 }
 function removeGymVariation(muscle, vi) {
     if (_gymSelectedMuscles[muscle]) _gymSelectedMuscles[muscle].splice(vi, 1);
@@ -1178,10 +1186,18 @@ function removeGymVariation(muscle, vi) {
 }
 function addGymSet(muscle, vi) {
     if (!_gymSelectedMuscles[muscle]?.[vi]) return;
-    const setNum = _gymSelectedMuscles[muscle][vi].sets.length + 1;
-    _gymSelectedMuscles[muscle][vi].sets.push({ set: setNum, reps: 0, weight: 0 });
+    const sets = _gymSelectedMuscles[muscle][vi].sets;
+    const setNum = sets.length + 1;
+    sets.push({ set: setNum, reps: 0, weight: 0 });
     renderGymMuscleInputs();
     clearActivityAiPreview('gym');
+    setTimeout(() => {
+        const el = document.getElementById(`gymReps_${muscle}_${vi}_${sets.length - 1}`);
+        if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, 50);
 }
 function removeGymSet(muscle, vi, si) {
     if (!_gymSelectedMuscles[muscle]?.[vi]) return;
@@ -1342,7 +1358,7 @@ function renderTodayActivities() {
             detail = act.muscles.map(m => {
                 const restLabel = m.restTime ? ` <span style="font-size:0.72rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
                 const varList = (m.variations || []).map(v => {
-                    const setsStr = (v.sets || []).map((s, idx) => `<span style="display:inline-block; padding:4px 8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; font-size:0.75rem; color:var(--text2);">Set ${idx+1}: <b style="color:var(--text);">${s.reps}</b>${s.weight ? `<span style="opacity:0.7;font-size:0.7rem;">×${s.weight}kg</span>` : ''}</span>`).join('');
+                    const setsStr = (v.sets || []).map((s, idx) => `<span style="display:inline-block; white-space:nowrap; padding:4px 8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; font-size:0.75rem; color:var(--text2);">Set ${idx+1}: <b style="color:var(--text);">${s.reps}</b>${s.weight ? `<span style="opacity:0.7;font-size:0.7rem;">×${s.weight}kg</span>` : ''}</span>`).join('');
                     return `<div style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(255,255,255,0.15);">
                               <div style="font-size:0.85rem; margin-bottom:6px;"><b style="color:var(--text);">${v.name || '(tanpa nama)'}</b></div>
                               <div style="display:flex; flex-wrap:wrap; gap:6px;">${setsStr}</div>
@@ -1466,7 +1482,7 @@ function renderActivityHistory() {
                 detail = (act.muscles || []).map(m => {
                     const restLabel = m.restTime ? ` <span style="font-size:0.72rem;color:var(--text3);">⏱ ${m.restTime}s rest</span>` : '';
                     const varList = (m.variations || []).map(v => {
-                        const setsStr = (v.sets || []).map((s, idx) => `<span style="display:inline-block; padding:4px 8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; font-size:0.75rem; color:var(--text2);">Set ${idx+1}: <b style="color:var(--text);">${s.reps}</b>${s.weight ? `<span style="opacity:0.7;font-size:0.7rem;">×${s.weight}kg</span>` : ''}</span>`).join('');
+                        const setsStr = (v.sets || []).map((s, idx) => `<span style="display:inline-block; white-space:nowrap; padding:4px 8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; font-size:0.75rem; color:var(--text2);">Set ${idx+1}: <b style="color:var(--text);">${s.reps}</b>${s.weight ? `<span style="opacity:0.7;font-size:0.7rem;">×${s.weight}kg</span>` : ''}</span>`).join('');
                         return `<div style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(255,255,255,0.15);">
                                   <div style="font-size:0.85rem; margin-bottom:6px;"><b style="color:var(--text);">${v.name || '(tanpa nama)'}</b></div>
                                   <div style="display:flex; flex-wrap:wrap; gap:6px;">${setsStr}</div>
@@ -1991,7 +2007,7 @@ function renderDashboardActivityCard() {
             }
             // Burn badge for applicable types
             const burnHtml = (act.burn && act.type !== 'sleep')
-                ? `<div style="margin-top:3px;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.25);border-radius:10px;font-size:0.7rem;font-weight:700;color:var(--success);"><i data-lucide="flame" style="width:10px;height:10px;"></i>${act.burn.kcal} kcal terbakar · Lemak ${act.burn.fatG}g</div>`
+                ? `<div style="margin-top:3px;display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;padding:2px 7px;background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.25);border-radius:10px;font-size:0.7rem;font-weight:700;color:var(--success);"><i data-lucide="flame" style="width:10px;height:10px;"></i>${act.burn.kcal} kcal terbakar · Lemak ${act.burn.fatG}g</div>`
                 : '';
             return `<div class="dash-activity-item" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
                 <div style="flex:1; min-width:0;">
