@@ -260,7 +260,7 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
     endpoint = 'https://openrouter.ai/api/v1/chat/completions';
   }
 
-  const body = { model: model, messages, max_tokens: 2500 };
+  const body = { model: model, messages, max_tokens: 2500, temperature: 0.1 };
   if (json && !isVision) body.response_format = { type: 'json_object' };
   
   const res = await fetch(endpoint, {
@@ -277,9 +277,18 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
 }
 
 async function analyzePhotoAI(base64, mime) {
-  const prompt = `Analisis foto makanan ini. Berikan estimasi nutrisi dalam JSON dengan format:
-{"name":"nama makanan","portion":"estimasi porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat"}
-Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON valid tanpa teks apapun di luar kurung kurawal.`;
+  const prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
+Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
+
+Instruksi:
+1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
+2. Lakukan perhitungan nutrisi secara proporsional. Gunakan standar gizi dasar, misalnya:
+   - Nasi putih: ~130 kcal/100g.
+   - Dada ayam: ~120-150 kcal/100g.
+   - Minyak goreng/lemak: ~900 kcal/100g (jika makanan terlihat berminyak atau digoreng, tambahkan lemak secara logis).
+3. Berikan jawaban dalam JSON dengan format berikut:
+{"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
+Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
   // Use getVisionKey() which will fall back to process.env.GEMINI_API_KEY on the server
   let key = getVisionKey();
@@ -298,7 +307,8 @@ Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab HANYA dengan JSON 
       ]
     }],
     generationConfig: {
-      responseMimeType: "application/json"
+      responseMimeType: "application/json",
+      temperature: 0.1
     }
   };
 
@@ -363,19 +373,29 @@ async function analyzePhysicalPhotoAI(base64, mime, promptText) {
 }
 
 async function analyzeTextAI(name, portion, desc) {
-  let prompt = `Berikan estimasi nutrisi untuk makanan berikut:
-Nama: ${name}
-Porsi: ${portion || '1 porsi standar'}`;
+  let prompt = `Kamu adalah database gizi dan sistem kalkulasi nutrisi makanan yang sangat akurat, konsisten, dan ilmiah.
+Tugas kamu adalah memberikan estimasi nutrisi secara presisi berdasarkan basis data terpercaya (seperti USDA, Kemenkes, atau FatSecret).
+
+Nama Makanan: ${name}
+Porsi/Berat: ${portion || '1 porsi standar'}`;
 
   if (desc) {
-    prompt += `\nDeskripsi Tambahan: ${desc} (Mohon perhitungkan deskripsi ini ke kalkulasi kalori & makronutrisi)`;
+    prompt += `\nDeskripsi/Metode Masak: ${desc}`;
   }
 
   prompt += `
 
-Jawab HANYA dengan JSON valid dengan format:
+Instruksi Perhitungan (WAJIB DIIKUTI SECARA KETAT):
+1. Gunakan nilai gizi dasar per 100g untuk makanan umum berikut sebagai patokan perhitungan:
+   - Singkong rebus/mentah: ~160 kalori, ~38g karbohidrat, ~1.3g protein, ~0.3g lemak, ~1.8g serat per 100g. (Jadi jika porsi adalah 500 gram singkong rebus tanpa bumbu/minyak, total kalorinya adalah 5 * 160 = 800 kcal, karbohidrat = 5 * 38 = 190g, lemak = 5 * 0.3 = 1.5g).
+   - Nasi putih matang: ~130 kalori, ~28g karbohidrat, ~2.7g protein, ~0.3g lemak per 100g.
+   - Dada ayam mentah: ~120 kalori, ~23g protein, ~2.5g lemak per 100g.
+   - Telur ayam utuh sedang: ~75 kalori, ~6g protein, ~5g lemak, ~0.6g karbohidrat per butir (~50g).
+2. Jika pengguna menyebutkan berat spesifik (misal: "500gram", "200g", "1.5 kg"), lakukan perkalian matematika secara ketat berdasarkan berat tersebut dibagi 100.
+3. Selalu perhitungkan deskripsi metode masak (seperti digoreng pakai minyak, direbus tanpa bumbu/minyak sama sekali, mentah, matang) untuk menyesuaikan nilai kalori dan lemak secara logis.
+4. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
-Semua nilai numerik dalam satuan standar (gram/mg/mcg). Jawab murni JSON tanpa markup/teks lain.`;
+Semua nilai numerik dalam satuan standar (gram/mg/mcg).`;
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
@@ -445,26 +465,47 @@ async function analyzeWorkoutAI(activity, profile) {
     workoutDetails = `- Nama Aktivitas: ${activity.name}\n- Durasi: ${activity.durationMin} menit\n- Intensitas: ${activity.intensity}`;
   }
 
-  const prompt = `Kamu adalah ahli gizi, olahraga, dan pelatih fitness profesional. Berdasarkan profil pengguna dan rincian latihan berikut, lakukan analisis mendalam tentang pembakaran kalori, pembagian energi (karbohidrat, lemak, protein), intensitas latihan, dan berikan feedback pemulihan (recovery):
+  const prompt = `Kamu adalah pelatih fitness, ahli fisiologi olahraga, dan sistem analisis olahraga yang sangat akurat.
+Tugas kamu adalah menganalisis rincian latihan pengguna dan menghitung pembakaran kalori serta makronutrisi secara konsisten dan ilmiah menggunakan metode MET (Metabolic Equivalent of Task).
 
 == PROFIL PENGGUNA ==
-- Jenis Kelamin: ${gender || 'Laki-laki'}
-- Tinggi Badan: ${tb || 170} cm
-- Berat Badan: ${bb || 70} kg
+- Laki-laki/Perempuan: ${gender || 'Laki-laki'}
+- Tinggi: ${tb || 170} cm
+- Berat: ${bb || 70} kg
 - Usia: ${usia || 25} tahun
-- Aktivitas Harian: ${aktivitas || 'sedang'}
-- Target: ${target || 'fat loss'}
+- Target: ${target || 'kebugaran'}
 
 == DATA LATIHAN (${activity.type.toUpperCase()}) ==
 ${workoutDetails}
+- Durasi Latihan: ${activity.durationMin || 30} menit
+
+== FORMULA PERHITUNGAN KALORI (WAJIB DIIKUTI) ==
+Gunakan rumus ilmiah standar: Kcal = MET * Berat Badan (kg) * (Durasi (menit) / 60)
+Di mana nilai MET ditentukan secara logis berdasarkan jenis dan intensitas latihan:
+1. GYM / WORKOUT (Latihan beban / kalistenik):
+   - Intensitas Ringan (beban ringan, rest time lama): MET = 3.5
+   - Intensitas Sedang (latihan beban standar, rest time 60-90s): MET = 5.0
+   - Intensitas Tinggi (circuit training, superset, rest time pendek <60s): MET = 6.0
+2. CARDIO (Lari, bersepeda, berenang, dll):
+   - Intensitas Ringan (jalan santai, sepedahan santai): MET = 4.0
+   - Intensitas Sedang (jogging, kardio sedang): MET = 7.0
+   - Intensitas Tinggi (lari cepat, HIIT, kardio berat): MET = 10.0
+3. OTHER (Aktivitas lain):
+   - Gunakan MET berkisar 3.0 - 6.0 sesuai jenis aktivitas dan intensitasnya.
+
+== FORMULA PEMBAGIAN MAKRO YANG TERBAKAR (WAJIB DIIKUTI) ==
+Bagi energi kalori (kcal) yang terbakar menjadi gram makronutrisi sebagai berikut:
+- Protein terbakar: 5% dari total kalori -> gram protein = (Kcal * 0.05) / 4
+- Lemak terbakar (tergantung intensitas):
+  - Intensitas Ringan: 40% dari total kalori -> gram lemak = (Kcal * 0.40) / 9
+  - Intensitas Sedang: 30% dari total kalori -> gram lemak = (Kcal * 0.30) / 9
+  - Intensitas Tinggi: 20% dari total kalori -> gram lemak = (Kcal * 0.20) / 9
+- Karbohidrat terbakar: sisa persentase kalori -> gram karbohidrat = (Kcal * (100% - 5% - %Persentase Lemak)) / 4
 
 == TUGAS ==
-Hitung estimasi:
-1. Total kalori yang terbakar (kcal) secara logis berdasarkan beban, reps, set, dan durasi istirahat.
-2. Gram lemak yang terbakar (g).
-3. Gram karbohidrat yang terbakar (g).
-4. Gram protein yang terbakar (g).
-5. Berikan feedback analisis singkat (maksimal 3 kalimat dalam bahasa Indonesia gaul/santai yang bersahabat, gunakan 'lu/kamu'). Jelaskan efektivitas latihan ini terhadap target pengguna, kualitas istirahat/rest time yang digunakan, dan saran pemulihan otot.
+1. Tentukan tingkat intensitas latihan secara logis dari beban, repetisi, set, atau deskripsi latihan.
+2. Hitung total kalori (kcal), gram lemak (fatG), gram karbo (carbG), dan gram protein (proteinG) menggunakan rumus di atas. Bulatkan angka ke desimal 1 angka di belakang koma (misal: 12.4).
+3. Berikan feedback analisis singkat maksimal 3 kalimat dalam bahasa Indonesia gaul/santai yang bersahabat (gunakan 'lu/kamu'). Ulas efektivitas latihan lu, keselarasan dengan target lu, serta saran istirahat/recovery.
 
 Jawab HANYA dengan JSON valid format berikut tanpa markdown/teks lain:
 {"kcal":0,"fatG":0,"carbG":0,"proteinG":0,"analysis":"isi feedback di sini"}`;

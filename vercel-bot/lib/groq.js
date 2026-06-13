@@ -9,7 +9,8 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400) {
   const body = {
     model: 'llama-3.3-70b-versatile',
     messages,
-    max_tokens: maxTokens
+    max_tokens: maxTokens,
+    temperature: 0.1
   };
   if (jsonMode) body.response_format = { type: 'json_object' };
 
@@ -34,8 +35,22 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400) {
  * Same prompt as GAS version
  */
 async function analyzeFood(text) {
-  const prompt = `Berikan estimasi nutrisi untuk: "${text}"\nJawab HANYA JSON:\n{"name":"nama makanan","portion":"porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}`;
-  const content = await callGroq([{ role: 'user', content: prompt }], true, 300);
+  const prompt = `Kamu adalah database gizi dan sistem kalkulasi nutrisi makanan yang sangat akurat, konsisten, dan ilmiah.
+Tugas kamu adalah memberikan estimasi nutrisi secara presisi berdasarkan basis data terpercaya (seperti USDA, Kemenkes, atau FatSecret).
+
+Nama Makanan / Deskripsi: "${text}"
+
+Instruksi Perhitungan (WAJIB DIIKUTI SECARA KETAT):
+1. Gunakan nilai gizi dasar per 100g untuk makanan umum berikut sebagai patokan perhitungan:
+   - Singkong rebus/mentah: ~160 kalori, ~38g karbohidrat, ~1.3g protein, ~0.3g lemak, ~1.8g serat per 100g. (Jadi jika porsi adalah 500 gram singkong rebus tanpa bumbu/minyak, total kalorinya adalah 5 * 160 = 800 kcal, karbohidrat = 5 * 38 = 190g, lemak = 5 * 0.3 = 1.5g).
+   - Nasi putih matang: ~130 kalori, ~28g karbohidrat, ~2.7g protein, ~0.3g lemak per 100g.
+   - Dada ayam mentah: ~120 kalori, ~23g protein, ~2.5g lemak per 100g.
+   - Telur ayam utuh sedang: ~75 kalori, ~6g protein, ~5g lemak, ~0.6g karbohidrat per butir (~50g).
+2. Jika pengguna menyebutkan berat spesifik (misal: "500gram", "200g", "1.5 kg"), lakukan perkalian matematika secara ketat berdasarkan berat tersebut dibagi 100.
+3. Selalu perhitungkan deskripsi metode masak (seperti digoreng pakai minyak, direbus tanpa bumbu/minyak sama sekali, mentah, matang) untuk menyesuaikan nilai kalori dan lemak secara logis.
+4. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
+{"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}`;
+  const content = await callGroq([{ role: 'user', content: prompt }], true, 600);
   return JSON.parse(content);
 }
 
