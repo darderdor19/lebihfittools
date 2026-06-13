@@ -58,14 +58,21 @@ function handleRequestOTPCombined(body) {
     MailApp.sendEmail({
       to: email,
       subject: 'Kode Login LebihFit Kamu',
-      htmlBody: '<div style="font-family:Arial;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px">' +
-                '<h2 style="color:#00f0ff;text-align:center">LebihFit</h2>' +
-                '<p>Halo <b>' + name + '</b>!</p>' +
-                '<p>Kode OTP kamu untuk masuk ke LebihFit adalah:</p>' +
-                '<div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center">' +
-                '<span style="font-size:2.5rem;font-weight:900;letter-spacing:8px;color:#00f0ff">' + otp + '</span>' +
-                '</div><br>' +
-                '<p style="color:#8caebf;font-size:.85rem">Berlaku selama 10 menit. Jangan berikan kode ini kepada siapapun.</p>' +
+      htmlBody: '<div style="font-family:\'Segoe UI\',Arial,sans-serif;background:#060b11;color:#e0f7fa;padding:32px;border-radius:12px;max-width:480px;line-height:1.6">' +
+                '<h2 style="color:#00f0ff;text-align:center;margin-top:0;font-size:1.8rem;letter-spacing:1px">LebihFit</h2>' +
+                '<p style="font-size:1.1rem">Halo, <b>' + name + '</b>! 🔥</p>' +
+                '<p>Selamat datang di LebihFit.</p>' +
+                '<p style="color:#a5cbd6">Perjalanan menuju tubuh yang lebih sehat dimulai dari langkah kecil yang dilakukan berulang kali. Jangan khawatir soal hasil instan—fokus saja untuk menjadi 1% lebih baik setiap hari.</p>' +
+                '<p>Gunakan kode OTP berikut untuk masuk ke akunmu:</p>' +
+                '<div style="background:#0b121c;border:2px solid #00f0ff;border-radius:8px;padding:20px;text-align:center;margin:24px 0">' +
+                '<span style="font-size:2.5rem;font-weight:bold;letter-spacing:8px;color:#00f0ff">' + otp + '</span>' +
+                '</div>' +
+                '<p style="color:#a5cbd6">Ingat: badan ideal bukan dibangun dalam semalam, tapi dari keputusan-keputusan kecil yang kamu ambil setiap hari. 💪</p>' +
+                '<p>Tetap konsisten, nikmati prosesnya, dan biarkan hasil mengikuti.</p>' +
+                '<p style="font-weight:bold;color:#00f0ff">Let\'s get stronger together! 🚀</p>' +
+                '<hr style="border:0;border-top:1px solid #1a2c3d;margin:24px 0">' +
+                '<p style="color:#8caebf;font-size:0.75rem;line-height:1.4">Keamanan: Kode berlaku selama 10 menit. Jangan berikan kode ini kepada siapapun.</p>' +
+                '<p style="color:#64899c;font-size:0.75rem;line-height:1.4;margin-top:8px">💡 Tips: Jika email ini masuk ke folder Spam/Promosi, tandai sebagai <b>"Bukan Spam"</b> atau tambahkan <b>lebihfit@gmail.com</b> ke kontak Anda agar email berikutnya langsung masuk ke Kotak Masuk utama.</p>' +
                 '</div>'
     });
     return respondSuccessCombined({ message: 'OTP terkirim ke email' });
