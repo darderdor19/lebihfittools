@@ -933,7 +933,12 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
           ...chatHistory
         ];
 
-        const response = await fetch('/api/consultant', {
+        let apiEndpoint = '/api/consultant';
+        if (window.location.hostname !== 'lebihfittools.vercel.app') {
+          apiEndpoint = 'https://lebihfittools.vercel.app/api/consultant';
+        }
+
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
