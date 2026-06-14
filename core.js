@@ -265,11 +265,24 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
   const body = { model: model, messages, max_tokens: 2500, temperature: 0 };
   if (json && !isVision) body.response_format = { type: 'json_object' };
   
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+  
+  let res;
+  try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+  } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') throw new Error('Koneksi ke AI timeout. Cek jaringan/VPN lu bro.');
+      throw err;
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `HTTP ${res.status}`);

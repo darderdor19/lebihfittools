@@ -119,13 +119,24 @@ async function requestOTP() {
     btn.disabled = true;
 
     try {
-        console.log('[OTP] Sending requestOTP to:', GAS_URL);
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'requestOTP', email: email, name: name })
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        
+        let res;
+        try {
+            res = await fetch(GAS_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'requestOTP', email, name }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') throw new Error('Koneksi ke server timeout (20s). Coba pakai koneksi lain bro.');
+            throw err;
+        }
         
         console.log('[OTP] Response status:', res.status, res.statusText);
         const rawText = await res.text();
@@ -174,13 +185,24 @@ async function verifyOTP() {
     btn.disabled = true;
 
     try {
-        console.log('[OTP] Sending verifyOTP to:', GAS_URL);
-        const res = await fetch(GAS_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'verifyOTP', email: tempAuthEmail, otp: otp })
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        
+        let res;
+        try {
+            res = await fetch(GAS_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'verifyOTP', email: tempAuthEmail, otp: otp }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') throw new Error('Koneksi ke server timeout (20s). Jaringan lagi bapuk bro.');
+            throw err;
+        }
         
         console.log('[OTP] Verify response status:', res.status, res.statusText);
         const rawText = await res.text();
