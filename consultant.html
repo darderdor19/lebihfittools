@@ -605,7 +605,7 @@
       background: rgba(15, 23, 42, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 28px;
-      padding: 16px 20px;
+      padding: 8px 12px;
       gap: 8px;
       transition: all 0.3s ease;
       backdrop-filter: blur(10px);
@@ -621,7 +621,7 @@
     .input-main-row {
       display: flex;
       gap: 12px;
-      align-items: flex-start;
+      align-items: flex-end;
       width: 100%;
     }
     .chat-textarea {
@@ -637,20 +637,16 @@
       font-size: 0.95rem;
       line-height: 1.5;
       font-family: var(--font);
-      padding: 4px 0;
+      padding: 8px 0;
     }
     .input-actions-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      position: relative;
+      display: none;
     }
     /* Attachment Options Menu */
     .attachment-menu {
       position: absolute;
-      bottom: 50px;
-      left: 0;
+      bottom: 56px;
+      left: 10px;
       background: rgba(15, 23, 42, 0.95);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -895,12 +891,13 @@
         gap: 8px;
       }
       .input-container {
-        padding: 12px 16px;
+        padding: 6px 10px;
         border-radius: 24px;
         gap: 6px;
       }
       .chat-textarea {
         height: 36px;
+        padding: 8px 0;
       }
     }
     @media (max-width: 480px) {
@@ -1116,9 +1113,6 @@
           <div id="attachmentPreview" class="hidden"></div>
 
           <div class="input-main-row">
-            <textarea id="chatInput" class="chat-textarea" placeholder="Tanya apa saja ke LebihFit AI......" rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
-          </div>
-          <div class="input-actions-row">
             <button id="attachmentBtn" class="btn-input-attachment" onclick="toggleAttachmentMenu(event)">
               <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
             </button>
@@ -1134,6 +1128,8 @@
                 <span>Ambil dari Kamera</span>
               </button>
             </div>
+
+            <textarea id="chatInput" class="chat-textarea" placeholder="Tanya apa saja ke LebihFit AI......" rows="1" oninput="autoGrowInput(this)" onkeydown="handleInputKeydown(event)"></textarea>
 
             <button id="sendBtn" class="btn-send" onclick="sendChatMessage()">
               <i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>
