@@ -210,7 +210,7 @@ a{color:var(--accent);text-decoration:none}
 .food-item:hover{border-color:var(--accent);transform:translateX(2px)}
 .meal-badge{font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(108,99,255,.2);color:var(--accent);white-space:nowrap}
 .food-item-info{flex:1;min-width:0}
-.food-item-name{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.food-item-name{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .food-item-portion{font-size:.8rem;color:var(--text2)}
 .food-item-macros{font-size:.8rem;color:var(--text2);display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .food-item-cal{font-size:1.1rem;font-weight:800;color:var(--accent);white-space:nowrap}
@@ -1194,9 +1194,6 @@ a{color:var(--accent);text-decoration:none}
   border-radius: var(--radius-md);
   padding: 16px;
   margin-bottom: 12px;
-  transform: translateZ(0); /* Fix Android visual glitch */
-  will-change: transform;
-
   position: relative;
 }
 .activity-log-header {

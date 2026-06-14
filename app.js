@@ -2110,7 +2110,7 @@ function renderDashboard() {
         foodList.innerHTML = logs.map(item => `
             <div class="food-item">
                 <div class="food-item-info">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;width:100%;min-width:0;">
                         <span class="meal-badge">${formatMealTime(item.mealTime)}</span>
                         <span class="food-item-name">${item.name}</span>
                     </div>
