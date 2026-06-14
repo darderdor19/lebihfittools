@@ -1596,13 +1596,47 @@ function renderActivityHistory() {
     let totalWorkoutSessions = 0, totalGymSessions = 0, totalCardioSessions = 0, totalOtherSessions = 0;
     let totalSleepEntries = 0, totalSleepHours = 0;
     let totalKcalBurned = 0, totalFatBurned = 0;
+    let totalSteps = 0;
+
+    // Get profile data for step length
+    const profile = getProfile() || {};
+    const heightCm = parseFloat(profile.tb) || 0;
+    const gender = profile.gender || '';
+    
+    let strideLengthM = 0.75;
+    if (heightCm > 0) {
+        const isFemale = gender.toLowerCase().includes('wanita') || 
+                         gender.toLowerCase().includes('perempuan') || 
+                         gender.toLowerCase().includes('female') || 
+                         gender.toLowerCase() === 'f';
+        if (isFemale) {
+            strideLengthM = (heightCm * 0.413) / 100;
+        } else {
+            strideLengthM = (heightCm * 0.415) / 100;
+        }
+    }
     
     const allDates = Object.keys(allActs).sort().reverse();
     allDates.forEach(date => {
         allActs[date].forEach(a => {
             if (a.type === 'workout') totalWorkoutSessions++;
             else if (a.type === 'gym') totalGymSessions++;
-            else if (a.type === 'cardio') totalCardioSessions++;
+            else if (a.type === 'cardio') {
+                totalCardioSessions++;
+                if (a.name) {
+                    const nameLower = a.name.toLowerCase();
+                    const isStepsCardio = nameLower.includes('lari') || 
+                                         nameLower.includes('run') || 
+                                         nameLower.includes('treadmill') || 
+                                         nameLower.includes('jalan') || 
+                                         nameLower.includes('walk');
+                    if (isStepsCardio && a.distanceKm) {
+                        const distM = (parseFloat(a.distanceKm) || 0) * 1000;
+                        const steps = Math.round(distM / strideLengthM);
+                        totalSteps += steps;
+                    }
+                }
+            }
             else if (a.type === 'other') totalOtherSessions++;
             else if (a.type === 'sleep') { totalSleepEntries++; totalSleepHours += a.hours || 0; }
             
@@ -1616,6 +1650,7 @@ function renderActivityHistory() {
     const avgSleep = totalSleepEntries > 0 ? (totalSleepHours / totalSleepEntries).toFixed(1) : '--';
     const avgKcalBurned = Math.round(totalKcalBurned / daysDiff);
     const avgFatBurned = (totalFatBurned / daysDiff).toFixed(1);
+    const avgSteps = Math.round(totalSteps / daysDiff);
 
     summaryEl.innerHTML = `
         <div class="act-stat-card"><div class="act-stat-value">${totalWorkoutSessions}</div><div class="act-stat-label">Sesi Workout</div></div>
@@ -1629,6 +1664,10 @@ function renderActivityHistory() {
         <div class="act-stat-card" style="grid-column: span 2; display:flex; gap:12px;">
             <div style="flex:1;"><div class="act-stat-value" style="color:#ffab40;text-shadow:0 0 10px rgba(255,171,64,0.3);">${avgFatBurned}g</div><div class="act-stat-label">Rerata Lemak/hari</div></div>
             <div style="flex:1; border-left: 1px solid rgba(255,255,255,0.1); padding-left:12px;"><div class="act-stat-value" style="color:#ffab40; font-size:1.1rem;">${totalFatBurned.toFixed(1)}g</div><div class="act-stat-label">Total Lemak Terbakar</div></div>
+        </div>
+        <div class="act-stat-card" style="grid-column: span 2; display:flex; gap:12px;">
+            <div style="flex:1;"><div class="act-stat-value" style="color:#00f0ff;text-shadow:0 0 10px rgba(0,240,255,0.3);">${avgSteps.toLocaleString('id-ID')}</div><div class="act-stat-label">Rerata Langkah/hari</div></div>
+            <div style="flex:1; border-left: 1px solid rgba(255,255,255,0.1); padding-left:12px;"><div class="act-stat-value" style="color:#00f0ff; font-size:1.1rem;">${totalSteps.toLocaleString('id-ID')}</div><div class="act-stat-label">Total Langkah</div></div>
         </div>
         <div class="act-stat-card"><div class="act-stat-value">${totalSleepHours.toFixed(1)}j</div><div class="act-stat-label">Total Tidur</div></div>
         <div class="act-stat-card"><div class="act-stat-value">${avgSleep}j</div><div class="act-stat-label">Rerata Tidur/Hari</div></div>`;
@@ -1668,7 +1707,21 @@ function renderActivityHistory() {
             } else if (act.type === 'cardio') {
                 const distanceStr = act.distanceKm ? ` · ${act.distanceKm} km` : '';
                 const intensityStr = act.intensity === 'low' ? 'Ringan' : act.intensity === 'medium' ? 'Sedang' : 'Tinggi';
-                detail = `<b>${act.name}</b> · ${act.durationMin} menit${distanceStr} · Intensitas: ${intensityStr}`;
+                let stepsStr = '';
+                if (act.name) {
+                    const nameLower = act.name.toLowerCase();
+                    const isStepsCardio = nameLower.includes('lari') || 
+                                         nameLower.includes('run') || 
+                                         nameLower.includes('treadmill') || 
+                                         nameLower.includes('jalan') || 
+                                         nameLower.includes('walk');
+                    if (isStepsCardio && act.distanceKm) {
+                        const distM = (parseFloat(act.distanceKm) || 0) * 1000;
+                        const steps = Math.round(distM / strideLengthM);
+                        stepsStr = ` · 🚶 ${steps.toLocaleString('id-ID')} langkah`;
+                    }
+                }
+                detail = `<b>${act.name}</b> · ${act.durationMin} menit${distanceStr}${stepsStr} · Intensitas: ${intensityStr}`;
                 badge = '<i data-lucide="heart" style="width:12px;height:12px;vertical-align:text-bottom;margin-right:3px;"></i> Kardio';
             } else if (act.type === 'other') {
                 const intensityStr = act.intensity === 'low' ? 'Ringan' : act.intensity === 'medium' ? 'Sedang' : 'Tinggi';
