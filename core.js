@@ -305,7 +305,7 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
   }
   if (!key) throw new Error("Gemini API Key belum diset. Buka Settings.");
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
   
   const parts = [{ text: prompt }];
   if (Array.isArray(images)) {
@@ -358,7 +358,7 @@ async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false
   }
   if (!key) throw new Error("Gemini API Key belum diset. Buka Settings.");
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
   
   const parts = [{ text: promptText }];
   if (Array.isArray(images)) {

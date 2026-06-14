@@ -235,6 +235,7 @@ async function handleCallback(cb) {
   if (data === 'log_food_manual') return email ? startFoodManual(chatId, userId) : promptLogin(chatId, userId);
   if (data === 'log_food_photo') return email ? startFoodPhoto(chatId, userId) : promptLogin(chatId, userId);
   if (data === 'food_ai_save') return saveFoodAI(chatId, userId, email);
+  if (data === 'process_food_photos') return processFoodPhotos(chatId, userId);
   
   // Activities callbacks
   if (data === 'log_activity') return email ? showLogActivityOptions(chatId) : promptLogin(chatId, userId);
@@ -298,6 +299,7 @@ async function handleCallback(cb) {
   if (data.startsWith('phys_days_')) return email ? onPhysicalDaysSelected(chatId, userId, parseInt(data.replace('phys_days_', ''))) : promptLogin(chatId, userId);
   if (data === 'phys_skip_desc') return email ? onPhysicalDescInput(chatId, userId, 'skip') : promptLogin(chatId, userId);
 
+  if (data === 'phys_photos_done') return physPhotosDone(chatId, userId);
   if (data === 'settings') return showSettings(chatId, userId, email);
   if (data === 'logout') return doLogout(chatId, userId);
   if (data === 'retry_login') return promptLogin(chatId, userId);
@@ -689,7 +691,7 @@ async function onFoodPortionInput(chatId, userId, text) {
 async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY is not set in Vercel environment variables.');
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
   
   const parts = [{ text: prompt }];
   if (Array.isArray(images)) {
@@ -727,13 +729,9 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
 // ===== HANDLE PHOTO INPUT =====
 async function handlePhotoInput(chatId, userId, photos, caption) {
   try {
-    await sendMessage(chatId, '⏳ Mengunduh dan menganalisis foto makanan lu dengan LebihFit Tools AI. Tunggu bentar ya...');
-
-    // Ambil foto resolusi paling besar
     const largestPhoto = photos[photos.length - 1];
     const fileId = largestPhoto.file_id;
     
-    // Ambil path file dari Telegram
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
@@ -742,7 +740,6 @@ async function handlePhotoInput(chatId, userId, photos, caption) {
     const filePath = fileData.result.file_path;
     const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
     
-    // Download file
     const imgRes = await fetch(fileUrl);
     const arrayBuffer = await imgRes.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -752,6 +749,44 @@ async function handlePhotoInput(chatId, userId, photos, caption) {
     if (filePath.endsWith('.png')) mime = 'image/png';
     if (filePath.endsWith('.webp')) mime = 'image/webp';
 
+    const cacheKey = `${userId}_food_photos_arr`;
+    let cachedData = await getCache(cacheKey) || {};
+    cachedData[fileId] = { mime, base64 };
+    await setCache(cacheKey, cachedData);
+
+    const count = Object.keys(cachedData).length;
+
+    let msg = `✅ Foto ke-${count} berhasil ditambahkan.\n\n`;
+    if (count < 10) {
+      msg += `Kirim foto lagi jika ada (maksimal 10), atau klik "Selesai & Analisis" kalau sudah semua.`;
+    } else {
+      msg += `Udah maksimal 10 foto nih! Klik "Selesai & Analisis" ya.`;
+    }
+
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [{ text: '✅ Selesai & Analisis', callback_data: 'process_food_photos' }],
+        [{ text: '❌ Batal', callback_data: 'log_food' }]
+      ]
+    });
+  } catch (err) {
+    console.error('Photo handler error:', err);
+    return sendMessage(chatId, 'Gagal menerima foto: ' + err.message, {
+      inline_keyboard: [[{ text: '🔄 Coba Lagi', callback_data: 'log_food' }]]
+    });
+  }
+}
+
+async function processFoodPhotos(chatId, userId) {
+  try {
+    await sendMessage(chatId, '⏳ Menganalisis semua foto makanan lu dengan LebihFit Tools AI. Tunggu bentar ya...');
+    const cacheKey = `${userId}_food_photos_arr`;
+    const cachedData = await getCache(cacheKey);
+    if (!cachedData || Object.keys(cachedData).length === 0) {
+      return sendMessage(chatId, 'Belum ada foto yang diunggah.', { inline_keyboard: [[{ text: 'Ulangi', callback_data: 'log_food_photo' }]] });
+    }
+    const images = Object.values(cachedData);
+    
     const prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
 Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
 
@@ -771,18 +806,19 @@ Instruksi:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
-    const raw = await callGeminiVisionAPI(base64, mime, prompt, true);
+    const raw = await callGeminiVisionAPI(images, null, prompt, true);
     let parsed;
     try {
       parsed = JSON.parse(raw);
     } catch(e) {
       const match = raw.match(/\{[\s\S]*\}/);
       if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Gagal memproses hasil dari AI: Format JSON tidak sesuai.');
+      else throw new Error('Format JSON tidak sesuai.');
     }
 
     await setCache(`${userId}_food_ai`, JSON.stringify(parsed));
     await setState(userId, 'AWAIT_FOOD_CONFIRM_AI');
+    await deleteCache(cacheKey);
 
     let msg = `📸 *Hasil Analisis AI*\n\n`;
     msg += `🍽️ Makanan: *${parsed.name}*\n`;
@@ -800,11 +836,10 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
         [{ text: '❌ Batal / Ulangi', callback_data: 'log_food' }]
       ]
     });
-
-  } catch (err) {
-    console.error('Photo handler error:', err);
+  } catch(err) {
+    console.error(err);
     return sendMessage(chatId, 'Gagal memproses foto: ' + err.message, {
-      inline_keyboard: [[{ text: '🔄 Coba Lagi', callback_data: 'log_food' }]]
+      inline_keyboard: [[{ text: '🔄 Ulangi', callback_data: 'log_food_photo' }]]
     });
   }
 }
@@ -3526,12 +3561,9 @@ async function startPhysicalEvaluationBot(chatId, userId) {
 
 async function handlePhysicalPhotoInput(chatId, userId, photos) {
   try {
-    await sendMessage(chatId, '⏳ Mengunduh foto tubuh lu...');
-    
     const largestPhoto = photos[photos.length - 1];
     const fileId = largestPhoto.file_id;
     
-    // Download file path from Telegram
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
@@ -3540,7 +3572,6 @@ async function handlePhysicalPhotoInput(chatId, userId, photos) {
     const filePath = fileData.result.file_path;
     const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
     
-    // Download file binary
     const imgRes = await fetch(fileUrl);
     const arrayBuffer = await imgRes.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -3550,7 +3581,6 @@ async function handlePhysicalPhotoInput(chatId, userId, photos) {
     if (filePath.endsWith('.png')) mime = 'image/png';
     if (filePath.endsWith('.webp')) mime = 'image/webp';
 
-    // Download small photo version for history storage
     let smallBase64 = '';
     try {
       const smallPhotoObj = photos[Math.min(1, photos.length - 1)];
@@ -3564,36 +3594,49 @@ async function handlePhysicalPhotoInput(chatId, userId, photos) {
         const smallArrayBuffer = await smallImgRes.arrayBuffer();
         smallBase64 = `data:${mime};base64,` + Buffer.from(smallArrayBuffer).toString('base64');
       }
-    } catch (err) {
-      console.error('Failed to download small photo for history:', err);
+    } catch (err) {}
+
+    const cacheKey = `${userId}_phys_photos_arr`;
+    let cachedData = await getCache(cacheKey) || {};
+    cachedData[fileId] = { mime, base64, smallBase64 };
+    await setCache(cacheKey, cachedData);
+
+    const count = Object.keys(cachedData).length;
+
+    let msg = `✅ Foto tubuh ke-${count} berhasil ditambahkan.\n\n`;
+    if (count < 10) {
+      msg += `Kirim foto pose lain (depan, samping, belakang - maksimal 10), atau klik "Lanjut" jika sudah semua.`;
+    } else {
+      msg += `Maksimal 10 foto tercapai. Klik "Lanjut".`;
     }
 
-    // Save temporary state & data to cache
-    await setCache(`${userId}_physical_photo`, base64);
-    await setCache(`${userId}_physical_photo_small`, smallBase64);
-    await setCache(`${userId}_physical_mime`, mime);
-    await setState(userId, 'AWAIT_PHYSICAL_DAYS');
-
-    return sendMessage(chatId,
-      '📸 *Foto tubuh diterima!*\n\nPilih rentang hari riwayat data kebugaran lu (nutrisi, latihan, tidur) yang mau diikutkan dalam analisis:',
-      {
-        inline_keyboard: [
-          [
-            { text: '📅 7 Hari', callback_data: 'phys_days_7' },
-            { text: '📅 14 Hari', callback_data: 'phys_days_14' },
-            { text: '📅 30 Hari', callback_data: 'phys_days_30' }
-          ],
-          [{ text: '❌ Batal', callback_data: 'progress_menu' }]
-        ]
-      }
-    );
+    return sendMessage(chatId, msg, {
+      inline_keyboard: [
+        [{ text: '➡️ Lanjut', callback_data: 'phys_photos_done' }],
+        [{ text: '❌ Batal', callback_data: 'progress_menu' }]
+      ]
+    });
   } catch (err) {
     console.error('handlePhysicalPhotoInput error:', err);
-    await setState(userId, null);
-    return sendMessage(chatId, 'Gagal memproses foto: ' + err.message, {
-      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'progress_menu' }]]
-    });
+    return sendMessage(chatId, 'Gagal mengunduh foto: ' + err.message);
   }
+}
+
+async function physPhotosDone(chatId, userId) {
+  await setState(userId, 'AWAIT_PHYSICAL_DAYS');
+  return sendMessage(chatId,
+    '📸 *Foto tubuh disimpan!*\n\nPilih rentang hari riwayat data kebugaran lu (nutrisi, latihan, tidur) yang mau diikutkan dalam analisis:',
+    {
+      inline_keyboard: [
+        [
+          { text: '📅 7 Hari', callback_data: 'phys_days_7' },
+          { text: '📅 14 Hari', callback_data: 'phys_days_14' },
+          { text: '📅 30 Hari', callback_data: 'phys_days_30' }
+        ],
+        [{ text: '❌ Batal', callback_data: 'progress_menu' }]
+      ]
+    }
+  );
 }
 
 async function onPhysicalDaysSelected(chatId, userId, days) {
@@ -3633,9 +3676,14 @@ async function onPhysicalDescInput(chatId, userId, text) {
     const email = await getLinkedEmail(userId);
     if (!email) return promptLogin(chatId, userId);
 
-    const base64 = await getCache(`${userId}_physical_photo`);
+    const cachedArr = await getCache(`${userId}_phys_photos_arr`);
+  if (!cachedArr) return sendMessage(chatId, 'Sesi kadaluarsa, silahkan ulangi.', { inline_keyboard: [[{ text: 'Batal', callback_data: 'progress_menu' }]] });
+  const base64 = null; // compatibility
+  const photoArr = Object.values(cachedArr);
+  const images = photoArr.map(p => ({ mime: p.mime, base64: p.base64 }));
+  
     const smallPhotoDataUrl = await getCache(`${userId}_physical_photo_small`);
-    const mime = await getCache(`${userId}_physical_mime`);
+    const mime = photoArr[0].mime;
     const daysStr = await getCache(`${userId}_physical_days`);
     const days = parseInt(daysStr) || 7;
     
