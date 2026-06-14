@@ -357,45 +357,109 @@ function renderActivityAiPreview(type, res) {
             const strideM = profile.strideLengthM || 0.7;
             const steps = Math.round((cardioDistance * 1000) / strideM);
             stepsHtml = `
-                <div id="previewStepsContainer" style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); padding-left:10px;">
-                    <div style="font-size:1.1rem; font-weight:700; color:var(--accent);">${steps.toLocaleString('id-ID')}</div>
-                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">🚶 Langkah</div>
+                <div id="previewStepsContainer" class="preview-stat-col">
+                    <div style="font-size:1.05rem; font-weight:800; color:var(--accent);">${steps.toLocaleString('id-ID')}</div>
+                    <div style="font-size:0.65rem; color:var(--text3); text-transform:uppercase; margin-top:2px;">🚶 Langkah</div>
                 </div>
             `;
         } else {
             stepsHtml = `
-                <div id="previewStepsContainer" style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); padding-left:10px; display:none;">
+                <div id="previewStepsContainer" class="preview-stat-col" style="display:none;">
                 </div>
             `;
         }
     }
     
     el.innerHTML = `
+        <style>
+            .preview-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px 4px;
+                margin-bottom: 12px;
+                background: var(--bg3);
+                padding: 12px;
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+            }
+            .preview-stats-grid.has-steps {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .preview-stat-col {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .preview-stat-col:not(:first-child) {
+                border-left: 1px solid rgba(255,255,255,0.08);
+            }
+            @media (max-width: 480px) {
+                /* For 4 items layout: 2x2 grid */
+                .preview-stats-grid:not(.has-steps) {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .preview-stats-grid:not(.has-steps) .preview-stat-col:nth-child(odd) {
+                    border-left: none;
+                }
+                .preview-stats-grid:not(.has-steps) .preview-stat-col:nth-child(1),
+                .preview-stats-grid:not(.has-steps) .preview-stat-col:nth-child(2) {
+                    margin-bottom: 8px;
+                    padding-bottom: 8px;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                }
+                
+                /* For 5 items layout: 3x2 grid (first row 3, second row 2) */
+                .preview-stats-grid.has-steps {
+                    grid-template-columns: repeat(6, 1fr);
+                }
+                .preview-stats-grid.has-steps .preview-stat-col:nth-child(1),
+                .preview-stats-grid.has-steps .preview-stat-col:nth-child(2),
+                .preview-stats-grid.has-steps .preview-stat-col:nth-child(3) {
+                    grid-column: span 2;
+                    margin-bottom: 8px;
+                    padding-bottom: 8px;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                }
+                .preview-stats-grid.has-steps .preview-stat-col:nth-child(4) {
+                    grid-column: span 3;
+                    border-left: none;
+                }
+                .preview-stats-grid.has-steps .preview-stat-col:nth-child(5) {
+                    grid-column: span 3;
+                    border-left: 1px solid rgba(255,255,255,0.08);
+                }
+            }
+        </style>
+        
         <div class="activity-ai-preview-card" style="margin-top: 15px; padding: 14px; background: rgba(0, 255, 204, 0.04); border: 1.5px solid rgba(0, 255, 204, 0.3); border-radius: var(--radius-sm);">
             <div style="display:flex; align-items:center; gap:6px; color:var(--accent); font-weight:700; font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">
                 <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Hasil Analisis AI
             </div>
-            <div style="display:flex; justify-content:space-around; align-items:center; gap:10px; margin-bottom:12px; background:var(--bg3); padding:10px; border-radius:var(--radius-sm);">
-                <div style="text-align:center;">
-                    <div style="font-size:1.2rem; font-weight:700; color:var(--success);">${res.burn.kcal}</div>
-                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">kcal</div>
+            
+            <div class="preview-stats-grid ${stepsHtml && !stepsHtml.includes('display:none') ? 'has-steps' : ''}">
+                <div class="preview-stat-col">
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--success);">${res.burn.kcal}</div>
+                    <div style="font-size:0.65rem; color:var(--text3); text-transform:uppercase; margin-top:2px;">🔥 kcal</div>
                 </div>
-                <div style="text-align:center;">
-                    <div style="font-size:1.1rem; font-weight:700; color:#ffab40;">${res.burn.fatG}g</div>
-                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">Lemak</div>
+                <div class="preview-stat-col">
+                    <div style="font-size:1.05rem; font-weight:800; color:#ffab40;">${res.burn.fatG}g</div>
+                    <div style="font-size:0.65rem; color:var(--text3); text-transform:uppercase; margin-top:2px;">🥩 Lemak</div>
                 </div>
-                <div style="text-align:center;">
-                    <div style="font-size:1.1rem; font-weight:700; color:#ffd60a;">${res.burn.carbG}g</div>
-                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">Karbo</div>
+                <div class="preview-stat-col">
+                    <div style="font-size:1.05rem; font-weight:800; color:#ffd60a;">${res.burn.carbG}g</div>
+                    <div style="font-size:0.65rem; color:var(--text3); text-transform:uppercase; margin-top:2px;">🍚 Karbo</div>
                 </div>
-                <div style="text-align:center;">
-                    <div style="font-size:1.1rem; font-weight:700; color:var(--accent2);">${res.burn.proteinG}g</div>
-                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">Protein</div>
+                <div class="preview-stat-col">
+                    <div style="font-size:1.05rem; font-weight:800; color:var(--accent2);">${res.burn.proteinG}g</div>
+                    <div style="font-size:0.65rem; color:var(--text3); text-transform:uppercase; margin-top:2px;">💪 Protein</div>
                 </div>
                 ${stepsHtml}
             </div>
+            
             ${res.analysis ? `
-            <div style="font-size:0.8rem; line-height:1.4; color:var(--text2); background:rgba(255,255,255,0.02); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border);">
+            <div style="font-size:0.8rem; line-height:1.45; color:var(--text2); background:rgba(255,255,255,0.02); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border);">
                 <strong>Evaluasi Latihan:</strong><br>${res.analysis}
             </div>` : ''}
         </div>
@@ -416,14 +480,14 @@ function renderActivityAiPreview(type, res) {
                 const strideM = profile.strideLengthM || 0.7;
                 const steps = Math.round((dist * 1000) / strideM);
                 stepsContainer.innerHTML = `
-                    <div style="font-size:1.1rem; font-weight:700; color:var(--accent);">${steps.toLocaleString('id-ID')}</div>
-                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">🚶 Langkah</div>
+                    <div style="font-size:1.05rem; font-weight:800; color:var(--accent);">${steps.toLocaleString('id-ID')}</div>
+                    <div style="font-size:0.65rem; color:var(--text3); text-transform:uppercase; margin-top:2px;">🚶 Langkah</div>
                 `;
                 stepsContainer.style.display = 'block';
-                stepsContainer.style.setProperty('border-left', '1px solid rgba(255,255,255,0.1)');
-                stepsContainer.style.setProperty('padding-left', '10px');
+                stepsContainer.closest('.preview-stats-grid').classList.add('has-steps');
             } else {
                 stepsContainer.style.display = 'none';
+                stepsContainer.closest('.preview-stats-grid').classList.remove('has-steps');
             }
         };
         distInput.removeEventListener('input', updatePreviewSteps);
