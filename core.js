@@ -278,9 +278,9 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
   return data.choices[0].message.content;
 }
 
-async function analyzePhotoAI(base64, mime) {
+async function analyzePhotoAI(images, mime = null) {
   const prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
-Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
+Tugas kamu adalah menganalisis foto makanan yang diunggah (bisa berupa satu foto atau beberapa foto yang menampilkan makanan yang sama atau komponen makanan yang berbeda dari hidangan tersebut), mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
 
 Instruksi:
 1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
@@ -307,12 +307,18 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
   
+  const parts = [{ text: prompt }];
+  if (Array.isArray(images)) {
+    images.forEach(img => {
+      parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
+    });
+  } else {
+    parts.push({ inline_data: { mime_type: mime, data: images } });
+  }
+
   const body = {
     contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: mime, data: base64 } }
-      ]
+      parts: parts
     }],
     generationConfig: {
       responseMimeType: "application/json",

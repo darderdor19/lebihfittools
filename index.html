@@ -527,14 +527,14 @@
         <!-- Photo AI Form -->
         <div id="photoForm" class="log-panel hidden">
           <div class="photo-upload-area" id="photoUploadArea" onclick="openPhotoPickerSheet()">
-            <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(this)">
+            <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(this)">
             <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoUpload(this)">
             <div class="upload-icon"><i data-lucide="camera" style="width:48px;height:48px;"></i></div>
             <p>Tap atau drag foto makanan kamu di sini</p>
-            <small>Didukung: JPG, PNG, WEBP</small>
+            <small>Didukung: JPG, PNG, WEBP (Maksimal 10 foto)</small>
           </div>
           <div id="photoPreviewWrap" class="hidden">
-            <img id="photoPreview" src="" alt="Preview">
+            <div id="foodPhotosGrid" style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-bottom:12px;"></div>
             <div class="photo-actions">
               <button class="btn-secondary" onclick="clearPhoto()"><i data-lucide="trash-2" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Hapus Foto</button>
               <button class="btn-primary" id="analyzeBtn" onclick="analyzePhoto()"><i data-lucide="zap" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Analisis Nutrisi</button>
@@ -754,15 +754,15 @@
             <div class="form-group" style="margin-top: 20px;">
               <label>Foto Tubuh / Kondisi Fisik</label>
               <div class="upload-area" id="physicalUploadArea" style="border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: var(--radius); cursor: pointer; background: var(--surface); margin-top: 8px; position: relative; transition: border-color 0.2s;" onclick="document.getElementById('physicalFileInput').click()">
-                <input type="file" id="physicalFileInput" accept="image/*" style="display: none;" onchange="handlePhysicalFileSelect(event)">
+                <input type="file" id="physicalFileInput" accept="image/*" multiple style="display: none;" onchange="handlePhysicalFileSelect(event)">
                 <div id="physicalUploadPlaceholder">
                   <div class="upload-icon" style="margin-bottom:10px;"><i data-lucide="camera" style="width:48px;height:48px;color:var(--text3);display:inline-block;"></i></div>
                   <p style="font-weight:600;color:var(--text2);">Klik atau seret foto badan ke sini</p>
-                  <p style="font-size:0.75rem;color:var(--text3);margin-top:4px;">PNG, JPG, JPEG, WEBP</p>
+                  <p style="font-size:0.75rem;color:var(--text3);margin-top:4px;">PNG, JPG, JPEG, WEBP (Maksimal 10 foto)</p>
                 </div>
                 <div id="physicalPreviewContainer" class="hidden">
-                  <img id="physicalImagePreview" src="" alt="Preview" style="max-height: 250px; border-radius: var(--radius); margin: 0 auto; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                  <button class="btn-text" onclick="removePhysicalPhoto(event)" style="margin-top:12px;color:var(--danger);font-size:0.85rem;background:none;border:none;cursor:pointer;font-weight:600;"><i data-lucide="trash-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Hapus Foto</button>
+                  <div id="physicalImagesGrid" style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-bottom:12px;"></div>
+                  <button class="btn-text" onclick="removePhysicalPhoto(event)" style="margin-top:12px;color:var(--danger);font-size:0.85rem;background:none;border:none;cursor:pointer;font-weight:600;"><i data-lucide="trash-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:4px;"></i> Hapus Semua Foto</button>
                 </div>
               </div>
             </div>

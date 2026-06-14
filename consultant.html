@@ -1138,7 +1138,7 @@
         </div>
 
         <!-- Hidden file inputs for image attachment (gallery vs camera) -->
-        <input type="file" id="imageAttachmentInput" accept="image/*" style="display:none;" onchange="handleFileSelected(this)">
+        <input type="file" id="imageAttachmentInput" accept="image/*" multiple style="display:none;" onchange="handleFileSelected(this)">
         <input type="file" id="cameraAttachmentInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileSelected(this)">
       </footer>
     </div>
@@ -1216,8 +1216,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     let userEmail = '';
     let userName = 'Bro';
     let safeEmail = '';
-    let attachedImageBase64 = null;
-    let attachedImageName = '';
+    let attachedImages = []; // Array of { name, base64 }
 
     // Loaded user data for AI Consultant context
     let userProfile = null;
@@ -1675,7 +1674,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       
       if (chatHistory.length > 0) {
         chatHistory.forEach(msg => {
-          appendMessageUI(msg.role, msg.content, msg.image);
+          appendMessageUI(msg.role, msg.content, msg.image, msg.images);
         });
       } else {
         startNewChatUI();
@@ -2050,7 +2049,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     }
 
     // Append bubble UI
-    function appendMessageUI(role, content, imageBase64 = null) {
+    function appendMessageUI(role, content, imageBase64 = null, imagesArray = null) {
       const container = document.getElementById('chatContainer');
       
       const row = document.createElement('div');
@@ -2068,8 +2067,16 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       bubble.className = 'message-bubble';
       
       let html = parseMarkdown(content);
-      if (role === 'user' && imageBase64) {
-        html = `<div style="margin-bottom:10px;"><img src="${imageBase64}" style="max-width:100%; max-height:240px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); display:block;"></div>` + html;
+      if (role === 'user') {
+        let imgsHtml = '';
+        if (imagesArray && imagesArray.length > 0) {
+          imgsHtml = `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">` + 
+            imagesArray.map(img => `<img src="${img}" style="max-width:120px; max-height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.08); display:block;">`).join('') + 
+            `</div>`;
+        } else if (imageBase64) {
+          imgsHtml = `<div style="margin-bottom:10px;"><img src="${imageBase64}" style="max-width:100%; max-height:240px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); display:block;"></div>`;
+        }
+        html = imgsHtml + html;
       }
       bubble.innerHTML = html;
       
@@ -2086,10 +2093,10 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       const text = input.value.trim();
       
       // If both text and image are empty, do nothing
-      if (!text && !attachedImageBase64) return;
+      if (!text && attachedImages.length === 0) return;
 
       let queryText = text;
-      if (!queryText && attachedImageBase64) {
+      if (!queryText && attachedImages.length > 0) {
         queryText = "Analisis gambar makanan/latihan ini, bro.";
       }
 
@@ -2118,12 +2125,15 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       }
 
       // Append user bubble
-      const currentAttachedImage = attachedImageBase64;
-      appendMessageUI('user', queryText, currentAttachedImage);
+      const currentAttachedImages = attachedImages.map(img => img.base64);
+      appendMessageUI('user', queryText, null, currentAttachedImages);
       
       const userMsg = { role: 'user', content: queryText };
-      if (currentAttachedImage) {
-        userMsg.image = currentAttachedImage;
+      if (currentAttachedImages.length > 0) {
+        userMsg.images = currentAttachedImages;
+        if (currentAttachedImages.length === 1) {
+          userMsg.image = currentAttachedImages[0];
+        }
       }
       chatHistory.push(userMsg);
       
@@ -2189,8 +2199,15 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
 
         // 1. Image classification if image is uploaded
         let classificationResult = null;
-        if (currentAttachedImage) {
+        if (currentAttachedImages && currentAttachedImages.length > 0) {
           try {
+            const classifierContent = [
+              { type: 'text', text: `Tolong analisis gambar ini berdasarkan pertanyaan: "${queryText}"` }
+            ];
+            currentAttachedImages.forEach(img => {
+              classifierContent.push({ type: 'image_url', image_url: { url: img } });
+            });
+
             const classifierMessages = [
               {
                 role: 'system',
@@ -2209,10 +2226,7 @@ Aturan Penilaian:
               },
               {
                 role: 'user',
-                content: [
-                  { type: 'text', text: `Tolong analisis gambar ini berdasarkan pertanyaan: "${queryText}"` },
-                  { type: 'image_url', image_url: { url: currentAttachedImage } }
-                ]
+                content: classifierContent
               }
             ];
 
@@ -2314,13 +2328,18 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
         ];
         
         chatHistory.forEach(msg => {
-          if (msg.role === 'user' && msg.image) {
+          if (msg.role === 'user' && (msg.image || (msg.images && msg.images.length > 0))) {
+            const content = [{ type: 'text', text: msg.content }];
+            if (msg.images && msg.images.length > 0) {
+              msg.images.forEach(img => {
+                content.push({ type: 'image_url', image_url: { url: img } });
+              });
+            } else if (msg.image) {
+              content.push({ type: 'image_url', image_url: { url: msg.image } });
+            }
             apiMessages.push({
               role: 'user',
-              content: [
-                { type: 'text', text: msg.content },
-                { type: 'image_url', image_url: { url: msg.image } }
-              ]
+              content: content
             });
           } else {
             apiMessages.push({
@@ -2446,48 +2465,75 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
 
     // File selected handler
     function handleFileSelected(input) {
-      const file = input.files[0];
-      if (!file) return;
+      const files = Array.from(input.files);
+      if (files.length === 0) return;
 
-      if (!file.type.startsWith('image/')) {
-        showToast('Hanya file gambar yang didukung!', 'error');
+      const totalExisting = attachedImages.length;
+      if (totalExisting + files.length > 10) {
+        showToast('Maksimal hanya 10 foto, bro!', 'warning');
         input.value = '';
         return;
       }
 
-      // Resize and compress the image before uploading to keep firebase/api fast
-      resizeImage(file, 800, 800, function(resizedBase64) {
-        attachedImageBase64 = resizedBase64;
-        attachedImageName = file.name;
-        
-        // Show preview card
-        const preview = document.getElementById('attachmentPreview');
-        preview.innerHTML = `
-          <div class="attachment-preview-container">
-            <img src="${resizedBase64}" class="attachment-preview-img">
-            <div class="attachment-preview-info">
-              <span class="attachment-preview-name">${file.name}</span>
-            </div>
-            <button type="button" class="btn-remove-attachment" onclick="removeAttachment(event)">
-              <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-            </button>
-          </div>
-        `;
-        preview.classList.remove('hidden');
-        if (window.lucide) lucide.createIcons();
+      let processedCount = 0;
+      files.forEach(file => {
+        if (!file.type.startsWith('image/')) {
+          showToast(`File ${file.name} bukan gambar!`, 'error');
+          return;
+        }
+
+        resizeImage(file, 800, 800, function(resizedBase64) {
+          attachedImages.push({
+            name: file.name,
+            base64: resizedBase64
+          });
+          processedCount++;
+
+          if (processedCount === files.length) {
+            renderAttachmentPreview();
+            input.value = '';
+          }
+        });
       });
+    }
+
+    function renderAttachmentPreview() {
+      const preview = document.getElementById('attachmentPreview');
+      if (attachedImages.length === 0) {
+        preview.innerHTML = '';
+        preview.classList.add('hidden');
+        return;
+      }
+
+      preview.innerHTML = `
+        <div style="display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:rgba(255,255,255,0.03); border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+          ${attachedImages.map((img, idx) => `
+            <div class="attachment-preview-container" style="position:relative; width:80px; height:80px; display:inline-block;">
+              <img src="${img.base64}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">
+              <button type="button" class="btn-remove-attachment" onclick="removeSingleAttachment(${idx}, event)" style="position:absolute; top:-6px; right:-6px; background:var(--danger); color:white; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px; box-shadow:0 2px 4px rgba(0,0,0,0.3); padding:0; line-height:1;">
+                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      preview.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function removeSingleAttachment(index, e) {
+      if (e) e.stopPropagation();
+      attachedImages.splice(index, 1);
+      renderAttachmentPreview();
     }
 
     // Clear attachment from state and DOM
     function removeAttachment(e) {
       if (e) e.stopPropagation();
-      attachedImageBase64 = null;
-      attachedImageName = '';
+      attachedImages = [];
       document.getElementById('imageAttachmentInput').value = '';
       document.getElementById('cameraAttachmentInput').value = '';
-      const preview = document.getElementById('attachmentPreview');
-      preview.innerHTML = '';
-      preview.classList.add('hidden');
+      renderAttachmentPreview();
     }
 
     // Resize image using HTML5 Canvas

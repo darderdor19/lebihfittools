@@ -2560,52 +2560,101 @@ async function analyzeTextFood() {
 }
 
 // Photo Upload
-let currentPhotoBase64 = null;
-let currentPhotoMime = null;
+let foodImagesList = []; // Array of { base64, mime, previewSrc }
 
 function handlePhotoUpload(input) {
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            // Show preview with original
-            document.getElementById('photoPreview').src = e.target.result;
-            document.getElementById('photoPreviewWrap').classList.remove('hidden');
-            document.getElementById('photoUploadArea').classList.add('hidden');
-            
-            // Compress image before sending to AI (max 512px, 60% quality)
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX = 512;
-                let w = img.width, h = img.height;
-                if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-                else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
-                canvas.width = w;
-                canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                const compressed = canvas.toDataURL('image/jpeg', 0.6);
-                currentPhotoBase64 = compressed.split(',')[1];
-                currentPhotoMime = 'image/jpeg';
+    if (input.files && input.files.length > 0) {
+        const files = Array.from(input.files);
+        if (foodImagesList.length + files.length > 10) {
+            showToast('Maksimal 10 foto, bro!', 'warning');
+            input.value = '';
+            return;
+        }
+
+        let processed = 0;
+        files.forEach(file => {
+            if (!file.type.startsWith('image/')) {
+                showToast(`File ${file.name} bukan gambar!`, 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 512;
+                    let w = img.width, h = img.height;
+                    if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+                    else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    foodImagesList.push({
+                        base64: compressed.split(',')[1],
+                        mime: 'image/jpeg',
+                        previewSrc: e.target.result
+                    });
+                    processed++;
+
+                    if (processed === files.length) {
+                        renderFoodPreviews();
+                        input.value = '';
+                    }
+                };
+                img.src = e.target.result;
             };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
     }
+}
+
+function renderFoodPreviews() {
+    const grid = document.getElementById('foodPhotosGrid');
+    const wrap = document.getElementById('photoPreviewWrap');
+    const uploadArea = document.getElementById('photoUploadArea');
+
+    if (foodImagesList.length === 0) {
+        grid.innerHTML = '';
+        wrap.classList.add('hidden');
+        uploadArea.classList.remove('hidden');
+        return;
+    }
+
+    grid.innerHTML = foodImagesList.map((img, idx) => `
+        <div style="position:relative; width:80px; height:80px;">
+            <img src="${img.previewSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+            <button type="button" onclick="removeSingleFoodPhoto(${idx}, event)" style="position:absolute; top:-6px; right:-6px; background:var(--danger); color:white; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+            </button>
+        </div>
+    `).join('');
+
+    uploadArea.classList.add('hidden');
+    wrap.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function removeSingleFoodPhoto(idx, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    foodImagesList.splice(idx, 1);
+    renderFoodPreviews();
 }
 
 function clearPhoto() {
     document.getElementById('photoInput').value = '';
-    document.getElementById('photoPreview').src = '';
-    document.getElementById('photoPreviewWrap').classList.add('hidden');
-    document.getElementById('photoUploadArea').classList.remove('hidden');
+    foodImagesList = [];
+    renderFoodPreviews();
     document.getElementById('photoResult').classList.add('hidden');
-    currentPhotoBase64 = null;
-    currentPhotoMime = null;
 }
 
 async function analyzePhoto() {
-    if (!currentPhotoBase64) return;
+    if (foodImagesList.length === 0) return;
     
     const btn = document.getElementById('analyzeBtn');
     const resultDiv = document.getElementById('photoResult');
@@ -2615,7 +2664,7 @@ async function analyzePhoto() {
         btn.disabled = true;
         resultDiv.classList.add('hidden');
         
-        const res = await analyzePhotoAI(currentPhotoBase64, currentPhotoMime);
+        const res = await analyzePhotoAI(foodImagesList);
         
         // Populate manual form with results
         document.getElementById('foodName').value = res.name || '';
@@ -4848,26 +4897,75 @@ function switchProgressTab(tab) {
     if (window.lucide) lucide.createIcons();
 }
 
+let physicalImagesList = []; // Array of { name, base64 }
+
 function handlePhysicalFileSelect(event) {
     event.stopPropagation();
     event.preventDefault();
     
-    const files = event.target.files || event.dataTransfer.files;
+    const files = Array.from(event.target.files || event.dataTransfer.files);
     if (!files || files.length === 0) return;
     
-    const file = files[0];
-    if (!file.type.startsWith('image/')) {
-        showToast('File harus berupa gambar!', 'error');
+    if (physicalImagesList.length + files.length > 10) {
+        showToast('Maksimal 10 foto, bro!', 'warning');
         return;
     }
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        document.getElementById('physicalImagePreview').src = e.target.result;
-        document.getElementById('physicalUploadPlaceholder').classList.add('hidden');
-        document.getElementById('physicalPreviewContainer').classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
+    let processed = 0;
+    files.forEach(file => {
+        if (!file.type.startsWith('image/')) {
+            showToast(`File ${file.name} bukan gambar!`, 'error');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            physicalImagesList.push({
+                name: file.name,
+                base64: e.target.result
+            });
+            processed++;
+            if (processed === files.length) {
+                renderPhysicalPreviews();
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderPhysicalPreviews() {
+    const grid = document.getElementById('physicalImagesGrid');
+    const placeholder = document.getElementById('physicalUploadPlaceholder');
+    const container = document.getElementById('physicalPreviewContainer');
+    
+    if (physicalImagesList.length === 0) {
+        grid.innerHTML = '';
+        container.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        return;
+    }
+    
+    grid.innerHTML = physicalImagesList.map((img, idx) => `
+        <div style="position:relative; width:80px; height:80px;">
+            <img src="${img.base64}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+            <button type="button" onclick="removeSinglePhysicalPhoto(${idx}, event)" style="position:absolute; top:-6px; right:-6px; background:var(--danger); color:white; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:10px; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                <i data-lucide="x" style="width: 10px; height: 10px;"></i>
+            </button>
+        </div>
+    `).join('');
+    
+    placeholder.classList.add('hidden');
+    container.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+}
+
+function removeSinglePhysicalPhoto(idx, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    physicalImagesList.splice(idx, 1);
+    renderPhysicalPreviews();
 }
 
 function removePhysicalPhoto(event) {
@@ -4876,9 +4974,8 @@ function removePhysicalPhoto(event) {
         event.preventDefault();
     }
     document.getElementById('physicalFileInput').value = '';
-    document.getElementById('physicalImagePreview').src = '';
-    document.getElementById('physicalPreviewContainer').classList.add('hidden');
-    document.getElementById('physicalUploadPlaceholder').classList.remove('hidden');
+    physicalImagesList = [];
+    renderPhysicalPreviews();
 }
 
 function resizeImageBase64(base64Str, maxWidth = 500, maxHeight = 500) {
@@ -4932,8 +5029,7 @@ async function startPhysicalAnalysis() {
         return;
     }
     
-    const imgPreview = document.getElementById('physicalImagePreview');
-    if (!imgPreview.src || imgPreview.src.includes('localhost') || imgPreview.src === '') {
+    if (physicalImagesList.length === 0) {
         alert('Harap unggah foto kondisi badan terlebih dahulu!');
         return;
     }
@@ -5005,8 +5101,10 @@ async function startPhysicalAnalysis() {
         const workoutDetailsText = workoutDetails.length > 0 ? workoutDetails.join('\n') : 'Tidak ada sesi latihan beban atau kardio yang tercatat.';
         
         // Prepare base64 image details
-        const base64Data = imgPreview.src.split(',')[1];
-        const mimeType = imgPreview.src.split(',')[0].split(':')[1].split(';')[0];
+        const base64Parts = physicalImagesList.map(img => img.base64.split(',')[1]);
+        const mimeTypes = physicalImagesList.map(img => img.base64.split(',')[0].split(':')[1].split(';')[0]);
+        const base64Data = base64Parts[0];
+        const mimeType = mimeTypes[0];
 
         // Cache system to save Gemini tokens
         function hashString(str) {
@@ -5019,7 +5117,7 @@ async function startPhysicalAnalysis() {
         }
 
         const inputString = [
-            base64Data,
+            base64Parts.join(','),
             days.toString(),
             customDesc || '',
             JSON.stringify(profile),
@@ -5100,8 +5198,13 @@ Bandingkan kondisi fisik visual pada foto saat ini dengan catatan evaluasi fisik
         
         // Construct image inputs array
         const imagesInput = [];
-        // First image is always the new/current upload
-        imagesInput.push({ base64: base64Data, mime: mimeType });
+        // Add all new uploads from physicalImagesList
+        physicalImagesList.forEach(img => {
+            const parsed = parseDataUrl(img.base64);
+            if (parsed) {
+                imagesInput.push(parsed);
+            }
+        });
         
         let visualComparisonPromptNote = '';
         if (previousAnalysis && previousAnalysis.photo) {
@@ -5109,10 +5212,9 @@ Bandingkan kondisi fisik visual pada foto saat ini dengan catatan evaluasi fisik
             if (parsed) {
                 imagesInput.push(parsed);
                 visualComparisonPromptNote = `
-* PENTING: Kami menyertakan 2 FOTO untuk kamu bandingkan secara visual.
-- Foto Pertama (Urutan ke-1) adalah FOTO TERBARU saat ini.
-- Foto Kedua (Urutan ke-2) adalah FOTO DARI ANALISIS SEBELUMNYA (${previousAnalysis.date || 'kemarin'}).
-Silakan analisis perubahan bentuk tubuh, definisi otot, dan kadar lemak tubuh secara visual di antara kedua foto tersebut secara langsung.`;
+* PENTING: Kami menyertakan foto-foto terbaru untuk kamu bandingkan secara visual dengan foto dari analisis sebelumnya di bagian akhir.
+- Foto Terakhir (Urutan ke-${imagesInput.length}) adalah FOTO DARI ANALISIS SEBELUMNYA (${previousAnalysis.date || 'kemarin'}).
+Silakan analisis perubahan bentuk tubuh, definisi otot, dan kadar lemak tubuh secara visual di antara foto-foto terbaru dengan foto sebelumnya secara langsung.`;
             }
         }
         
@@ -5241,7 +5343,8 @@ ${visualComparisonPromptNote}
             DB.set('lf_physical_analysis_cache', cacheObj);
             
             // Resize current photo to store in history entry
-            const resizedPhoto = await resizeImageBase64(imgPreview.src, 400, 400);
+            const resizedPhoto = await resizeImageBase64(physicalImagesList[0].base64, 400, 400);
+            const resizedPhotos = await Promise.all(physicalImagesList.map(async img => await resizeImageBase64(img.base64, 400, 400)));
             
             // Save to historical physical analyses list
             const historyEntry = {
@@ -5249,7 +5352,8 @@ ${visualComparisonPromptNote}
                 timestamp: new Date().toISOString(),
                 date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                 data: data,
-                photo: resizedPhoto
+                photo: resizedPhoto,
+                photos: resizedPhotos
             };
             
             let localHistory = DB.get('lf_physical_analyses') || [];
