@@ -383,6 +383,24 @@
             <h3 class="section-title" style="margin-bottom:0;"><i data-lucide="dumbbell" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Kegiatan Hari Ini</h3>
             <button class="btn-secondary" style="padding:6px 12px;font-size:0.75rem;" onclick="showPage('activity')">+ Tambah</button>
           </div>
+          
+          <!-- Steps Tracker Dashboard Widget -->
+          <div id="dashStepsWidget" style="display:flex; align-items:center; justify-content:space-between; background:var(--bg3); border:1px solid var(--border); padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:32px; height:32px; border-radius:50%; background:rgba(0, 240, 255, 0.08); display:flex; align-items:center; justify-content:center; color:#00f0ff;">
+                <i data-lucide="footprints" style="width:18px; height:18px;"></i>
+              </div>
+              <div>
+                <div style="font-size:0.7rem; color:var(--text3); text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">Langkah Hari Ini</div>
+                <div style="font-size:1.15rem; font-weight:800; color:var(--text1); margin-top:1px;" id="dashTotalSteps">0</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.85rem; font-weight:700; color:#00f0ff;" id="dashStepsDistance">0.0 km</div>
+              <div style="font-size:0.65rem; color:var(--text3);" id="dashStepsStrideInfo">Langkah: 0.75m</div>
+            </div>
+          </div>
+
           <div id="dashActivityContent">
             <p style="color:var(--text2);font-size:0.88rem;">Belum ada kegiatan tercatat. <span style="color:var(--accent);cursor:pointer;" onclick="showPage('activity')">Catat sekarang →</span></p>
           </div>

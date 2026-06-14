@@ -1170,24 +1170,24 @@
   <script>
     // Constants
     const MODEL_NAME = 'lf_openroutermodel';
-    const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
-
-    // System prompt context
+    const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';    // System prompt context
     const SYSTEM_PROMPT = `Kamu adalah AI Consultant LebihFit. Kamu adalah pakar gizi klinis, pelatih kebugaran (fitness coach), dan konsultan kesehatan profesional. 
 Tugasmu adalah memberikan saran kesehatan, nutrisi, rancangan diet, perbaikan pola tidur, dan rancangan program latihan beban/kardio yang ilmiah, realistis, dan aman bagi pengguna.
 Tulis jawaban dalam bahasa Indonesia gaul yang ramah, sopan, memotivasi, dan mudah dipahami (gunakan panggilan 'Lu' atau 'Kamu').
 Hubungkan saranmu dengan konsep gaya hidup sehat jangka panjang. 
 
-PENTING UNTUK EVALUASI PROGRESS / STUCK PROGRESS:
-Jika pengguna bertanya tentang progress badan, berat badan stuck (datar/tidak turun/tidak naik), evaluasi latihan, atau pencapaian target fitness mereka:
-1. Analisis secara mendalam data historis pengguna yang dilampirkan di akhir instruksi ini (Profile, Log Makanan 7 hari terakhir, dan Log Kegiatan 7 hari terakhir).
-2. Berikan penilaian SCORE (skala 1 - 10) untuk aspek-aspek utama berikut beserta ulasannya:
-   - Konsistensi Nutrisi & Target Kalori/Gizi (Nutritional Score): Nilai kepatuhan asupan kalori & protein aktual vs target mereka.
-   - Konsistensi Latihan & Olahraga (Training Score): Nilai frekuensi, durasi, dan konsistensi olahraga mereka.
-   - Kualitas Tidur & Recovery (Recovery Score): Nilai jam tidur rata-rata mereka.
-3. Hubungkan data-data tersebut untuk menjawab alasan utama kenapa progress mereka stuck. Contoh: jika kalori harian mereka di log sering berlebih dibanding target, atau jika jam tidur di log kegiatan sangat kurang (misal <6 jam), atau jika jarang mencatat olahraga.
-4. Jika data log makanan/kegiatan masih kosong atau sangat minim, berikan nasihat yang mendalam secara teori dulu, dan ingatkan mereka secara ramah untuk rajin mengisi log di dashboard agar kamu bisa memberikan analisis score berbasis data yang sangat presisi di pertanyaan berikutnya.
-5. Berikan rekomendasi langkah konkret (actionable steps) yang terarah dan memotivasi untuk memecahkan stuck tersebut.
+PENTING UNTUK EVALUASI PROGRESS, STUCK PROGRESS, & SKORING:
+Jika pengguna bertanya tentang progress badan, berat badan stuck (datar/tidak turun/tidak naik), evaluasi latihan, kepatuhan gizi/diet, kualitas tidur, atau pencapaian target fitness mereka (dan pertanyaan lain yang membutuhkan penilaian):
+1. Analisis secara mendalam data historis pengguna yang dilampirkan di akhir instruksi ini (Profile, Data Detil Hari Ini, Log 7 Hari, dan Data Agregat 30 Hari).
+2. Kamu WAJIB memberikan penilaian SCORE kuantitatif (skala 1 - 10 atau 1 - 100) untuk aspek-aspek utama berikut beserta ulasannya:
+   - Konsistensi Nutrisi & Target Kalori/Gizi (Nutritional Score): Nilai kepatuhan asupan kalori & protein aktual vs target dari kalkulator profil mereka.
+   - Konsistensi Latihan & Olahraga (Training Score / Overload Score): Nilai frekuensi, durasi, konsistensi olahraga, serta progressive overload (volume/intensitas beban jika ada detail gerakan latihan).
+   - Kualitas Tidur & Recovery (Recovery Score): Nilai jam tidur rata-rata mereka vs rekomendasi sehat (7-8 jam).
+3. Kamu wajib mengaitkan data-data tersebut secara langsung untuk menjawab keluhan mereka. Contoh: jika berat badan stuck, hubungkan asupan kalori aktual di log 7-30 hari terakhir dengan target defisit/surplus mereka.
+4. Kamu harus menyebutkan nama makanan spesifik (seperti 'dada ayam', 'nasi putih', dsb.) dan gerakan/sesi olahraga spesifik (seperti 'Bench Press', 'Jogging', dsb.) yang tercatat di dalam log pengguna. JAWABAN HARUS SANGAT CUSTOM DAN PERSONAL, DILARANG MEMBERIKAN JAWABAN UMUM/TEMPLATE.
+5. Sesuaikan fokus analisis waktu berdasarkan pertanyaan user. Di bagian bawah context data, terdapat 'Rentang Waktu yang Relevan'. Jika rentang waktunya TODAY, berikan detail data hari ini. Jika 7 DAYS atau 30 DAYS, gunakan analisis tren mingguan/bulanan tersebut secara mendalam.
+6. Jika data log makanan/kegiatan masih kosong atau sangat minim, berikan nasihat teoritis yang mendalam dulu, dan ingatkan mereka secara bersahabat untuk rajin mengisi log di dashboard agar kamu bisa memberikan analisis score berbasis data yang sangat presisi di pertanyaan berikutnya.
+7. Berikan rekomendasi langkah konkret (actionable steps) yang terarah, praktis, dan memotivasi untuk memecahkan masalah mereka.
 
 PENTING UNTUK INSTRUKSI FITUR INTERNAL:
 1. Jika pengguna bertanya tentang jumlah kalori/nutrisi suatu makanan (misalnya: "Berapa kalori nasi goreng?", "Kalori pisang berapa?", dll.), kamu DILARANG menghitung atau memberitahukannya di chat ini. Arahkan pengguna dengan ramah untuk menggunakan fitur Tracker Diet (menu input makanan) yang sudah disediakan di dashboard LebihFit Tools dengan menulis link markdown persis seperti ini: [Tracker Diet](index.html?page=log).
@@ -1314,10 +1314,29 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     }
 
     // Helper to generate a detailed summary of user's current goals and history for the AI prompt
-    function generateUserContextSummary() {
+    function generateUserContextSummary(queryText = '') {
       if (!userProfile) return '';
       
-      let summary = `\n\n== USER PROFILE & FITNESS TARGETS (KALKULATOR PENYESUAIAN) ==\n`;
+      const localDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+      const todayStr = localDate.toISOString().slice(0, 10);
+      
+      // Determine what time range the user is focusing on
+      const queryLower = queryText.toLowerCase();
+      let focusedRange = 'ALL (Kombinasi)';
+      if (queryLower.includes('hari ini') || queryLower.includes('today') || queryLower.includes('tadi') || queryLower.includes('sekarang') || queryLower.includes('pagi') || queryLower.includes('siang') || queryLower.includes('malam')) {
+        focusedRange = 'TODAY (Hari Ini)';
+      } else if (queryLower.includes('minggu') || queryLower.includes('seminggu') || queryLower.includes('7 hari') || queryLower.includes('week') || queryLower.includes('stuck') || queryLower.includes('mendingan')) {
+        focusedRange = '7 DAYS (Seminggu Terakhir)';
+      } else if (queryLower.includes('bulan') || queryLower.includes('sebulan') || queryLower.includes('30 hari') || queryLower.includes('month') || queryLower.includes('progress') || queryLower.includes('perkembangan')) {
+        focusedRange = '30 DAYS (Satu Bulan Terakhir)';
+      }
+
+      let summary = `\n\n== REKOMENDASI DETEKSI FOKUS PERTANYAAN ==\n`;
+      summary += `- Waktu Saat Ini: ${new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}\n`;
+      summary += `- Tanggal Hari Ini (Format DB): ${todayStr}\n`;
+      summary += `- Rentang Waktu yang Relevan dengan Pertanyaan User: ${focusedRange}\n\n`;
+
+      summary += `== USER PROFILE & FITNESS TARGETS (KALKULATOR PENYESUAIAN) ==\n`;
       summary += `- Gender: ${userProfile.gender || 'tidak diset'}\n`;
       summary += `- Berat Badan saat ini: ${userProfile.bb || '?'} kg\n`;
       summary += `- Tinggi Badan: ${userProfile.tb || '?'} cm\n`;
@@ -1331,68 +1350,320 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         summary += `- Target Karbohidrat Harian: ${userProfile.targets.carbs || '?'} g\n`;
         summary += `- Target Lemak Harian: ${userProfile.targets.fat || '?'} g\n`;
       }
-      
-      summary += `\n== RINGKASAN LOG MAKANAN & NUTRISI (7 HARI TERAKHIR) ==\n`;
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
-      
-      let foodLogEntries = [];
-      if (userLogs) {
-        const sortedDates = Object.keys(userLogs).sort().reverse();
-        let count = 0;
-        sortedDates.forEach(date => {
-          if (date >= sevenDaysAgoStr && count < 7) {
-            const dayData = userLogs[date] || [];
-            let dayCal = 0, dayP = 0, dayC = 0, dayF = 0;
-            dayData.forEach(item => {
-              dayCal += parseFloat(item.cal) || 0;
-              dayP += parseFloat(item.protein) || 0;
-              dayC += parseFloat(item.carbs) || 0;
-              dayF += parseFloat(item.fat) || 0;
-            });
-            foodLogEntries.push(`- Tanggal ${date}: Total Kalori: ${Math.round(dayCal)} kcal, Protein: ${dayP.toFixed(1)}g, Karbo: ${dayC.toFixed(1)}g, Lemak: ${dayF.toFixed(1)}g (${dayData.length} item makanan: ${dayData.map(d => d.name).join(', ')})`);
-            count++;
+
+      // Normalization helper for daily activities
+      function getNormalizedDayActivities(dayData) {
+        let items = [];
+        if (Array.isArray(dayData)) {
+          items = dayData;
+        } else if (dayData && typeof dayData === 'object') {
+          if (dayData.workouts || dayData.sleep || dayData.steps || dayData.weight || dayData.water) {
+            return {
+              weight: dayData.weight || null,
+              steps: dayData.steps || 0,
+              sleep: dayData.sleep || 0,
+              water: dayData.water || 0,
+              workouts: dayData.workouts || []
+            };
+          }
+          items = Object.values(dayData);
+        }
+        
+        let weight = null;
+        let sleep = 0;
+        let steps = 0;
+        let water = 0;
+        let workouts = [];
+        
+        items.forEach(item => {
+          if (!item) return;
+          if (item.type === 'sleep') {
+            sleep += parseFloat(item.hours) || 0;
+          } else if (item.type === 'water') {
+            water += parseFloat(item.ml) || 0;
+          } else if (item.type === 'weight') {
+            weight = parseFloat(item.kg) || weight;
+          } else if (item.type === 'steps') {
+            steps += parseInt(item.count) || 0;
+          } else if (item.type === 'cardio' || item.type === 'workout' || item.type === 'gym' || item.type === 'other') {
+            workouts.push(item);
           }
         });
+        
+        return { weight, sleep, steps, water, workouts };
       }
+
+      // Stride / step length calculation in meters
+      const heightCm = parseFloat(userProfile.tb) || 0;
+      const gender = userProfile.gender || '';
+      let strideM = 0.75;
+      if (heightCm > 0) {
+        const isFemale = gender.toLowerCase().includes('wanita') || 
+                         gender.toLowerCase().includes('perempuan') || 
+                         gender.toLowerCase().includes('female') || 
+                         gender.toLowerCase() === 'f';
+        strideM = isFemale ? (heightCm * 0.413) / 100 : (heightCm * 0.415) / 100;
+      }
+      
+      // 1. TODAY'S DETAILS
+      summary += `\n== DATA DETIL HARI INI (${todayStr}) ==\n`;
+      const todayLogs = userLogs ? (userLogs[todayStr] || []) : [];
+      let todayCal = 0, todayP = 0, todayC = 0, todayF = 0;
+      let todayFoodItems = [];
+      todayLogs.forEach(item => {
+        const cal = parseFloat(item.cal) || 0;
+        const p = parseFloat(item.protein) || 0;
+        const c = parseFloat(item.carbs) || 0;
+        const f = parseFloat(item.fat) || 0;
+        todayCal += cal;
+        todayP += p;
+        todayC += c;
+        todayF += f;
+        todayFoodItems.push(`${item.name} (${cal} kcal, P: ${p}g, K: ${c}g, L: ${f}g)`);
+      });
+      
+      if (todayFoodItems.length > 0) {
+        summary += `- Makanan Hari Ini:\n  * ` + todayFoodItems.join('\n  * ') + '\n';
+        summary += `- Total Nutrisi Terkonsumsi Hari Ini: Kalori: ${Math.round(todayCal)} kcal, Protein: ${todayP.toFixed(1)}g, Karbo: ${todayC.toFixed(1)}g, Lemak: ${todayF.toFixed(1)}g\n`;
+        if (userProfile.targets) {
+          summary += `- Selisih vs Target Hari Ini: Kalori: ${Math.round(todayCal - (userProfile.targets.cal || 0))} kcal, Protein: ${(todayP - (userProfile.targets.protein || 0)).toFixed(1)}g\n`;
+        }
+      } else {
+        summary += `- Makanan Hari Ini: Belum mencatat makanan hari ini.\n`;
+      }
+
+      const rawTodayActs = userActivities ? userActivities[todayStr] : null;
+      const todayActs = getNormalizedDayActivities(rawTodayActs);
+
+      // Process today's workouts and compute cardio steps
+      let todayStepsCalculated = 0;
+      let todayWorkoutList = [];
+      
+      if (todayActs.workouts && todayActs.workouts.length > 0) {
+        todayActs.workouts.forEach(w => {
+          let actDetails = `${w.name || w.type || 'Olahraga'} (${w.duration || w.durationMin || '?'} menit`;
+          if (w.calories || w.burn) {
+            actDetails += `, ~${w.calories || (w.burn ? w.burn.kcal : 0)} kcal burned`;
+          }
+          actDetails += `)`;
+
+          const wName = (w.name || '').toLowerCase();
+          const isStepsCardio = w.type === 'cardio' || 
+                               wName.includes('lari') || 
+                               wName.includes('run') || 
+                               wName.includes('treadmill') || 
+                               wName.includes('jalan') || 
+                               wName.includes('walk');
+          const wDist = parseFloat(w.distanceKm || w.distance) || 0;
+          if (isStepsCardio && wDist > 0) {
+            const steps = Math.round((wDist * 1000) / strideM);
+            actDetails += ` [Jarak: ${wDist} km, Estimasi Langkah: ${steps.toLocaleString('id-ID')} langkah, Stride: ${strideM.toFixed(2)}m]`;
+            todayStepsCalculated += steps;
+          }
+
+          if (w.exercises && w.exercises.length > 0) {
+            const exercisesDetails = w.exercises.map(e => {
+              const setsDetails = e.sets ? e.sets.map(s => `${s.weight}kg x ${s.reps} reps`).join(', ') : '';
+              return `    + Gerakan: ${e.name} (${setsDetails})`;
+            }).join('\n');
+            actDetails += `\n${exercisesDetails}`;
+          }
+          todayWorkoutList.push(actDetails);
+        });
+      }
+
+      const finalTodaySteps = (todayActs.steps || 0) + todayStepsCalculated;
+
+      summary += `- Berat Badan Terdaftar Hari Ini: ${todayActs.weight ? todayActs.weight + ' kg' : 'Belum menimbang hari ini'}\n`;
+      summary += `- Langkah Kaki Hari Ini: ${finalTodaySteps} langkah${todayStepsCalculated > 0 ? ` (Termasuk estimasi dari olahraga kardio: ${todayStepsCalculated} langkah)` : ''}\n`;
+      summary += `- Tidur Hari Ini: ${todayActs.sleep || 0} jam\n`;
+      summary += `- Air Minum Hari Ini: ${todayActs.water || 0} ml\n`;
+      
+      if (todayWorkoutList.length > 0) {
+        summary += `- Olahraga Hari Ini:\n  * ${todayWorkoutList.join('\n  * ')}\n`;
+      } else {
+        summary += `- Olahraga Hari Ini: Belum mencatat olahraga hari ini.\n`;
+      }
+
+      // 2. 7 DAYS TREND (Seminggu Terakhir)
+      summary += `\n== RINGKASAN LOG NUTRISI & OLAHRAGA (7 HARI TERAKHIR) ==\n`;
+      let foodLogEntries = [];
+      let activityLogEntries = [];
+      
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(localDate);
+        d.setDate(d.getDate() - i);
+        const dStr = d.toISOString().slice(0, 10);
+        
+        // Diet
+        const dayLogs = userLogs ? (userLogs[dStr] || []) : [];
+        let dCal = 0, dP = 0, dC = 0, dF = 0;
+        dayLogs.forEach(item => {
+          dCal += parseFloat(item.cal) || 0;
+          dP += parseFloat(item.protein) || 0;
+          dC += parseFloat(item.carbs) || 0;
+          dF += parseFloat(item.fat) || 0;
+        });
+        
+        if (dayLogs.length > 0) {
+          foodLogEntries.push(`- Tanggal ${dStr}: Total Kalori: ${Math.round(dCal)} kcal, Protein: ${dP.toFixed(1)}g, Karbo: ${dC.toFixed(1)}g, Lemak: ${dF.toFixed(1)}g (${dayLogs.length} makanan: ${dayLogs.map(item => item.name).join(', ')})`);
+        }
+
+        // Activities
+        const rawDayActs = userActivities ? userActivities[dStr] : null;
+        const dayActs = getNormalizedDayActivities(rawDayActs);
+        
+        let details = [];
+        if (dayActs.weight) details.push(`BB: ${dayActs.weight} kg`);
+        
+        let dayStepsCalculated7 = 0;
+        if (dayActs.workouts && dayActs.workouts.length > 0) {
+          const workoutDetails = dayActs.workouts.map(w => {
+            let desc = `${w.name || w.type || 'Olahraga'} (${w.duration || w.durationMin || '?'} menit`;
+            if (w.calories || w.burn) {
+              desc += `, ~${w.calories || (w.burn ? w.burn.kcal : 0)} kcal`;
+            }
+            desc += `)`;
+
+            const wName = (w.name || '').toLowerCase();
+            const isStepsCardio = w.type === 'cardio' || 
+                                 wName.includes('lari') || 
+                                 wName.includes('run') || 
+                                 wName.includes('treadmill') || 
+                                 wName.includes('jalan') || 
+                                 wName.includes('walk');
+            const wDist = parseFloat(w.distanceKm || w.distance) || 0;
+            if (isStepsCardio && wDist > 0) {
+              const steps = Math.round((wDist * 1000) / strideM);
+              desc += ` [${steps} langkah]`;
+              dayStepsCalculated7 += steps;
+            }
+            return desc;
+          }).join(', ');
+          
+          details.push(`Olahraga: ${workoutDetails}`);
+        }
+        
+        const finalSteps7 = (dayActs.steps || 0) + dayStepsCalculated7;
+        if (finalSteps7 > 0) details.push(`Langkah: ${finalSteps7}`);
+        if (dayActs.sleep > 0) details.push(`Tidur: ${dayActs.sleep} jam`);
+        if (dayActs.water > 0) details.push(`Air: ${dayActs.water} ml`);
+        
+        if (details.length > 0) {
+          activityLogEntries.push(`- Tanggal ${dStr}: ${details.join(' | ')}`);
+        }
+      }
+
       if (foodLogEntries.length === 0) {
         summary += `Belum ada log makanan tercatat dalam 7 hari terakhir.\n`;
       } else {
         summary += foodLogEntries.join('\n') + '\n';
       }
-      
-      summary += `\n== RINGKASAN LOG AKTIVITAS & OLAHRAGA (7 HARI TERAKHIR) ==\n`;
-      let activityLogEntries = [];
-      if (userActivities) {
-        const sortedDates = Object.keys(userActivities).sort().reverse();
-        let count = 0;
-        sortedDates.forEach(date => {
-          if (date >= sevenDaysAgoStr && count < 7) {
-            const dayActs = userActivities[date] || {};
-            let details = [];
-            if (dayActs.weight) details.push(`Berat badan tercatat: ${dayActs.weight} kg`);
-            if (dayActs.workouts && dayActs.workouts.length > 0) {
-              const workoutDetails = dayActs.workouts.map(w => `${w.name} (${w.duration} menit, ~${w.calories} kcal terbakar)`).join(', ');
-              details.push(`Olahraga: ${workoutDetails}`);
-            }
-            if (dayActs.steps) details.push(`Langkah kaki: ${dayActs.steps}`);
-            if (dayActs.sleep) details.push(`Durasi tidur: ${dayActs.sleep} jam`);
-            if (dayActs.water) details.push(`Air minum: ${dayActs.water} ml`);
-            
-            if (details.length > 0) {
-              activityLogEntries.push(`- Tanggal ${date}: ${details.join(' | ')}`);
-              count++;
-            }
-          }
-        });
-      }
+
       if (activityLogEntries.length === 0) {
         summary += `Belum ada log aktivitas/olahraga tercatat dalam 7 hari terakhir.\n`;
       } else {
         summary += activityLogEntries.join('\n') + '\n';
       }
-      
+
+      // 3. 30 DAYS TREND (Sebulan Terakhir - Aggregated)
+      summary += `\n== DATA AGREGAT & TREN KEMAJUAN (30 HARI TERAKHIR) ==\n`;
+      let totalCal30 = 0, totalP30 = 0, countDaysDiet30 = 0;
+      let totalSteps30 = 0, countSteps30 = 0;
+      let totalSleep30 = 0, countSleep30 = 0;
+      let weightEntries30 = [];
+      let totalWorkouts30 = 0;
+
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(localDate);
+        d.setDate(d.getDate() - i);
+        const dStr = d.toISOString().slice(0, 10);
+
+        // Diet
+        const dayLogs = userLogs ? (userLogs[dStr] || []) : [];
+        if (dayLogs.length > 0) {
+          let dCal = 0, dP = 0;
+          dayLogs.forEach(item => {
+            dCal += parseFloat(item.cal) || 0;
+            dP += parseFloat(item.protein) || 0;
+          });
+          totalCal30 += dCal;
+          totalP30 += dP;
+          countDaysDiet30++;
+        }
+
+        // Activities
+        const rawDayActs = userActivities ? userActivities[dStr] : null;
+        const dayActs = getNormalizedDayActivities(rawDayActs);
+        
+        if (dayActs.weight) {
+          weightEntries30.push({ date: dStr, val: parseFloat(dayActs.weight) });
+        }
+        
+        let dayStepsCalculated30 = 0;
+        if (dayActs.workouts && dayActs.workouts.length > 0) {
+          totalWorkouts30 += dayActs.workouts.length;
+          dayActs.workouts.forEach(w => {
+            const wName = (w.name || '').toLowerCase();
+            const isStepsCardio = w.type === 'cardio' || 
+                                 wName.includes('lari') || 
+                                 wName.includes('run') || 
+                                 wName.includes('treadmill') || 
+                                 wName.includes('jalan') || 
+                                 wName.includes('walk');
+            const wDist = parseFloat(w.distanceKm || w.distance) || 0;
+            if (isStepsCardio && wDist > 0) {
+              dayStepsCalculated30 += Math.round((wDist * 1000) / strideM);
+            }
+          });
+        }
+        
+        const finalSteps30 = (dayActs.steps || 0) + dayStepsCalculated30;
+        if (finalSteps30 > 0) {
+          totalSteps30 += finalSteps30;
+          countSteps30++;
+        }
+        
+        if (dayActs.sleep > 0) {
+          totalSleep30 += dayActs.sleep;
+          countSleep30++;
+        }
+      }
+
+      if (countDaysDiet30 > 0) {
+        summary += `- Rata-rata Kalori Harian (30 hari terakhir): ${Math.round(totalCal30 / countDaysDiet30)} kcal (${countDaysDiet30} hari aktif mencatat)\n`;
+        summary += `- Rata-rata Protein Harian (30 hari terakhir): ${(totalP30 / countDaysDiet30).toFixed(1)} g\n`;
+      } else {
+        summary += `- Rata-rata Diet: Belum ada log makanan tercatat dalam 30 hari terakhir.\n`;
+      }
+
+      summary += `- Total Sesi Olahraga (30 hari terakhir): ${totalWorkouts30} sesi olahraga\n`;
+
+      if (countSteps30 > 0) {
+        summary += `- Rata-rata Langkah Kaki Harian: ${Math.round(totalSteps30 / countSteps30)} langkah (${countSteps30} hari aktif mencatat)\n`;
+      } else {
+        summary += `- Rata-rata Langkah Kaki: Belum ada data langkah kaki.\n`;
+      }
+
+      if (countSleep30 > 0) {
+        summary += `- Rata-rata Tidur Harian: ${(totalSleep30 / countSleep30).toFixed(1)} jam\n`;
+      }
+
+      if (weightEntries30.length > 0) {
+        weightEntries30.sort((a, b) => a.date.localeCompare(b.date));
+        const earliestWeight = weightEntries30[0];
+        const latestWeight = weightEntries30[weightEntries30.length - 1];
+        const minW = Math.min(...weightEntries30.map(w => w.val));
+        const maxW = Math.max(...weightEntries30.map(w => w.val));
+        summary += `- Tren Berat Badan (30 hari terakhir):\n`;
+        summary += `  * Awal Pencatatan (${earliestWeight.date}): ${earliestWeight.val} kg\n`;
+        summary += `  * Terakhir/Hari Ini (${latestWeight.date}): ${latestWeight.val} kg\n`;
+        summary += `  * Selisih/Perkembangan: ${(latestWeight.val - earliestWeight.val).toFixed(1)} kg\n`;
+        summary += `  * Rentang Berat: Min ${minW} kg, Max ${maxW} kg\n`;
+      } else {
+        summary += `- Tren Berat Badan: Belum ada pencatatan berat badan dalam 30 hari terakhir.\n`;
+      }
+
       return summary;
     }
 
@@ -1900,10 +2171,148 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
 
       // Call Vercel Backend Proxy
       try {
+        let apiEndpoint = '/api/consultant';
+        if (window.location.hostname !== 'lebihfittools.vercel.app') {
+          apiEndpoint = 'https://lebihfittools.vercel.app/api/consultant';
+        }
+
+        // Fetch latest profile, logs, and activities dynamically right before calling the AI API to ensure real-time accuracy
+        try {
+          const [profileRes, logsRes, activitiesRes] = await Promise.all([
+            fetch(`${FB_URL}/users/${safeEmail}/lf_profile.json`),
+            fetch(`${FB_URL}/users/${safeEmail}/lf_logs.json`),
+            fetch(`${FB_URL}/users/${safeEmail}/lf_activities.json`)
+          ]);
+          userProfile = await profileRes.json() || {};
+          userLogs = await logsRes.json() || {};
+          userActivities = await activitiesRes.json() || {};
+          console.log("Dynamically refreshed user context database nodes successfully.");
+        } catch (fetchErr) {
+          console.warn("Failed to fetch fresh user data before query, using cached local data:", fetchErr);
+        }
+
+        // 1. Image classification if image is uploaded
+        let classificationResult = null;
+        if (currentAttachedImage) {
+          try {
+            const classifierMessages = [
+              {
+                role: 'system',
+                content: `Kamu adalah AI Classifier LebihFit. Tugasmu adalah menganalisis gambar yang dikirim pengguna dan mencocokkannya dengan pertanyaan mereka: "${queryText}".
+Kamu wajib merespons HANYA dengan JSON valid (tanpa markdown codeblock, tanpa kata/kalimat tambahan di luar JSON) seperti ini:
+{
+  "isGymDietWorkout": true,
+  "isFoodCalorieQuery": false,
+  "isWorkoutCalorieQuery": false
+}
+
+Aturan Penilaian:
+1. isGymDietWorkout: bernilai true jika gambar/pertanyaan berkaitan dengan gym, latihan beban, olahraga, running/lari, kardio, makanan sehat, makanan secara umum, diet, nutrisi, atau fitness. Bernilai false jika di luar itu (misal gambar gadget, anime, pemandangan non-olahraga, meme, pertanyaan random).
+2. isFoodCalorieQuery: bernilai true jika gambar menampilkan makanan/minuman dan pengguna secara spesifik bertanya seputar jumlah kalori, protein, gizi, atau "berapa kalori ini?".
+3. isWorkoutCalorieQuery: bernilai true jika gambar menampilkan olahraga/gerakan fisik dan pengguna bertanya berapa kalori yang terbakar dari olahraga tersebut.`
+              },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: `Tolong analisis gambar ini berdasarkan pertanyaan: "${queryText}"` },
+                  { type: 'image_url', image_url: { url: currentAttachedImage } }
+                ]
+              }
+            ];
+
+            const classResponse = await fetch(apiEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash',
+                messages: classifierMessages
+              })
+            });
+
+            if (classResponse.ok) {
+              const classData = await classResponse.json();
+              if (classData.choices && classData.choices[0]) {
+                const textRes = classData.choices[0].message.content.trim();
+                const cleanJSON = textRes.replace(/```json|```/gi, '').trim();
+                classificationResult = JSON.parse(cleanJSON);
+                console.log("Classifier result:", classificationResult);
+              }
+            }
+          } catch (e) {
+            console.error("Image classification failed, fallback to standard route:", e);
+          }
+        }
+
+        // Handle classification routing
+        if (classificationResult) {
+          const tBubble = document.getElementById('typingBubble');
+          
+          // Case 3: Food calorie query redirect
+          if (classificationResult.isFoodCalorieQuery) {
+            if (tBubble) tBubble.remove();
+            const reply = `😅 Halo bro! Karena lo nanya kalori/gizi dari makanan ini, lo bisa catat langsung di **Tracker Diet** biar LebihFit Tools yang otomatis ngitung secara presisi buat lo! Silakan klik link ini ya: [Tracker Diet](index.html?page=log). Gas terus dietnya! 💪🥗`;
+            appendMessageUI('assistant', reply);
+            chatHistory.push({ role: 'assistant', content: reply });
+            sessions[activeSessionId].messages = chatHistory;
+            await saveSessionToFirebase(activeSessionId);
+            
+            // Re-enable input
+            input.disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+            scrollToBottom();
+            return;
+          }
+          
+          // Case 4: Workout calorie query redirect
+          if (classificationResult.isWorkoutCalorieQuery) {
+            if (tBubble) tBubble.remove();
+            const reply = `😅 Halo bro! Buat tau kalori yang terbakar dari olahraga atau aktivitas ini dan mencatatnya, langsung aja masuk ke menu **Log Kegiatan** ya. Di sana lo bisa masukin durasinya dan log langsung! Klik link ini: [Log Kegiatan](index.html?page=activity). Tetap konsisten olahraganya! 🏃🔥`;
+            appendMessageUI('assistant', reply);
+            chatHistory.push({ role: 'assistant', content: reply });
+            sessions[activeSessionId].messages = chatHistory;
+            await saveSessionToFirebase(activeSessionId);
+            
+            // Re-enable input
+            input.disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+            scrollToBottom();
+            return;
+          }
+          
+          // Case 2: Non-fitness/diet image redirect/refusal
+          if (!classificationResult.isGymDietWorkout) {
+            if (tBubble) tBubble.remove();
+            const reply = `😅 Waduh bro, gambar atau pertanyaan itu di luar fokus LebihFit Tools nih.
+
+Gue spesialis bantuin seputar:
+🏋️ Gym & Workout
+🥗 Diet & Nutrisi
+🏃 Lari & Kardio
+🔥 Kalori, Makro & Mikro
+📊 Progress Body Transformation
+
+Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progress badan ya bro. Gas terus! 💪🔥`;
+            appendMessageUI('assistant', reply);
+            chatHistory.push({ role: 'assistant', content: reply });
+            sessions[activeSessionId].messages = chatHistory;
+            await saveSessionToFirebase(activeSessionId);
+            
+            // Re-enable input
+            input.disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+            scrollToBottom();
+            return;
+          }
+        }
+
+        // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
         const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-flash';
         
         // Build payload messages with system context and multimodal support
-        const userContext = generateUserContextSummary();
+        const userContext = generateUserContextSummary(queryText);
         const apiMessages = [
           { role: 'system', content: SYSTEM_PROMPT.replace('{name}', userName) + userContext }
         ];
@@ -1924,11 +2333,6 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
             });
           }
         });
-
-        let apiEndpoint = '/api/consultant';
-        if (window.location.hostname !== 'lebihfittools.vercel.app') {
-          apiEndpoint = 'https://lebihfittools.vercel.app/api/consultant';
-        }
 
         const response = await fetch(apiEndpoint, {
           method: 'POST',

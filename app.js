@@ -1395,7 +1395,29 @@ function renderTodayActivities() {
             typeLabel = 'Gym';
         } else if (act.type === 'cardio') {
             const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
-            detail = `<b>${act.name}</b> · ${act.durationMin} menit${act.distanceKm ? ` · ${act.distanceKm} km` : ''} · Intensitas: ${intensityText}`;
+            let stepsStr = '';
+            const nameLower = (act.name || '').toLowerCase();
+            const isStepsCardio = nameLower.includes('lari') || 
+                                 nameLower.includes('run') || 
+                                 nameLower.includes('treadmill') || 
+                                 nameLower.includes('jalan') || 
+                                 nameLower.includes('walk');
+            if (isStepsCardio && act.distanceKm) {
+                const profile = getProfile() || {};
+                const heightCm = parseFloat(profile.tb) || 0;
+                const gender = profile.gender || '';
+                let strideM = 0.75;
+                if (heightCm > 0) {
+                    const isFemale = gender.toLowerCase().includes('wanita') || 
+                                     gender.toLowerCase().includes('perempuan') || 
+                                     gender.toLowerCase().includes('female') || 
+                                     gender.toLowerCase() === 'f';
+                    strideM = isFemale ? (heightCm * 0.413) / 100 : (heightCm * 0.415) / 100;
+                }
+                const steps = Math.round((parseFloat(act.distanceKm) * 1000) / strideM);
+                stepsStr = ` · 🚶 ${steps.toLocaleString('id-ID')} langkah`;
+            }
+            detail = `<b>${act.name}</b> · ${act.durationMin} menit${act.distanceKm ? ` · ${act.distanceKm} km` : ''}${stepsStr} · Intensitas: ${intensityText}`;
             typeLabel = 'Kardio';
         } else if (act.type === 'other') {
             const intensityText = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[act.intensity] || act.intensity;
@@ -2016,6 +2038,62 @@ function renderDashboardActivityCard() {
     const el = document.getElementById('dashActivityContent');
     if (!el) return;
     const activities = getTodayActivities();
+    
+    // Get profile data for step length
+    const profile = getProfile() || {};
+    const heightCm = parseFloat(profile.tb) || 0;
+    const gender = profile.gender || '';
+    
+    // Calculate stride/step length in meters
+    let strideLengthM = 0.75;
+    if (heightCm > 0) {
+        const isFemale = gender.toLowerCase().includes('wanita') || 
+                         gender.toLowerCase().includes('perempuan') || 
+                         gender.toLowerCase().includes('female') || 
+                         gender.toLowerCase() === 'f';
+        if (isFemale) {
+            strideLengthM = (heightCm * 0.413) / 100;
+        } else {
+            strideLengthM = (heightCm * 0.415) / 100;
+        }
+    }
+
+    let totalSteps = 0;
+    let totalStepsDistanceKm = 0;
+    
+    activities.forEach(act => {
+        if (act.type === 'cardio' && act.name) {
+            const nameLower = act.name.toLowerCase();
+            const isStepsCardio = nameLower.includes('lari') || 
+                                 nameLower.includes('run') || 
+                                 nameLower.includes('treadmill') || 
+                                 nameLower.includes('jalan') || 
+                                 nameLower.includes('walk');
+            if (isStepsCardio && act.distanceKm) {
+                const distM = (parseFloat(act.distanceKm) || 0) * 1000;
+                const steps = Math.round(distM / strideLengthM);
+                totalSteps += steps;
+                totalStepsDistanceKm += parseFloat(act.distanceKm) || 0;
+            }
+        }
+    });
+
+    // Populate dashboard Steps Tracker
+    const dashStepsWidget = document.getElementById('dashStepsWidget');
+    const dashTotalSteps = document.getElementById('dashTotalSteps');
+    const dashStepsDistance = document.getElementById('dashStepsDistance');
+    const dashStepsStrideInfo = document.getElementById('dashStepsStrideInfo');
+    
+    if (dashTotalSteps && dashStepsDistance && dashStepsStrideInfo) {
+        dashTotalSteps.textContent = totalSteps.toLocaleString('id-ID');
+        dashStepsDistance.textContent = totalStepsDistanceKm.toFixed(1) + ' km';
+        dashStepsStrideInfo.textContent = `Langkah: ${strideLengthM.toFixed(2)}m`;
+        
+        if (dashStepsWidget) {
+            dashStepsWidget.style.display = totalSteps > 0 ? 'flex' : 'none';
+        }
+    }
+
     if (activities.length === 0) {
         el.innerHTML = `<p style="color:var(--text2);font-size:0.88rem;">Belum ada kegiatan tercatat. <span style="color:var(--accent);cursor:pointer;" onclick="showPage('activity')">Catat sekarang →</span></p>`;
         return;
@@ -2031,7 +2109,19 @@ function renderDashboardActivityCard() {
                 detail = (act.muscles || []).map(m => MUSCLE_LABELS[m.muscle] || m.muscle).join(' · ');
             } else if (act.type === 'cardio') {
                 badge = '❤️ Kardio';
-                detail = `${act.name} · ${act.durationMin}m${act.distanceKm ? ` · ${act.distanceKm}km` : ''}`;
+                let stepsInfo = '';
+                const nameLower = (act.name || '').toLowerCase();
+                const isStepsCardio = nameLower.includes('lari') || 
+                                     nameLower.includes('run') || 
+                                     nameLower.includes('treadmill') || 
+                                     nameLower.includes('jalan') || 
+                                     nameLower.includes('walk');
+                if (isStepsCardio && act.distanceKm) {
+                    const distM = (parseFloat(act.distanceKm) || 0) * 1000;
+                    const steps = Math.round(distM / strideLengthM);
+                    stepsInfo = ` · 🚶 ${steps.toLocaleString('id-ID')} langkah`;
+                }
+                detail = `${act.name} · ${act.durationMin}m${act.distanceKm ? ` · ${act.distanceKm}km` : ''}${stepsInfo}`;
             } else if (act.type === 'other') {
                 badge = '🏃 Lainnya';
                 detail = `${act.name} · ${act.durationMin}m`;
