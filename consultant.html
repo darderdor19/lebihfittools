@@ -1178,6 +1178,17 @@ Tugasmu adalah memberikan saran kesehatan, nutrisi, rancangan diet, perbaikan po
 Tulis jawaban dalam bahasa Indonesia gaul yang ramah, sopan, memotivasi, dan mudah dipahami (gunakan panggilan 'Lu' atau 'Kamu').
 Hubungkan saranmu dengan konsep gaya hidup sehat jangka panjang. 
 
+PENTING UNTUK EVALUASI PROGRESS / STUCK PROGRESS:
+Jika pengguna bertanya tentang progress badan, berat badan stuck (datar/tidak turun/tidak naik), evaluasi latihan, atau pencapaian target fitness mereka:
+1. Analisis secara mendalam data historis pengguna yang dilampirkan di akhir instruksi ini (Profile, Log Makanan 7 hari terakhir, dan Log Kegiatan 7 hari terakhir).
+2. Berikan penilaian SCORE (skala 1 - 10) untuk aspek-aspek utama berikut beserta ulasannya:
+   - Konsistensi Nutrisi & Target Kalori/Gizi (Nutritional Score): Nilai kepatuhan asupan kalori & protein aktual vs target mereka.
+   - Konsistensi Latihan & Olahraga (Training Score): Nilai frekuensi, durasi, dan konsistensi olahraga mereka.
+   - Kualitas Tidur & Recovery (Recovery Score): Nilai jam tidur rata-rata mereka.
+3. Hubungkan data-data tersebut untuk menjawab alasan utama kenapa progress mereka stuck. Contoh: jika kalori harian mereka di log sering berlebih dibanding target, atau jika jam tidur di log kegiatan sangat kurang (misal <6 jam), atau jika jarang mencatat olahraga.
+4. Jika data log makanan/kegiatan masih kosong atau sangat minim, berikan nasihat yang mendalam secara teori dulu, dan ingatkan mereka secara ramah untuk rajin mengisi log di dashboard agar kamu bisa memberikan analisis score berbasis data yang sangat presisi di pertanyaan berikutnya.
+5. Berikan rekomendasi langkah konkret (actionable steps) yang terarah dan memotivasi untuk memecahkan stuck tersebut.
+
 PENTING UNTUK INSTRUKSI FITUR INTERNAL:
 1. Jika pengguna bertanya tentang jumlah kalori/nutrisi suatu makanan (misalnya: "Berapa kalori nasi goreng?", "Kalori pisang berapa?", dll.), kamu DILARANG menghitung atau memberitahukannya di chat ini. Arahkan pengguna dengan ramah untuk menggunakan fitur Tracker Diet (menu input makanan) yang sudah disediakan di dashboard LebihFit Tools dengan menulis link markdown persis seperti ini: [Tracker Diet](index.html?page=log).
 2. Jika pengguna meminta analisis badan, perhitungan kebutuhan kalori (BMR/TDEE), target berat badan, target body fat, atau sejenisnya, kamu DILARANG menghitungnya secara manual di chat ini. Arahkan mereka secara ramah untuk membuka menu Kalkulator Fitness dengan menulis link markdown persis seperti ini: [Kalkulator Fitness](index.html?page=calculator).
@@ -1211,6 +1222,11 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     let safeEmail = '';
     let attachedImageBase64 = null;
     let attachedImageName = '';
+
+    // Loaded user data for AI Consultant context
+    let userProfile = null;
+    let userLogs = {};
+    let userActivities = {};
 
     // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
@@ -1259,13 +1275,30 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       }
     }
 
-    // Load list of all chat sessions from Firebase REST API
+    // Load list of all chat sessions and other user data from Firebase REST API
     async function loadAllSessionsFromFirebase() {
       try {
-        const response = await fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions.json`);
-        const data = await response.json();
-        sessions = data || {};
+        // Fetch sessions, profile, logs, and activities in parallel to speed up load time
+        const [sessionsRes, profileRes, logsRes, activitiesRes] = await Promise.all([
+          fetch(`${FB_URL}/users/${safeEmail}/lf_consultant_sessions.json`),
+          fetch(`${FB_URL}/users/${safeEmail}/lf_profile.json`),
+          fetch(`${FB_URL}/users/${safeEmail}/lf_logs.json`),
+          fetch(`${FB_URL}/users/${safeEmail}/lf_activities.json`)
+        ]);
+
+        const sessionsData = await sessionsRes.json();
+        sessions = sessionsData || {};
         renderSidebarList();
+
+        userProfile = await profileRes.json() || {};
+        userLogs = await logsRes.json() || {};
+        userActivities = await activitiesRes.json() || {};
+
+        console.log("Loaded user logs for AI context:", {
+          hasProfile: !!userProfile,
+          logsCount: Object.keys(userLogs).length,
+          activitiesCount: Object.keys(userActivities).length
+        });
         
         // Load the most recent session if exists
         const sessionIds = Object.keys(sessions).sort((a,b) => (sessions[b].createdAt || '').localeCompare(sessions[a].createdAt || ''));
@@ -1275,9 +1308,92 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
           startNewChat();
         }
       } catch (e) {
-        console.error('Failed to load sessions from Firebase:', e);
+        console.error('Failed to load sessions or user data from Firebase:', e);
         startNewChat();
       }
+    }
+
+    // Helper to generate a detailed summary of user's current goals and history for the AI prompt
+    function generateUserContextSummary() {
+      if (!userProfile) return '';
+      
+      let summary = `\n\n== USER PROFILE & FITNESS TARGETS (KALKULATOR PENYESUAIAN) ==\n`;
+      summary += `- Gender: ${userProfile.gender || 'tidak diset'}\n`;
+      summary += `- Berat Badan saat ini: ${userProfile.bb || '?'} kg\n`;
+      summary += `- Tinggi Badan: ${userProfile.tb || '?'} cm\n`;
+      summary += `- Usia: ${userProfile.usia || '?'} tahun\n`;
+      summary += `- Tingkat Aktivitas: ${userProfile.aktivitas || 'tidak diset'}\n`;
+      summary += `- Goal Utama: ${userProfile.target || 'maintenance'}\n`;
+      summary += `- Target Berat Badan: ${userProfile.targetBb || '?'} kg\n`;
+      if (userProfile.targets) {
+        summary += `- Target Kalori Harian: ${userProfile.targets.cal || '?'} kcal\n`;
+        summary += `- Target Protein Harian: ${userProfile.targets.protein || '?'} g\n`;
+        summary += `- Target Karbohidrat Harian: ${userProfile.targets.carbs || '?'} g\n`;
+        summary += `- Target Lemak Harian: ${userProfile.targets.fat || '?'} g\n`;
+      }
+      
+      summary += `\n== RINGKASAN LOG MAKANAN & NUTRISI (7 HARI TERAKHIR) ==\n`;
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
+      
+      let foodLogEntries = [];
+      if (userLogs) {
+        const sortedDates = Object.keys(userLogs).sort().reverse();
+        let count = 0;
+        sortedDates.forEach(date => {
+          if (date >= sevenDaysAgoStr && count < 7) {
+            const dayData = userLogs[date] || [];
+            let dayCal = 0, dayP = 0, dayC = 0, dayF = 0;
+            dayData.forEach(item => {
+              dayCal += parseFloat(item.cal) || 0;
+              dayP += parseFloat(item.protein) || 0;
+              dayC += parseFloat(item.carbs) || 0;
+              dayF += parseFloat(item.fat) || 0;
+            });
+            foodLogEntries.push(`- Tanggal ${date}: Total Kalori: ${Math.round(dayCal)} kcal, Protein: ${dayP.toFixed(1)}g, Karbo: ${dayC.toFixed(1)}g, Lemak: ${dayF.toFixed(1)}g (${dayData.length} item makanan: ${dayData.map(d => d.name).join(', ')})`);
+            count++;
+          }
+        });
+      }
+      if (foodLogEntries.length === 0) {
+        summary += `Belum ada log makanan tercatat dalam 7 hari terakhir.\n`;
+      } else {
+        summary += foodLogEntries.join('\n') + '\n';
+      }
+      
+      summary += `\n== RINGKASAN LOG AKTIVITAS & OLAHRAGA (7 HARI TERAKHIR) ==\n`;
+      let activityLogEntries = [];
+      if (userActivities) {
+        const sortedDates = Object.keys(userActivities).sort().reverse();
+        let count = 0;
+        sortedDates.forEach(date => {
+          if (date >= sevenDaysAgoStr && count < 7) {
+            const dayActs = userActivities[date] || {};
+            let details = [];
+            if (dayActs.weight) details.push(`Berat badan tercatat: ${dayActs.weight} kg`);
+            if (dayActs.workouts && dayActs.workouts.length > 0) {
+              const workoutDetails = dayActs.workouts.map(w => `${w.name} (${w.duration} menit, ~${w.calories} kcal terbakar)`).join(', ');
+              details.push(`Olahraga: ${workoutDetails}`);
+            }
+            if (dayActs.steps) details.push(`Langkah kaki: ${dayActs.steps}`);
+            if (dayActs.sleep) details.push(`Durasi tidur: ${dayActs.sleep} jam`);
+            if (dayActs.water) details.push(`Air minum: ${dayActs.water} ml`);
+            
+            if (details.length > 0) {
+              activityLogEntries.push(`- Tanggal ${date}: ${details.join(' | ')}`);
+              count++;
+            }
+          }
+        });
+      }
+      if (activityLogEntries.length === 0) {
+        summary += `Belum ada log aktivitas/olahraga tercatat dalam 7 hari terakhir.\n`;
+      } else {
+        summary += activityLogEntries.join('\n') + '\n';
+      }
+      
+      return summary;
     }
 
     // Load a specific session
@@ -1787,8 +1903,9 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-flash';
         
         // Build payload messages with system context and multimodal support
+        const userContext = generateUserContextSummary();
         const apiMessages = [
-          { role: 'system', content: SYSTEM_PROMPT.replace('{name}', userName) }
+          { role: 'system', content: SYSTEM_PROMPT.replace('{name}', userName) + userContext }
         ];
         
         chatHistory.forEach(msg => {
