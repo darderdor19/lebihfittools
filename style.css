@@ -92,7 +92,7 @@ a{color:var(--accent);text-decoration:none}
 .page-subtitle{color:var(--text2);font-size:.95rem;margin-top:4px}
 
 /* ===== SECTION CARDS ===== */
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative;overflow:hidden}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative;overflow:hidden;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden;}
 .section-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent)}
 .section-title{font-size:1rem;font-weight:800;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;color:var(--text)}
 .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -399,7 +399,7 @@ a{color:var(--accent);text-decoration:none}
 
 @media(max-width:768px){
   html { font-size: 87.5%; }
-  .sidebar{left:-220px !important;transform:translateX(0)}
+  .sidebar{left:-220px !important;transform:translateX(0);box-shadow:none !important}
   .sidebar.open{left:0 !important;box-shadow:8px 0 32px rgba(0,0,0,.5)}
   .sidebar-overlay{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;opacity:0;pointer-events:none;transition:.3s}
   .sidebar-overlay.active{opacity:1;pointer-events:all}
@@ -1591,6 +1591,9 @@ a{color:var(--accent);text-decoration:none}
   padding: 24px;
   position: relative;
   overflow: hidden;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
