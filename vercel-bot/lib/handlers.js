@@ -686,17 +686,23 @@ async function onFoodPortionInput(chatId, userId, text) {
 }
 
 // ===== GEMINI VISION API CALL =====
-async function callGeminiVisionAPI(base64Image, mimeType, prompt, jsonMode = false) {
+async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY is not set in Vercel environment variables.');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
   
+  const parts = [{ text: prompt }];
+  if (Array.isArray(images)) {
+    images.forEach(img => {
+      parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
+    });
+  } else {
+    parts.push({ inline_data: { mime_type: mimeType, data: images } });
+  }
+
   const body = {
     contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: mimeType, data: base64Image } }
-      ]
+      parts: parts
     }]
   };
 
@@ -3509,8 +3515,27 @@ async function handlePhysicalPhotoInput(chatId, userId, photos) {
     if (filePath.endsWith('.png')) mime = 'image/png';
     if (filePath.endsWith('.webp')) mime = 'image/webp';
 
+    // Download small photo version for history storage
+    let smallBase64 = '';
+    try {
+      const smallPhotoObj = photos[Math.min(1, photos.length - 1)];
+      const smallFileId = smallPhotoObj.file_id;
+      const smallFileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${smallFileId}`);
+      const smallFileData = await smallFileRes.json();
+      if (smallFileData.ok) {
+        const smallFilePath = smallFileData.result.file_path;
+        const smallFileUrl = `https://api.telegram.org/file/bot${token}/${smallFilePath}`;
+        const smallImgRes = await fetch(smallFileUrl);
+        const smallArrayBuffer = await smallImgRes.arrayBuffer();
+        smallBase64 = `data:${mime};base64,` + Buffer.from(smallArrayBuffer).toString('base64');
+      }
+    } catch (err) {
+      console.error('Failed to download small photo for history:', err);
+    }
+
     // Save temporary state & data to cache
     await setCache(`${userId}_physical_photo`, base64);
+    await setCache(`${userId}_physical_photo_small`, smallBase64);
     await setCache(`${userId}_physical_mime`, mime);
     await setState(userId, 'AWAIT_PHYSICAL_DAYS');
 
@@ -3559,12 +3584,22 @@ async function onPhysicalDaysSelected(chatId, userId, days) {
   }
 }
 
+function parseDataUrl(dataUrl) {
+  if (!dataUrl) return null;
+  const parts = dataUrl.split(',');
+  if (parts.length < 2) return null;
+  const mime = parts[0].split(':')[1].split(';')[0];
+  const base64 = parts[1];
+  return { mime, base64 };
+}
+
 async function onPhysicalDescInput(chatId, userId, text) {
   try {
     const email = await getLinkedEmail(userId);
     if (!email) return promptLogin(chatId, userId);
 
     const base64 = await getCache(`${userId}_physical_photo`);
+    const smallPhotoDataUrl = await getCache(`${userId}_physical_photo_small`);
     const mime = await getCache(`${userId}_physical_mime`);
     const daysStr = await getCache(`${userId}_physical_days`);
     const days = parseInt(daysStr) || 7;
@@ -3579,6 +3614,7 @@ async function onPhysicalDescInput(chatId, userId, text) {
     // Clean up temporary state
     await setState(userId, null);
     await deleteCache(`${userId}_physical_photo`);
+    await deleteCache(`${userId}_physical_photo_small`);
     await deleteCache(`${userId}_physical_mime`);
     await deleteCache(`${userId}_physical_days`);
 
@@ -3638,6 +3674,33 @@ async function onPhysicalDescInput(chatId, userId, text) {
     const calTarget = Math.round((profile && profile.targets) ? profile.targets.cal : 2000);
     const targetProtein = Math.round((profile && profile.targets) ? profile.targets.protein : 120);
 
+    // Serialize workout details
+    let workoutDetails = [];
+    dates.forEach((date, index) => {
+      const dayActs = toArray(rawActs[index]);
+      dayActs.forEach(a => {
+        if (a.type === 'workout' && a.exercises) {
+          const exStr = a.exercises.map(ex => {
+            const setsStr = (ex.sets || []).map(s => `${s.reps || 0} reps @ ${s.weight || 0}kg`).join(', ');
+            return `${ex.name}: [${setsStr}]`;
+          }).join('; ');
+          workoutDetails.push(`- ${date} (Workout): ${exStr}`);
+        } else if (a.type === 'gym' && a.muscles) {
+          const musStr = a.muscles.map(m => {
+            const varStr = (m.variations || []).map(v => {
+              const setsStr = (v.sets || []).map(s => `${s.reps || 0} reps @ ${s.weight || 0}kg`).join(', ');
+              return `${v.name}: [${setsStr}]`;
+            }).join('; ');
+            return `${m.muscle} (${varStr})`;
+          }).join('; ');
+          workoutDetails.push(`- ${date} (Gym): ${musStr}`);
+        } else if (a.type === 'cardio') {
+          workoutDetails.push(`- ${date} (Cardio): ${a.name || 'Kardio'} - ${a.durationMin || 0} min, ${a.distanceKm || 0} km (${a.intensity || 'medium'})`);
+        }
+      });
+    });
+    const workoutDetailsText = workoutDetails.length > 0 ? workoutDetails.join('\n') : 'Tidak ada sesi latihan beban atau kardio yang tercatat.';
+
     // Cache system to save Gemini tokens
     function hashString(str) {
       let hash = 0x811c9dc5;
@@ -3662,7 +3725,8 @@ async function onPhysicalDescInput(chatId, userId, text) {
       gymCount.toString(),
       cardioCount.toString(),
       avgSleep.toString(),
-      avgBurn.toString()
+      avgBurn.toString(),
+      workoutDetailsText
     ].join('|');
     const currentHash = hashString(inputString);
 
@@ -3673,9 +3737,47 @@ async function onPhysicalDescInput(chatId, userId, text) {
       return sendMessage(chatId, formattedMessage, mainMenuKeyboard());
     }
 
+    // Load physical analysis history for comparison
+    const historyData = await getFirebase(`users/${safe(email)}/lf_physical_analyses`);
+    let physicalHistory = [];
+    if (historyData) {
+      physicalHistory = Object.values(historyData).sort((a,b) => a.timestamp.localeCompare(b.timestamp));
+    }
+    
+    const previousAnalysis = physicalHistory.length > 0 ? physicalHistory[physicalHistory.length - 1] : null;
+    let previousContextText = '';
+    if (previousAnalysis) {
+      previousContextText = `
+== DATA EVALUASI FISIK SEBELUMNYA (${previousAnalysis.date || 'Tanggal tidak diketahui'}) ==
+Bandingkan kondisi fisik visual pada foto saat ini dengan catatan evaluasi fisik sebelumnya ini:
+- Body Fat Sebelumnya: ${previousAnalysis.data?.perkiraanGoal?.currentBF || '?'}
+- Kelebihan Sebelumnya: ${(previousAnalysis.data?.ringkasanSederhana?.pros || []).join(', ')}
+- Kekurangan Sebelumnya: ${(previousAnalysis.data?.ringkasanSederhana?.cons || []).join(', ')}
+- Fokus Perbaikan Sebelumnya: ${previousAnalysis.data?.ringkasanSederhana?.focus || '?'}
+- Ulasan Risiko Sebelumnya: ${previousAnalysis.data?.analisisRisiko?.notes || '?'}
+`;
+    }
+
+    const imagesInput = [];
+    imagesInput.push({ base64, mime });
+
+    let visualComparisonPromptNote = '';
+    if (previousAnalysis && previousAnalysis.photo) {
+      const parsed = parseDataUrl(previousAnalysis.photo);
+      if (parsed) {
+        imagesInput.push(parsed);
+        visualComparisonPromptNote = `
+* PENTING: Kami menyertakan 2 FOTO untuk kamu bandingkan secara visual.
+- Foto Pertama (Urutan ke-1) adalah FOTO TERBARU saat ini.
+- Foto Kedua (Urutan ke-2) adalah FOTO DARI ANALISIS SEBELUMNYA (${previousAnalysis.date || 'kemarin'}).
+Silakan analisis perubahan bentuk tubuh, definisi otot, dan kadar lemak tubuh secara visual di antara kedua foto tersebut secara langsung.`;
+      }
+    }
+
     // Build Gemini prompt requesting JSON
     let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
 Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (otot, lemak, proporsi tubuh) dan mengaitkannya dengan data profil serta riwayat asupan/olahraga selama ${days} hari terakhir.
+Bandingkan kondisi visual saat ini dengan data kondisi fisik sebelumnya jika dilampirkan, untuk menganalisis apakah tubuhnya membaik (improve), stagnan, atau memburuk.
 Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberikan di bawah ini.
 
 == PROFIL PENGGUNA ==
@@ -3698,10 +3800,26 @@ Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberi
 - Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari
 - Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari
 
+== CATATAN DETAIL GERAKAN/EXERCISE OLAHRAGA ==
+${workoutDetailsText}
+
 Catatan Tambahan User: "${customDesc || '-'}"
+${previousContextText}
+${visualComparisonPromptNote}
 
 == SKEMA JSON RESPONS (WAJIB PERSIS SEPERTI INI) ==
 {
+  "comparisonWithPrevious": {
+    "hasPrevious": ${previousAnalysis ? 'true' : 'false'},
+    "status": "Improve" (atau "Stagnan" / "Memburuk"),
+    "score": 15 (nilai -100 sampai 100, positif = membaik/improve, negatif = memburuk/regress, 0 jika stagnan atau tidak ada data pembanding),
+    "explanation": "Kondisi otot perut terlihat lebih tajam dibanding analisis sebelumnya. Defisit kalori yang lu pertahankan berhasil mengurangi lemak."
+  },
+  "progressiveOverload": {
+    "score": 85,
+    "status": "Optimal" (atau "Butuh Peningkatan" / "Kurang Beban"),
+    "explanation": "Berdasarkan detail latihan lu, ada peningkatan beban yang bagus pada Bench Press dari 60kg ke 62.5kg. Namun untuk gerakan aksesoris seperti lateral raise dan tricep pushdown masih menggunakan volume yang sama. Pertahankan intensitas dan coba tambah reps/beban secara bertahap!"
+  },
   "ringkasanSederhana": {
     "pros": ["Asupan protein optimal", "Defisit kalori sudah tepat"],
     "cons": ["Tidur terlalu rendah", "Lemak terlalu rendah", "Serat terlalu rendah"],
@@ -3760,7 +3878,7 @@ Catatan Tambahan User: "${customDesc || '-'}"
   }
 }`;
 
-    const rawJson = await callGeminiVisionAPI(base64, mime, promptText, true);
+    const rawJson = await callGeminiVisionAPI(imagesInput, mime, promptText, true);
     let data = null;
     try {
       let cleanJson = rawJson.trim();
@@ -3773,6 +3891,18 @@ Catatan Tambahan User: "${customDesc || '-'}"
 
     if (data) {
       await setFirebase(`users/${safe(email)}/lf_physical_analysis_cache`, { hash: currentHash, data: data });
+      
+      // Save to Firebase history
+      const historyId = 'pa_' + Date.now();
+      const historyEntry = {
+        id: historyId,
+        timestamp: new Date().toISOString(),
+        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        data: data,
+        photo: smallPhotoDataUrl || ''
+      };
+      await setFirebase(`users/${safe(email)}/lf_physical_analyses/${historyId}`, historyEntry);
+
       const formattedMessage = formatPhysicalAnalysisBot(data);
       return sendMessage(chatId, formattedMessage, mainMenuKeyboard());
     } else {
@@ -3787,6 +3917,29 @@ Catatan Tambahan User: "${customDesc || '-'}"
 }
 
 function formatPhysicalAnalysisBot(data) {
+  // 0a. Perbandingan dengan Fisik Sebelumnya
+  const comp = data.comparisonWithPrevious || {};
+  let comparisonStr = '';
+  if (comp && comp.hasPrevious) {
+    const statusEmoji = comp.status === 'Improve' ? '📈' : comp.status === 'Memburuk' ? '📉' : '⚖️';
+    const scoreSign = comp.score >= 0 ? '+' : '';
+    comparisonStr = `📊 *PERBANDINGAN FISIK SEBELUMNYA*\n`;
+    comparisonStr += `• Status: *${statusEmoji} ${escapeMarkdown(comp.status === 'Improve' ? 'MEMBAIK / IMPROVE' : comp.status === 'Memburuk' ? 'MEMBURUK / REGRESS' : 'STAGNAN')}*\n`;
+    comparisonStr += `• Skor Peningkatan: *${scoreSign}${comp.score}%*\n`;
+    if (comp.explanation) comparisonStr += `_${escapeMarkdown(comp.explanation)}_\n`;
+    comparisonStr += `────────────────────────\n`;
+  }
+
+  // 0b. Progressive Overload Score
+  const po = data.progressiveOverload || { score: 0, status: 'Kurang Beban', explanation: 'Belum ada data progres latihan beban.' };
+  const poScore = po.score || 0;
+  const poStatusEmoji = po.status === 'Optimal' ? '🔥' : po.status === 'Butuh Peningkatan' ? '⚡' : '⚠️';
+  let poStr = `🏋️ *PROGRESSIVE OVERLOAD SCORE*\n`;
+  poStr += `• Status Latihan: *${poStatusEmoji} ${escapeMarkdown(po.status || 'KURANG BEBAN')}*\n`;
+  poStr += `• Skor Overload: *${poScore}/100*\n`;
+  if (po.explanation) poStr += `_${escapeMarkdown(po.explanation)}_\n`;
+  poStr += `────────────────────────\n`;
+
   // 1. Ringkasan Super Singkat
   const rs = data.ringkasanSederhana || {};
   const pros = Array.isArray(rs.pros) ? rs.pros.map(p => `🟢 ${escapeMarkdown(p)}`).join('\n') : '';
@@ -3838,7 +3991,11 @@ function formatPhysicalAnalysisBot(data) {
   }
 
   // Constructing the final message
-  let msg = `⚡ *RINGKASAN AI (3 DETIK BACA)*\n`;
+  let msg = '';
+  if (comparisonStr) msg += comparisonStr;
+  msg += poStr;
+
+  msg += `⚡ *RINGKASAN AI (3 DETIK BACA)*\n`;
   if (pros) msg += `${pros}\n`;
   if (cons) msg += `${cons}\n`;
   msg += `🎯 Fokus Minggu Ini: \`${focus}\`\n\n`;
