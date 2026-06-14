@@ -571,7 +571,7 @@ async function showDashboard(chatId, email) {
   const todayActs = toArray(rawActs);
   const totalBurned = todayActs.reduce((acc, act) => acc + ((act.burn && act.burn.kcal) ? parseFloat(act.burn.kcal) : 0), 0);
   
-  const remaining = calTarget - Math.round(total.cal) + Math.round(totalBurned);
+  const remaining = calTarget - Math.round(total.cal);
   const pct = calTarget > 0 ? Math.min(100, Math.round(total.cal / calTarget * 100)) : 0;
   const bar = progressBar(pct);
 

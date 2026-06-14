@@ -1923,7 +1923,7 @@ function renderDashboard() {
     
     document.getElementById('calConsumed').textContent = Math.round(calConsumed);
     document.getElementById('calTarget').textContent = calTarget;
-    document.getElementById('calRemaining').textContent = Math.max(0, calTarget - Math.round(calConsumed) + Math.round(totalBurned));
+    document.getElementById('calRemaining').textContent = Math.max(0, calTarget - Math.round(calConsumed));
     
     renderEnergyComparisonChart(calConsumed, totalBurned, fatIntake, totalFatBurned);
     
