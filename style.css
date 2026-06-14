@@ -92,7 +92,7 @@ a{color:var(--accent);text-decoration:none}
 .page-subtitle{color:var(--text2);font-size:.95rem;margin-top:4px}
 
 /* ===== SECTION CARDS ===== */
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative;overflow:hidden}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative;overflow:hidden;transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;contain:paint;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
 .section-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent)}
 .section-title{font-size:1rem;font-weight:800;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;color:var(--text)}
 .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -1280,6 +1280,7 @@ a{color:var(--accent);text-decoration:none}
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 0.83rem;
+  transform: translateZ(0);
 }
 .dash-activity-item .type-badge {
   font-size: 0.68rem;
