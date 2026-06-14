@@ -3951,12 +3951,12 @@ ${activitiesSummary}
 == INSTRUKSI KALKULASI & ATURAN ANALISIS ==
 1. Hitung skorHarian (0-100) untuk nutrisi, protein, recovery (tidur vs intensitas latihan), aktivitas, dan konsistensi. Berikan status: "Sangat Baik" (85-100), "Perlu Perbaikan" (70-84), "Bermasalah" (<70).
 2. Tentukan statusGoal sesuai goal target (misal: "Cutting Agresif"). Tandai checklist yang sudah atau belum tercapai (defisit kalori, protein, aktivitas, tidur). Estimasi probabilitas keberhasilan besok.
-3. Hitung prediksiBerat: hitung rata-rata surplus/defisit harian (TDEE - Kalori makan + Kalori bakar olahraga). Estimasi penurunan/kenaikan lemak per minggu (Defisit/Surplus * 7 / 7700). Berikan prediksi perubahan berat badan dalam 30 hari dan 60 hari.
+3. Hitung prediksiBerat: hitung rata-rata surplus/defisit harian (TDEE - Kalori makan + Kalori bakar olahraga). Estimasi penurunan/keaikan lemak per minggu (Defisit/Surplus * 7 / 7700). Berikan prediksi perubahan berat badan dalam 30 hari dan 60 hari.
 4. Tentukan bodyFatEstimation: jika user tidak memasukkan Body Fat %, estimasikan secara ilmiah. Hitung Lean Mass dan Fat Mass (kg). Estimasi berapa minggu lagi untuk mencapai body fat target tertentu (misal: target 15%, 12%, 10% untuk pria; 24%, 20%, 18% untuk wanita).
 5. Lakukan analisisMakro secara pintar. Berikan peringatan jika lemak < 0.6g/kg BB, karbohidrat terlalu rendah untuk latihan beban, protein optimal, atau protein berlebih.
 6. Lakukan analisisMikro secara presisi. Bandingkan asupan harian dengan kebutuhan standar (Vit C: 90mg, Kalium: 4700mg, Magnesium: 350mg, Kalsium: 1000mg). Berikan gap (kekurangan) dan sebutkan rekomendasi makanan Indonesia yang kaya zat gizi tersebut.
 7. Hitung recovery score (0-100) berdasarkan durasi tidur (idealnya 7-9 jam), frekuensi latihan, intensitas, dan defisit kalori. Tuliskan penyebab pemulihan kurang maksimal.
-8. Lakukan analisisLatihan secara mendalam: hitung total volume latihan beban minggu ini (set * reps * weight) dan bandingkan dengan data sesi sebelumnya jika ada, hitung perubahan persen (progressive overload), dan hitung distribusi set per kelompok otot (misal: Back 12 set, Biceps 8 set).
+8. Lakukan analisisLatihan secara mendalam: hitung total volume latihan beban minggu ini (set * reps * weight), hitung perubahan persen (progressive overload), hitung distribusi set per kelompok otot (misal: Back 12 set, Biceps 8 set), berikan progressiveOverloadScore (0-100) berdasarkan konsistensi peningkatan volume/beban/reps harian, status overload ("Optimal" / "Butuh Konsistensi" / "Stagnan"), dan berikan daftar tips latihan konkrit (progressiveOverloadTips) untuk sesi berikutnya berdasarkan gerakan yang biasa dilakukan user.
 9. Buat actionPlan harian yang konkret dan mudah dilakukan (3-5 poin).
 10. Berikan progressAlert jika berat badan stag (plateau) atau turun terlalu cepat (risiko otot susut), beserta solusi kalorinya (misal: "Turunkan 150 kcal" atau "Naikkan 200 kcal").
 11. Hitung progressMeter: persentase progres menuju target berat badan, sisa kg, dan estimasi tanggal selesai secara logis.
@@ -4017,7 +4017,13 @@ Kembalikan respons dalam JSON dengan format persis seperti ini:
     ],
     "volumeThisWeek": 4200,
     "volumeLastWeek": 3800,
-    "volumeChangePercent": 10.5
+    "volumeChangePercent": 10.5,
+    "progressiveOverloadScore": 85,
+    "progressiveOverloadStatus": "Optimal",
+    "progressiveOverloadTips": [
+      "Naikkan beban squat 2.5 kg di sesi berikutnya karena volume sudah stabil.",
+      "Coba tambahkan 1-2 reps pada set terakhir Bench Press untuk memicu overload."
+    ]
   },
   "actionPlan": [
     { "label": "Target protein minimal 170g", "done": false }
@@ -4353,15 +4359,37 @@ function renderProgressAnalysisUI(data) {
                 <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative;">
                     <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:var(--accent);"></div>
                     <h4 style="font-size:0.85rem; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px;">🏋️ Deep Training Analysis</h4>
+                    
+                    <!-- Progressive Overload Score Badge -->
+                    ${ex.progressiveOverloadScore !== undefined ? `
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface2); padding:10px; border:1px solid var(--border); margin-bottom:12px;">
+                        <div>
+                            <div style="font-size:0.7rem; color:var(--text2); text-transform:uppercase; font-weight:700;">Progressive Overload Score</div>
+                            <div style="font-size:0.85rem; font-weight:700; color:var(--accent);">${ex.progressiveOverloadStatus || 'Cukup'}</div>
+                        </div>
+                        <div style="font-size:1.6rem; font-weight:900; color:${ex.progressiveOverloadScore >= 80 ? 'var(--success)' : ex.progressiveOverloadScore >= 60 ? '#ff9f0a' : 'var(--danger)'};">${ex.progressiveOverloadScore}<span style="font-size:0.85rem; font-weight:normal; color:var(--text3);">/100</span></div>
+                    </div>
+                    ` : ''}
+
                     <div style="font-size:0.82rem; color:var(--text2); margin-bottom:10px; line-height:1.4;">
                         • ${ex.summary || 'Latihan tercatat.'}
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap:8px; margin-bottom:12px;">
                         ${musclesHtml}
                     </div>
-                    <div style="font-size:0.8rem; color:var(--text3); border-top:1px solid var(--border); padding-top:8px;">
+                    <div style="font-size:0.8rem; color:var(--text3); border-top:1px solid var(--border); padding-top:8px; margin-bottom:8px;">
                         • Volume beban: <b>${ex.volumeThisWeek || 0} kg</b> vs <b>${ex.volumeLastWeek || 0} kg</b> (Progressive Overload: <b style="color:${volDiff >= 0 ? 'var(--success)' : 'var(--danger)'};">${volDir}${volPct}%</b>)
                     </div>
+
+                    <!-- Progressive Overload Tips -->
+                    ${ex.progressiveOverloadTips && ex.progressiveOverloadTips.length > 0 ? `
+                    <div style="border-top:1px dashed var(--border); padding-top:10px; margin-top:10px;">
+                        <div style="font-weight:700; font-size:0.8rem; color:var(--accent); margin-bottom:6px; text-transform:uppercase;">💡 Saran Progressive Overload:</div>
+                        <ul style="margin:0; padding-left:14px; font-size:0.8rem; color:var(--text2); line-height:1.4;">
+                            ${ex.progressiveOverloadTips.map(tip => `<li style="margin-bottom:4px;">${tip}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
                 </div>
 
                 <!-- Daily Action Plan -->
@@ -4696,9 +4724,48 @@ async function startPhysicalAnalysis() {
             return;
         }
         
+        // Load physical analysis history for comparison
+        let physicalHistory = [];
+        if (typeof fbDb !== 'undefined' && fbDb) {
+            const email = localStorage.getItem('lf_user_email');
+            if (email) {
+                const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+                try {
+                    const snapshot = await fbDb.ref(`users/${safeEmail}/lf_physical_analyses`).once('value');
+                    const historyData = snapshot.val();
+                    if (historyData) {
+                        physicalHistory = Object.values(historyData).sort((a,b) => a.timestamp.localeCompare(b.timestamp));
+                    }
+                } catch (e) {
+                    console.error("Firebase read error for physical analyses history:", e);
+                }
+            }
+        }
+        if (physicalHistory.length === 0) {
+            const localHist = DB.get('lf_physical_analyses');
+            if (localHist && Array.isArray(localHist)) {
+                physicalHistory = localHist.sort((a,b) => a.timestamp.localeCompare(b.timestamp));
+            }
+        }
+
+        const previousAnalysis = physicalHistory.length > 0 ? physicalHistory[physicalHistory.length - 1] : null;
+        let previousContextText = '';
+        if (previousAnalysis) {
+            previousContextText = `
+== DATA EVALUASI FISIK SEBELUMNYA (${previousAnalysis.date || 'Tanggal tidak diketahui'}) ==
+Bandingkan kondisi fisik visual pada foto saat ini dengan catatan evaluasi fisik sebelumnya ini:
+- Body Fat Sebelumnya: ${previousAnalysis.data?.perkiraanGoal?.currentBF || '?'}
+- Kelebihan Sebelumnya: ${(previousAnalysis.data?.ringkasanSederhana?.pros || []).join(', ')}
+- Kekurangan Sebelumnya: ${(previousAnalysis.data?.ringkasanSederhana?.cons || []).join(', ')}
+- Fokus Perbaikan Sebelumnya: ${previousAnalysis.data?.ringkasanSederhana?.focus || '?'}
+- Ulasan Risiko Sebelumnya: ${previousAnalysis.data?.analisisRisiko?.notes || '?'}
+`;
+        }
+        
         // Build the prompt for Gemini Flash requesting JSON
         let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
 Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (otot, lemak, proporsi tubuh) dan mengaitkannya dengan data profil serta riwayat asupan/olahraga selama ${days} hari terakhir.
+Bandingkan kondisi visual saat ini dengan data kondisi fisik sebelumnya jika dilampirkan, untuk menganalisis apakah tubuhnya membaik (improve), stagnan, atau memburuk.
 Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberikan di bawah ini.
 
 == PROFIL PENGGUNA ==
@@ -4720,9 +4787,16 @@ Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberi
 - Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari
 
 Catatan Tambahan User: "${customDesc || '-'}"
+${previousContextText}
 
 == SKEMA JSON RESPONS (WAJIB PERSIS SEPERTI INI) ==
 {
+  "comparisonWithPrevious": {
+    "hasPrevious": ${previousAnalysis ? 'true' : 'false'},
+    "status": "Improve" (atau "Stagnan" / "Memburuk"),
+    "score": 15 (nilai -100 sampai 100, positif = membaik/improve, negatif = memburuk/regress, 0 jika stagnan atau tidak ada data pembanding),
+    "explanation": "Kondisi otot perut terlihat lebih tajam dibanding analisis sebelumnya. Defisit kalori yang lu pertahankan berhasil mengurangi lemak."
+  },
   "ringkasanSederhana": {
     "pros": ["Asupan protein optimal", "Defisit kalori sudah tepat"],
     "cons": ["Tidur terlalu rendah", "Lemak terlalu rendah", "Serat terlalu rendah"],
@@ -4802,6 +4876,28 @@ Catatan Tambahan User: "${customDesc || '-'}"
                 }
             }
             DB.set('lf_physical_analysis_cache', cacheObj);
+            
+            // Save to historical physical analyses list
+            const historyEntry = {
+                id: 'pa_' + Date.now(),
+                timestamp: new Date().toISOString(),
+                date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                data: data
+            };
+            
+            let localHistory = DB.get('lf_physical_analyses') || [];
+            if (!Array.isArray(localHistory)) localHistory = [];
+            localHistory.push(historyEntry);
+            DB.set('lf_physical_analyses', localHistory);
+            
+            if (typeof fbDb !== 'undefined' && fbDb) {
+                const email = localStorage.getItem('lf_user_email');
+                if (email) {
+                    const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+                    fbDb.ref(`users/${safeEmail}/lf_physical_analyses/${historyEntry.id}`).set(historyEntry).catch(console.error);
+                }
+            }
+
             resultTextEl.innerHTML = renderPhysicalAnalysisUI(data);
         } else {
             resultTextEl.innerHTML = `<p style="color:var(--danger);">Gagal mendapatkan analisis dari AI. Silakan coba lagi.</p>`;
@@ -4814,6 +4910,35 @@ Catatan Tambahan User: "${customDesc || '-'}"
 
 function renderPhysicalAnalysisUI(data) {
     if (!data) return '<p style="color:var(--danger)">Gagal memuat analisis fisik.</p>';
+
+    // 0. Perbandingan dengan Fisik Sebelumnya
+    const comp = data.comparisonWithPrevious || {};
+    let comparisonHtml = '';
+    if (comp && comp.hasPrevious) {
+        const compColor = comp.status === 'Improve' ? 'var(--success)' : comp.status === 'Memburuk' ? 'var(--danger)' : '#ff9f0a';
+        const scoreSign = comp.score >= 0 ? '+' : '';
+        comparisonHtml = `
+            <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative; overflow:hidden;">
+                <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:${compColor};"></div>
+                <h4 style="font-size:0.85rem; font-weight:800; color:${compColor}; text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                    📊 Perbandingan dengan Evaluasi Fisik Sebelumnya
+                </h4>
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:10px;">
+                    <div>
+                        <span style="font-size:0.72rem; color:var(--text2); text-transform:uppercase; display:block;">Status Perkembangan</span>
+                        <span style="font-size:1.1rem; font-weight:800; color:${compColor};">${comp.status === 'Improve' ? '📈 MEMBAIK / IMPROVE' : comp.status === 'Memburuk' ? '📉 MEMBURUK / REGRESS' : '⚖️ STAGNAN'}</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:0.72rem; color:var(--text2); text-transform:uppercase; display:block;">Skor Peningkatan</span>
+                        <span style="font-size:1.4rem; font-weight:900; color:${compColor};">${scoreSign}${comp.score}%</span>
+                    </div>
+                </div>
+                <div style="font-size:0.82rem; color:var(--text2); line-height:1.5; background:var(--surface2); padding:10px; border:1px solid var(--border);">
+                    ${comp.explanation || ''}
+                </div>
+            </div>
+        `;
+    }
 
     // 1. Ringkasan Super Singkat
     const rs = data.ringkasanSederhana || {};
