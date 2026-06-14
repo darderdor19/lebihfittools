@@ -341,6 +341,35 @@ function renderActivityAiPreview(type, res) {
         return;
     }
     el.style.display = 'block';
+    
+    let stepsHtml = '';
+    if (type === 'cardio') {
+        const cardioName = document.getElementById('cardioName').value.trim();
+        const cardioDistance = parseFloat(document.getElementById('cardioDistance').value) || 0;
+        const nameLower = cardioName.toLowerCase();
+        const isStepsCardio = nameLower.includes('lari') || 
+                              nameLower.includes('jalan') || 
+                              nameLower.includes('treadmill') || 
+                              nameLower.includes('walk') || 
+                              nameLower.includes('run');
+        if (isStepsCardio && cardioDistance > 0) {
+            const profile = getProfile() || {};
+            const strideM = profile.strideLengthM || 0.7;
+            const steps = Math.round((cardioDistance * 1000) / strideM);
+            stepsHtml = `
+                <div id="previewStepsContainer" style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); padding-left:10px;">
+                    <div style="font-size:1.1rem; font-weight:700; color:var(--accent);">${steps.toLocaleString('id-ID')}</div>
+                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">🚶 Langkah</div>
+                </div>
+            `;
+        } else {
+            stepsHtml = `
+                <div id="previewStepsContainer" style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); padding-left:10px; display:none;">
+                </div>
+            `;
+        }
+    }
+    
     el.innerHTML = `
         <div class="activity-ai-preview-card" style="margin-top: 15px; padding: 14px; background: rgba(0, 255, 204, 0.04); border: 1.5px solid rgba(0, 255, 204, 0.3); border-radius: var(--radius-sm);">
             <div style="display:flex; align-items:center; gap:6px; color:var(--accent); font-weight:700; font-size:0.85rem; text-transform:uppercase; margin-bottom:10px;">
@@ -363,6 +392,7 @@ function renderActivityAiPreview(type, res) {
                     <div style="font-size:1.1rem; font-weight:700; color:var(--accent2);">${res.burn.proteinG}g</div>
                     <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">Protein</div>
                 </div>
+                ${stepsHtml}
             </div>
             ${res.analysis ? `
             <div style="font-size:0.8rem; line-height:1.4; color:var(--text2); background:rgba(255,255,255,0.02); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border);">
@@ -370,6 +400,38 @@ function renderActivityAiPreview(type, res) {
             </div>` : ''}
         </div>
     `;
+    
+    // Add real-time event listener to update preview steps when distance/name changes
+    if (type === 'cardio') {
+        const distInput = document.getElementById('cardioDistance');
+        const nameInput = document.getElementById('cardioName');
+        const updatePreviewSteps = () => {
+            const stepsContainer = document.getElementById('previewStepsContainer');
+            if (!stepsContainer) return;
+            const dist = parseFloat(distInput.value) || 0;
+            const name = nameInput.value.trim().toLowerCase();
+            const isSteps = name.includes('lari') || name.includes('jalan') || name.includes('treadmill') || name.includes('walk') || name.includes('run');
+            if (isSteps && dist > 0) {
+                const profile = getProfile() || {};
+                const strideM = profile.strideLengthM || 0.7;
+                const steps = Math.round((dist * 1000) / strideM);
+                stepsContainer.innerHTML = `
+                    <div style="font-size:1.1rem; font-weight:700; color:var(--accent);">${steps.toLocaleString('id-ID')}</div>
+                    <div style="font-size:0.68rem; color:var(--text3); text-transform:uppercase;">🚶 Langkah</div>
+                `;
+                stepsContainer.style.display = 'block';
+                stepsContainer.style.setProperty('border-left', '1px solid rgba(255,255,255,0.1)');
+                stepsContainer.style.setProperty('padding-left', '10px');
+            } else {
+                stepsContainer.style.display = 'none';
+            }
+        };
+        distInput.removeEventListener('input', updatePreviewSteps);
+        distInput.addEventListener('input', updatePreviewSteps);
+        nameInput.removeEventListener('input', updatePreviewSteps);
+        nameInput.addEventListener('input', updatePreviewSteps);
+    }
+    
     if (window.lucide) lucide.createIcons();
 }
 
