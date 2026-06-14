@@ -4702,6 +4702,46 @@ function removePhysicalPhoto(event) {
     document.getElementById('physicalUploadPlaceholder').classList.remove('hidden');
 }
 
+function resizeImageBase64(base64Str, maxWidth = 500, maxHeight = 500) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = () => {
+            resolve(base64Str);
+        };
+    });
+}
+
+function parseDataUrl(dataUrl) {
+    if (!dataUrl) return null;
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) return null;
+    const mime = parts[0].split(':')[1].split(';')[0];
+    const base64 = parts[1];
+    return { mime, base64 };
+}
+
 async function startPhysicalAnalysis() {
     const apiKey = getVisionKey() || localStorage.getItem('lf_visionkey');
     const resultTextEl = document.getElementById('physicalAiResultText');
@@ -4759,6 +4799,32 @@ async function startPhysicalAnalysis() {
         const avgSleep = sleepData.length > 0 ? (sleepData.reduce((s,x)=>s+x, 0) / sleepData.length).toFixed(1) : 'tidak tercatat';
         const avgBurn = (totalBurnedKcal / days).toFixed(0);
         
+        // Serialize workout details for progressive overload score calculation
+        let workoutDetails = [];
+        Object.entries(allActs).forEach(([date, dayActs]) => {
+            dayActs.forEach(a => {
+                if (a.type === 'workout' && a.exercises) {
+                    const exStr = a.exercises.map(ex => {
+                        const setsStr = (ex.sets || []).map(s => `${s.reps || 0} reps @ ${s.weight || 0}kg`).join(', ');
+                        return `${ex.name}: [${setsStr}]`;
+                    }).join('; ');
+                    workoutDetails.push(`- ${date} (Workout): ${exStr}`);
+                } else if (a.type === 'gym' && a.muscles) {
+                    const musStr = a.muscles.map(m => {
+                        const varStr = (m.variations || []).map(v => {
+                            const setsStr = (v.sets || []).map(s => `${s.reps || 0} reps @ ${s.weight || 0}kg`).join(', ');
+                            return `${v.name}: [${setsStr}]`;
+                        }).join('; ');
+                        return `${m.muscle} (${varStr})`;
+                    }).join('; ');
+                    workoutDetails.push(`- ${date} (Gym): ${musStr}`);
+                } else if (a.type === 'cardio') {
+                    workoutDetails.push(`- ${date} (Cardio): ${a.name || 'Kardio'} - ${a.durationMin || 0} min, ${a.distanceKm || 0} km (${a.intensity || 'medium'})`);
+                }
+            });
+        });
+        const workoutDetailsText = workoutDetails.length > 0 ? workoutDetails.join('\n') : 'Tidak ada sesi latihan beban atau kardio yang tercatat.';
+        
         // Prepare base64 image details
         const base64Data = imgPreview.src.split(',')[1];
         const mimeType = imgPreview.src.split(',')[0].split(':')[1].split(';')[0];
@@ -4787,7 +4853,8 @@ async function startPhysicalAnalysis() {
             gymCount.toString(),
             cardioCount.toString(),
             avgSleep.toString(),
-            avgBurn.toString()
+            avgBurn.toString(),
+            workoutDetailsText
         ].join('|');
         const currentHash = hashString(inputString);
 
@@ -4852,6 +4919,24 @@ Bandingkan kondisi fisik visual pada foto saat ini dengan catatan evaluasi fisik
 `;
         }
         
+        // Construct image inputs array
+        const imagesInput = [];
+        // First image is always the new/current upload
+        imagesInput.push({ base64: base64Data, mime: mimeType });
+        
+        let visualComparisonPromptNote = '';
+        if (previousAnalysis && previousAnalysis.photo) {
+            const parsed = parseDataUrl(previousAnalysis.photo);
+            if (parsed) {
+                imagesInput.push(parsed);
+                visualComparisonPromptNote = `
+* PENTING: Kami menyertakan 2 FOTO untuk kamu bandingkan secara visual.
+- Foto Pertama (Urutan ke-1) adalah FOTO TERBARU saat ini.
+- Foto Kedua (Urutan ke-2) adalah FOTO DARI ANALISIS SEBELUMNYA (${previousAnalysis.date || 'kemarin'}).
+Silakan analisis perubahan bentuk tubuh, definisi otot, dan kadar lemak tubuh secara visual di antara kedua foto tersebut secara langsung.`;
+            }
+        }
+        
         // Build the prompt for Gemini Flash requesting JSON
         let promptText = `Kamu adalah AI Personal Coach, pelatih fitness personal, dan ahli gizi klinis profesional.
 Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (otot, lemak, proporsi tubuh) dan mengaitkannya dengan data profil serta riwayat asupan/olahraga selama ${days} hari terakhir.
@@ -4876,8 +4961,12 @@ Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberi
 - Estimasi Kalori Terbakar Olahraga: ${avgBurn} kcal/hari
 - Rata-rata Tidur/Istirahat: ${avgSleep} jam/hari
 
+== CATATAN DETAIL GERAKAN/EXERCISE OLAHRAGA ==
+${workoutDetailsText}
+
 Catatan Tambahan User: "${customDesc || '-'}"
 ${previousContextText}
+${visualComparisonPromptNote}
 
 == SKEMA JSON RESPONS (WAJIB PERSIS SEPERTI INI) ==
 {
@@ -4886,6 +4975,11 @@ ${previousContextText}
     "status": "Improve" (atau "Stagnan" / "Memburuk"),
     "score": 15 (nilai -100 sampai 100, positif = membaik/improve, negatif = memburuk/regress, 0 jika stagnan atau tidak ada data pembanding),
     "explanation": "Kondisi otot perut terlihat lebih tajam dibanding analisis sebelumnya. Defisit kalori yang lu pertahankan berhasil mengurangi lemak."
+  },
+  "progressiveOverload": {
+    "score": 85,
+    "status": "Optimal" (atau "Butuh Peningkatan" / "Kurang Beban"),
+    "explanation": "Berdasarkan detail latihan lu, ada peningkatan beban yang bagus pada Bench Press dari 60kg ke 62.5kg. Namun untuk gerakan aksesoris seperti lateral raise dan tricep pushdown masih menggunakan volume yang sama. Pertahankan intensitas dan coba tambah reps/beban secara bertahap!"
   },
   "ringkasanSederhana": {
     "pros": ["Asupan protein optimal", "Defisit kalori sudah tepat"],
@@ -4945,7 +5039,7 @@ ${previousContextText}
   }
 }`;
                       
-        const rawJson = await analyzePhysicalPhotoAI(base64Data, mimeType, promptText, true);
+        const rawJson = await analyzePhysicalPhotoAI(imagesInput, mimeType, promptText, true);
         let data = null;
         try {
             let cleanJson = rawJson.trim();
@@ -4967,12 +5061,16 @@ ${previousContextText}
             }
             DB.set('lf_physical_analysis_cache', cacheObj);
             
+            // Resize current photo to store in history entry
+            const resizedPhoto = await resizeImageBase64(imgPreview.src, 400, 400);
+            
             // Save to historical physical analyses list
             const historyEntry = {
                 id: 'pa_' + Date.now(),
                 timestamp: new Date().toISOString(),
                 date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-                data: data
+                data: data,
+                photo: resizedPhoto
             };
             
             let localHistory = DB.get('lf_physical_analyses') || [];
@@ -5029,6 +5127,35 @@ function renderPhysicalAnalysisUI(data) {
             </div>
         `;
     }
+
+    // 0b. Progressive Overload Score & Analysis
+    const po = data.progressiveOverload || { score: 0, status: 'Kurang Beban', explanation: 'Belum ada data progres latihan beban.' };
+    const poScore = po.score || 0;
+    let poColor = 'var(--success)';
+    if (poScore < 50) poColor = 'var(--danger)';
+    else if (poScore < 75) poColor = '#ff9f0a';
+
+    let progressiveOverloadHtml = `
+        <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:0; left:0; width:2px; height:100%; background:${poColor};"></div>
+            <h4 style="font-size:0.85rem; font-weight:800; color:${poColor}; text-transform:uppercase; margin-bottom:12px; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                🏋️ Progressive Overload Score & Perkembangan Latihan
+            </h4>
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:10px;">
+                <div>
+                    <span style="font-size:0.72rem; color:var(--text2); text-transform:uppercase; display:block;">Status Latihan</span>
+                    <span style="font-size:1.1rem; font-weight:800; color:${poColor};">${po.status === 'Optimal' ? '🔥 OPTIMAL / OVERLOAD' : po.status === 'Butuh Peningkatan' ? '⚡ BUTUH PENINGKATAN' : '⚠️ KURANG BEBAN'}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-size:0.72rem; color:var(--text2); text-transform:uppercase; display:block;">Skor Overload</span>
+                    <span style="font-size:1.4rem; font-weight:900; color:${poColor};">${poScore}/100</span>
+                </div>
+            </div>
+            <div style="font-size:0.82rem; color:var(--text2); line-height:1.5; background:var(--surface2); padding:10px; border:1px solid var(--border);">
+                ${po.explanation || ''}
+            </div>
+        </div>
+    `;
 
     // 1. Ringkasan Super Singkat
     const rs = data.ringkasanSederhana || {};
@@ -5127,6 +5254,12 @@ function renderPhysicalAnalysisUI(data) {
 
     let html = `
         <div style="display:flex; flex-direction:column; gap:16px; font-family:var(--font); color:var(--text);">
+            
+            <!-- Perbandingan dengan Fisik Sebelumnya -->
+            ${comparisonHtml}
+
+            <!-- Progressive Overload Score -->
+            ${progressiveOverloadHtml}
             
             <!-- Ringkasan Super Singkat & Recovery Score -->
             <div style="background:linear-gradient(135deg, var(--surface2), var(--surface)); border:1px solid var(--border); padding:16px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:stretch; gap:16px;">

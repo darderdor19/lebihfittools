@@ -345,7 +345,7 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
   }
 }
 
-async function analyzePhysicalPhotoAI(base64, mime, promptText, jsonMode = false) {
+async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false) {
   let key = getVisionKey();
   if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
       key = process.env.GEMINI_API_KEY;
@@ -354,12 +354,18 @@ async function analyzePhysicalPhotoAI(base64, mime, promptText, jsonMode = false
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
   
+  const parts = [{ text: promptText }];
+  if (Array.isArray(images)) {
+    images.forEach(img => {
+      parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
+    });
+  } else {
+    parts.push({ inline_data: { mime_type: mime, data: images } });
+  }
+
   const body = {
     contents: [{
-      parts: [
-        { text: promptText },
-        { inline_data: { mime_type: mime, data: base64 } }
-      ]
+      parts: parts
     }]
   };
 
