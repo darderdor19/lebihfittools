@@ -2401,8 +2401,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
       
       if (chatHistory.length === 0) {
         if (isMobile) {
-          // On mobile, keep input container in the footer to prevent vertical overflow/keyboard clipping
-          if (footer && inputContainer) {
+          if (footer && inputContainer && inputContainer.parentNode !== footer) {
             footer.appendChild(inputContainer);
             footer.style.display = 'block';
           }
@@ -2410,17 +2409,15 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           const placeholder = document.getElementById('welcomeInputPlaceholder');
           if (placeholder) placeholder.innerHTML = '';
         } else {
-          // Place inside welcome container placeholder
           const placeholder = document.getElementById('welcomeInputPlaceholder');
-          if (placeholder && inputContainer) {
+          if (placeholder && inputContainer && inputContainer.parentNode !== placeholder) {
             placeholder.appendChild(inputContainer);
           }
           if (footer) footer.style.display = 'none';
           if (welcome) welcome.style.display = 'block';
         }
       } else {
-        // Place inside footer
-        if (footer && inputContainer) {
+        if (footer && inputContainer && inputContainer.parentNode !== footer) {
           footer.appendChild(inputContainer);
           footer.style.display = 'block';
         }
