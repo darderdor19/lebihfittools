@@ -217,6 +217,9 @@
       gap: 20px;
       background: radial-gradient(circle at 50% 20%, rgba(0, 240, 255, 0.08) 0%, var(--bg) 100%);
       position: relative;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      transform: translateZ(0);
     }
     .chat-container::before {
       content: '';
@@ -861,6 +864,22 @@
       .chat-sidebar.open {
         left: 0;
       }
+      .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        top: 60px;
+        background: rgba(0,0,0,0.6);
+        z-index: 999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      .sidebar-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+      }
       .hamburger-btn {
         display: flex !important;
       }
@@ -1070,6 +1089,7 @@
   <div class="app-layout">
     
     <!-- SIDEBAR FOR HISTORY -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeChatSidebar()"></div>
     <aside class="chat-sidebar" id="chatSidebar">
       <button class="btn-new-chat" onclick="startNewChat()"><i data-lucide="plus" style="width:16px;height:16px"></i> Chat Baru</button>
       <div class="sidebar-title">Riwayat Chat</div>
@@ -1243,13 +1263,17 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     // Toggle Mobile Sidebar
     function toggleChatSidebar() {
       const sidebar = document.getElementById('chatSidebar');
+      const overlay = document.getElementById('sidebarOverlay');
       sidebar.classList.toggle('open');
+      if (overlay) overlay.classList.toggle('active');
     }
 
     // Close Mobile Sidebar
     function closeChatSidebar() {
       const sidebar = document.getElementById('chatSidebar');
+      const overlay = document.getElementById('sidebarOverlay');
       sidebar.classList.remove('open');
+      if (overlay) overlay.classList.remove('active');
     }
 
     function getUserSession() {
