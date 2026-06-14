@@ -80,7 +80,7 @@ a{color:var(--accent);text-decoration:none}
 .nav-btn.active{background:rgba(108,99,255,.15);color:var(--accent);font-weight:600}
 .nav-icon{font-size:1.1rem;width:24px;text-align:center}
 .sidebar-profile{padding:16px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text2)}
-.main-content{margin-left:220px;flex:1;padding:32px;min-height:100dvh}
+.main-content{margin-left:220px;flex:1;padding:32px}
 .mobile-topbar{display:none}
 .sidebar-overlay{display:none}
 
@@ -92,7 +92,7 @@ a{color:var(--accent);text-decoration:none}
 .page-subtitle{color:var(--text2);font-size:.95rem;margin-top:4px}
 
 /* ===== SECTION CARDS ===== */
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative;overflow:hidden;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative;overflow:hidden}
 .section-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent)}
 .section-title{font-size:1rem;font-weight:800;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;color:var(--text)}
 .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -1591,9 +1591,6 @@ a{color:var(--accent);text-decoration:none}
   padding: 24px;
   position: relative;
   overflow: hidden;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
