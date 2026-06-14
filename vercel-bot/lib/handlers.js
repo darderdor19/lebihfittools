@@ -2765,15 +2765,36 @@ async function onCardioDistInput(chatId, userId, text) {
   await setCache(`${userId}_activity`, draft);
 
   await setState(userId, 'AWAIT_CARDIO_MENU');
-  return showCardioDraftMenu(chatId, draft);
+  return showCardioDraftMenu(chatId, userId, draft);
 }
 
-async function showCardioDraftMenu(chatId, draft) {
+async function showCardioDraftMenu(chatId, userId, draft) {
   const intLabel = { low: 'Ringan', medium: 'Sedang', high: 'Tinggi' }[draft.intensity];
   let msg = `❤️ *Ringkasan Kardio Harian*\n\n`;
   msg += `• Nama Aktivitas: *${escapeMarkdown(draft.name)}*\n`;
   msg += `• Durasi: *${draft.durationMin} menit*\n`;
   msg += `• Jarak: *${draft.distanceKm ? `${draft.distanceKm} km` : 'Tidak dicatat'}*\n`;
+
+  const nameLower = (draft.name || '').toLowerCase();
+  const isStepsCardio = nameLower.includes('lari') || 
+                        nameLower.includes('jalan') || 
+                        nameLower.includes('treadmill') || 
+                        nameLower.includes('walk') || 
+                        nameLower.includes('run');
+
+  if (isStepsCardio && draft.distanceKm > 0) {
+    const email = await getLinkedEmail(userId);
+    let strideM = 0.7;
+    if (email) {
+      const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
+      if (profile && profile.strideLengthM) {
+        strideM = parseFloat(profile.strideLengthM);
+      }
+    }
+    const steps = Math.round((draft.distanceKm * 1000) / strideM);
+    msg += `• Estimasi Langkah: *🚶 ${steps.toLocaleString('id-ID')} langkah*\n`;
+  }
+
   msg += `• Intensitas: *${intLabel}*\n`;
 
   return sendMessage(chatId, msg, {
@@ -2807,7 +2828,7 @@ async function onCardioDurEditInput(chatId, userId, text) {
   draft.durationMin = dur;
   await setCache(`${userId}_activity`, draft);
   await setState(userId, 'AWAIT_CARDIO_MENU');
-  return showCardioDraftMenu(chatId, draft);
+  return showCardioDraftMenu(chatId, userId, draft);
 }
 
 async function startCardioDistance(chatId, userId) {
@@ -2824,7 +2845,7 @@ async function onCardioDistEditInput(chatId, userId, text) {
   draft.distanceKm = dist;
   await setCache(`${userId}_activity`, draft);
   await setState(userId, 'AWAIT_CARDIO_MENU');
-  return showCardioDraftMenu(chatId, draft);
+  return showCardioDraftMenu(chatId, userId, draft);
 }
 
 async function promptCardioIntensity(chatId) {
@@ -2847,7 +2868,7 @@ async function saveCardioIntensity(chatId, userId, val) {
   await setCache(`${userId}_activity`, draft);
 
   await setState(userId, 'AWAIT_CARDIO_MENU');
-  return showCardioDraftMenu(chatId, draft);
+  return showCardioDraftMenu(chatId, userId, draft);
 }
 
 async function saveCardioSession(chatId, userId, email) {
@@ -2879,10 +2900,24 @@ async function saveCardioSession(chatId, userId, email) {
   const safeEmail = safe(email);
   await setFirebase(`users/${safeEmail}/ai_daily_sig_${safeEmail}_${today}`, null);
 
+  const nameLower = (draft.name || '').toLowerCase();
+  const isStepsCardio = nameLower.includes('lari') || 
+                        nameLower.includes('jalan') || 
+                        nameLower.includes('treadmill') || 
+                        nameLower.includes('walk') || 
+                        nameLower.includes('run');
+
   let msg = `✅ *Sesi Kardio Berhasil Disimpan!*\n\n`;
   msg += `• Aktivitas: *${escapeMarkdown(draft.name)}*\n`;
   msg += `• Durasi: *${draft.durationMin} menit*\n`;
-  if (draft.distanceKm) msg += `• Jarak: *${draft.distanceKm} km*\n`;
+  if (draft.distanceKm) {
+    msg += `• Jarak: *${draft.distanceKm} km*\n`;
+    if (isStepsCardio) {
+      const strideM = (profile && profile.strideLengthM) ? parseFloat(profile.strideLengthM) : 0.7;
+      const steps = Math.round((draft.distanceKm * 1000) / strideM);
+      msg += `• Estimasi Langkah: *🚶 ${steps.toLocaleString('id-ID')} langkah*\n`;
+    }
+  }
   msg += `• Estimasi Kalori Terbakar: *${burn.kcal} kcal*\n`;
   msg += `  _(Lemak: ${burn.fatG}g, Karbo: ${burn.carbG}g, Protein: ${burn.proteinG}g)_`;
 
