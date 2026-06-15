@@ -1289,10 +1289,11 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
           'deepseek/deepseek-chat',
           'meta-llama/llama-3.3-70b-instruct',
           'meta-llama/llama-3.2-3b-instruct:free',
-          'nousresearch/hermes-3-llama-3.1-405b:free'
+          'nousresearch/hermes-3-llama-3.1-405b:free',
+          'openrouter/free'
       ];
       if (!activeModel || oldModels.includes(activeModel)) {
-          activeModel = 'openrouter/free';
+          activeModel = 'llama-3.3-70b-versatile';
           localStorage.setItem('lf_openroutermodel', activeModel);
       }
       
@@ -2399,11 +2400,8 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
         }
 
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
+        // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
         const model = localStorage.getItem(MODEL_NAME) || 'llama-3.3-70b-versatile';
-        const key = localStorage.getItem('lf_assistantkey') || localStorage.getItem('lf_apikey');
-        if (!key) {
-          throw new Error('API Key belum diset. Silakan buka Settings di Dashboard utama dan masukkan API Key Assistant atau API Key Utama.');
-        }
         
         // Build payload messages with system context and multimodal support
         const userContext = generateUserContextSummary(queryText);
@@ -2411,10 +2409,8 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           { role: 'system', content: SYSTEM_PROMPT.replace('{name}', userName) + userContext }
         ];
         
-        let hasImage = false;
         chatHistory.forEach(msg => {
           if (msg.role === 'user' && (msg.image || (msg.images && msg.images.length > 0))) {
-            hasImage = true;
             const content = [{ type: 'text', text: msg.content }];
             if (msg.images && msg.images.length > 0) {
               msg.images.forEach(img => {
@@ -2435,19 +2431,14 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           }
         });
 
-        const activeModel = hasImage ? 'llama-3.2-11b-vision-preview' : model;
-
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${key}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: activeModel,
-            messages: apiMessages,
-            max_tokens: 3000,
-            temperature: 0.7
+            model: model,
+            messages: apiMessages
           })
         });
 

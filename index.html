@@ -1191,29 +1191,8 @@
           </div>
         </div>
         <div class="section-card">
-          <h3 class="section-title"><i data-lucide="key" style="display:inline-block;vertical-align:text-bottom;"></i> API Keys</h3>
-          <p class="setting-desc">Masukkan API Key untuk menghubungkan aplikasi dengan sistem server.</p>
-          <div class="form-group">
-            <label>Secret Token (Text - Analisis Teks)</label>
-            <div class="api-input-wrap">
-              <input type="password" id="apiKeyInput" placeholder="sk-..." class="api-input">
-              <button class="btn-icon" onclick="toggleApiVis('apiKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
-            </div>
-          </div>
-          <div class="form-group" style="margin-top: 12px;">
-            <label>Secret Token (Vision - Analisis Gambar) <span style="font-size:0.75rem;color:var(--text3);font-weight:400;">(Opsional, kalau mau API sendiri)</span></label>
-            <div class="api-input-wrap">
-              <input type="password" id="visionKeyInput" placeholder="AQ. / AIza... (opsional)" class="api-input">
-              <button class="btn-icon" onclick="toggleApiVis('visionKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
-            </div>
-          </div>
-          <div class="form-group" style="margin-top: 12px;">
-            <label>Secret Token (Assistant - Chat AI Consultant) <span style="font-size:0.75rem;color:var(--text3);font-weight:400;">(Opsional, jika mau memisahkan limit chat)</span></label>
-            <div class="api-input-wrap">
-              <input type="password" id="assistantKeyInput" placeholder="gsk_... (opsional)" class="api-input">
-              <button class="btn-icon" onclick="toggleApiVis('assistantKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
-            </div>
-          </div>
+          <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;"></i> Pengaturan AI</h3>
+          <p class="setting-desc">Kelola pengaturan model kecerdasan buatan (AI) yang digunakan untuk mendampingi program latihan kamu.</p>
           <div class="form-group" style="margin-top: 12px;">
             <label>Model AI Consultant</label>
             <div class="custom-select-wrapper" id="openRouterModelSelectWrapper">
@@ -1436,7 +1415,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="core.js?v=13"></script>
-  <script src="app.js?v=13"></script>
+  <script src="core.js?v=14"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

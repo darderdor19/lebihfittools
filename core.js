@@ -78,12 +78,12 @@ const getProfile = () => {
     return null;
 };
 const setProfile = p => { DB.set('lf_profile', p); invalidateAnalysisCache(); };
-const getApiKey = () => DB.get('lf_apikey');
-const setApiKey = k => DB.set('lf_apikey', k);
-const getVisionKey = () => DB.get('lf_visionkey');
-const setVisionKey = k => DB.set('lf_visionkey', k);
-const getAssistantKey = () => DB.get('lf_assistantkey');
-const setAssistantKey = k => DB.set('lf_assistantkey', k);
+const getApiKey = () => 'vercel-keys';
+const setApiKey = k => {};
+const getVisionKey = () => 'vercel-keys';
+const setVisionKey = k => {};
+const getAssistantKey = () => 'vercel-keys';
+const setAssistantKey = k => {};
 const getOpenRouterModel = () => {
     let model = DB.get('lf_openroutermodel');
     const oldModels = [
@@ -304,17 +304,12 @@ function getMaskedAIError(originalError) {
 }
 
 async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile', isVision = false, isGroqVision = false) {
-  // isGroqVision: vision call tapi pakai Groq (cepat) bukan OpenRouter
-  const key = (isVision && !isGroqVision) ? getVisionKey() : getApiKey();
-  if (!key) throw new Error((isVision && !isGroqVision) ? 'Vision API Key belum diset. Buka Settings.' : 'API Key belum diset. Buka Settings.');
-  
-  let endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-  if (isVision && !isGroqVision) {
-    endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  let endpoint = '/api/ai';
+  if (window.location.hostname !== 'lebihfittools.vercel.app') {
+    endpoint = 'https://lebihfittools.vercel.app/api/ai';
   }
 
-  const body = { model: model, messages, max_tokens: 2500, temperature: 0 };
-  if (json && !isVision) body.response_format = { type: 'json_object' };
+  const body = { model, messages, json, isVision };
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
@@ -323,7 +318,7 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
   try {
       res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         signal: controller.signal
       });

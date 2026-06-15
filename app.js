@@ -16,14 +16,7 @@ let tempAuthName = "";
 
 async function initApp() {
     const profile = getProfile();
-    const apiKey = getApiKey();
-    const visionKey = getVisionKey();
-    const assistantKey = getAssistantKey();
     const authUser = getAuthUser();
-    
-    if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
-    if (visionKey) document.getElementById('visionKeyInput').value = visionKey;
-    if (assistantKey) document.getElementById('assistantKeyInput').value = assistantKey;
     
     initCustomModelSelect();
     const openRouterModel = getOpenRouterModel();
@@ -32,7 +25,7 @@ async function initApp() {
         if (window.syncCustomModelSelect) window.syncCustomModelSelect(openRouterModel);
     }
 
-    if (apiKey || visionKey || assistantKey) updateApiStatus(true);
+    updateApiStatus(true);
 
     if (!authUser) {
         document.getElementById('authOverlay').classList.remove('hidden');
@@ -3435,24 +3428,10 @@ document.getElementById('recalcForm').addEventListener('submit', async (e) => {
 });
 
 // Settings
-function toggleApiVis(id) {
-    const input = document.getElementById(id || 'apiKeyInput');
-    input.type = input.type === 'password' ? 'text' : 'password';
-}
-
 function saveApiKey() {
-    const key = document.getElementById('apiKeyInput').value.trim();
-    const visionKey = document.getElementById('visionKeyInput').value.trim();
-    const assistantKey = document.getElementById('assistantKeyInput').value.trim();
     const openRouterModel = document.getElementById('openRouterModelSelect').value;
-    
-    setApiKey(key);
-    setVisionKey(visionKey);
-    setAssistantKey(assistantKey);
     setOpenRouterModel(openRouterModel);
-    
-    updateApiStatus(!!key || !!visionKey || !!assistantKey);
-    showToast('API Keys disimpan', 'success');
+    showToast('Pengaturan AI disimpan', 'success');
 }
 
 function openConsultantPage() {
