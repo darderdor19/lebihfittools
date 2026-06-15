@@ -434,18 +434,16 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
      - Hitung kandungan nutrisi masing-masing bahan secara terpisah terlebih dahulu.
      - JANGAN PERNAH menjumlahkan total berat (545g + 500g = 1045g) lalu mengalikan seluruh berat tersebut dengan gizi satu bahan. Ini salah!
      - Jumlahkan hasil akhir nutrisi dari masing-masing bahan di akhir.
-5. CONTOH DETAIL PERHITUNGAN MULTI-BAHAN:
-   - Input: "Bahan A 545g dan Bahan B 500g"
-     - Langkah 1: Hitung Bahan A 545g -> Faktor pengali = 5.45.
-       - Kalori = 100 * 5.45 = 545 kcal, Protein = 20 * 5.45 = 109g
-     - Langkah 2: Hitung Bahan B 500g -> Faktor pengali = 5.0.
-       - Kalori = 50 * 5.0 = 250 kcal, Karbo = 10 * 5.0 = 50g
-     - Langkah 3: Jumlahkan total gizi akhir:
-       - Kalori = 545 + 250 = 795 kcal
-       - Protein = 109 + 0 = 109g
-       - Karbohidrat = 0 + 50 = 50g
-6. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
-8. WAJIB KALIKAN SEMUA GIZI PER 100g (TERMASUK MIKRONUTRISI: sodium, kalsium, besi, vitC, dll) DENGAN FAKTOR PENGALI (Berat Gram / 100). JIKA PORSI 500g, KALIKAN SEMUA NILAI DENGAN 5! JANGAN BERIKAN NILAI 100g JIKA PORSI BUKAN 100g!
+5. ATURAN MAKANAN BERTULANG & FAST FOOD (SANGAT KRITIKAL):
+   - Jika input berupa ayam goreng fast food (KFC/McD/dll) atau ayam bertulang:
+     - 1 potong dada/paha atas (berat kotor ~100-150g) BUKAN daging murni. Terdapat TULANG (20-30% berat) dan TEPUNG/MINYAK.
+     - Kandungan protein asli dari 1 potong ayam fast food HANYA di kisaran 15-25 gram (maksimal 30g untuk ukuran jumbo). Jangan pernah mengalikan 1 potong = 150g daging murni (protein tidak boleh menembus 40g+ per potong, apalagi 130g untuk 3 potong, ini FATAL!).
+     - Jika user membuang kulit/tepung "semaksimal mungkin", TETAP asumsikan ada sisa coating/tepung menempel (wajib tambahkan karbohidrat sisa 5-15g dan lemak sisa).
+6. ATURAN SAUS/KONDIMEN:
+   - Jika ada saus sachet (tomat, sambal), kecap, atau mayo, WAJIB dihitung.
+   - 1 sachet saus sambal/tomat (~10g) mengandung sekitar 2-4g Karbohidrat (gula). Jangan berikan nilai Karbo 0g jika ada saus.
+7. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
+8. WAJIB KALIKAN SEMUA GIZI PER 100g (TERMASUK MIKRONUTRISI: sodium, kalsium, besi, vitC, dll) DENGAN FAKTOR PENGALI DAGING/MAKANAN BERSIH YANG LOGIS. Jawab dengan nilai realistis.
 9. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"calculation":"tuliskan langkah perkalian makro DAN MIKRO disini (misal: kalori 165*6=990, sodium 74*6=444, kalsium 15*6=90)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
 Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
