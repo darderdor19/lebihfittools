@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LebihFit — Admin Panel</title>
+<link rel="icon" type="image/png" href="favicon.png" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --text1: #f0f4ff;
+    --text2: #8892a4;
+    --accent: #00ffcc;
+    --accent2: #7c3aed;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --success: #10b981;
+    --radius: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text1);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== LOGIN PAGE ===== */
+  #loginPage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 20% 50%, rgba(0,255,204,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.06) 0%, transparent 60%);
+  }
+
+  .login-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .login-logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .login-logo-icon svg { width: 20px; height: 20px; color: #fff; }
+
+  .login-logo-text {
+    font-size: 1.4rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .login-subtitle { color: var(--text2); font-size: 0.85rem; margin-bottom: 32px; }
+  .login-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(239,68,68,0.1);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text1);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus { border-color: var(--accent); }
+
+  .input-wrapper { position: relative; }
+  .input-wrapper input { padding-right: 44px; }
+  .toggle-pass {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+  }
+
+  .btn-login {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), #00ccaa);
+    color: #0d0f14;
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-login:active { transform: translateY(0); }
+  .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .login-error {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: var(--danger);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* ===== ADMIN DASHBOARD ===== */
+  #adminDashboard { display: none; flex-direction: column; min-height: 100vh; }
+
+  .admin-header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .admin-header-left { display: flex; align-items: center; gap: 12px; }
+  .admin-header-logo { font-weight: 800; font-size: 1.1rem; color: var(--accent); }
+  .admin-badge {
+    background: rgba(239,68,68,0.1);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.25);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .admin-header-right { display: flex; align-items: center; gap: 16px; }
+  .admin-user-info { font-size: 0.82rem; color: var(--text2); }
+  .admin-user-info span { color: var(--text1); font-weight: 600; }
+
+  .btn-sm {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    transition: opacity 0.2s;
+  }
+  .btn-sm:hover { opacity: 0.85; }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+  .btn-primary { background: var(--accent); color: #0d0f14; }
+  .btn-ghost { background: var(--bg3); color: var(--text1); border: 1px solid var(--border); }
+  .btn-warning { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+
+  .admin-body { display: flex; flex: 1; }
+
+  .admin-sidebar {
+    width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text2);
+    transition: all 0.15s;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }
+  .sidebar-item:hover { background: var(--bg3); color: var(--text1); }
+  .sidebar-item.active { background: rgba(0,255,204,0.08); color: var(--accent); }
+  .sidebar-item svg { width: 16px; height: 16px; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 8px 4px; }
+  .sidebar-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 1px; color: var(--text2); padding: 4px 14px; text-transform: uppercase; }
+
+  .admin-content { flex: 1; padding: 28px; overflow-y: auto; }
+
+  .content-section { display: none; }
+  .content-section.active { display: block; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .section-header h2 { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .stat-label { font-size: 0.75rem; color: var(--text2); margin-bottom: 8px; }
+  .stat-value { font-size: 1.8rem; font-weight: 800; }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.success { color: var(--success); }
+  .stat-value.warning { color: var(--warning); }
+  .stat-value.danger { color: var(--danger); }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; vertical-align: middle; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .badge-lifetime { background: rgba(16,185,129,0.12); color: var(--success); }
+  .badge-pro { background: rgba(0,255,204,0.1); color: var(--accent); }
+  .badge-trial { background: rgba(245,158,11,0.12); color: var(--warning); }
+  .badge-expired { background: rgba(239,68,68,0.12); color: var(--danger); }
+
+  /* Search/filter bar */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-bar input, .filter-bar select {
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text1);
+    padding: 8px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .filter-bar input { flex: 1; min-width: 200px; }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent); }
+  .filter-bar select option { background: var(--bg2); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:none; } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .modal-header h3 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .modal-close { background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px; border-radius: 6px; }
+  .modal-close:hover { color: var(--text1); background: var(--bg3); }
+
+  .modal-form-group { margin-bottom: 14px; }
+  .modal-form-group label { display: block; font-size: 0.8rem; color: var(--text2); font-weight: 500; margin-bottom: 6px; }
+  .modal-form-group input,
+  .modal-form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text1);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .modal-form-group input:focus,
+  .modal-form-group select:focus { border-color: var(--accent); }
+  .modal-form-group input:disabled { opacity: 0.6; cursor: not-allowed; }
+  .modal-form-group select option { background: var(--bg2); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: opacity 0.2s; }
+  .modal-actions button:hover { opacity: 0.85; }
+  .btn-save { background: var(--accent); color: #0d0f14; }
+  .btn-cancel { background: var(--bg3); color: var(--text1); border: 1px solid var(--border) !important; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    z-index: 99999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    animation: toastIn 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  @keyframes toastIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+  .toast-success { background: var(--bg2); border: 1px solid var(--success); color: var(--success); }
+  .toast-error { background: var(--bg2); border: 1px solid var(--danger); color: var(--danger); }
+  .toast-info { background: var(--bg2); border: 1px solid var(--accent); color: var(--accent); }
+
+  /* Change password section */
+  .pass-section { max-width: 440px; }
+
+  /* Spinner */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top: 2px solid #0d0f14;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Admin list */
+  .admin-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .admin-list-item:last-child { border-bottom: none; }
+
+  @media (max-width: 640px) {
+    .admin-sidebar { display: none; }
+    .admin-content { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN PAGE ===== -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <i data-lucide="shield-check"></i>
+      </div>
+      <span class="login-logo-text">LebihFit</span>
+    </div>
+    <p class="login-subtitle">Admin Management Panel</p>
+    <div class="login-badge">
+      <i data-lucide="lock" style="width:10px;height:10px;"></i>
+      RESTRICTED ACCESS
+    </div>
+
+    <div class="form-group">
+      <label>Email Admin</label>
+      <input type="email" id="loginEmail" placeholder="admin@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="input-wrapper">
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="toggle-pass" onclick="togglePass('loginPassword', this)">
+          <i data-lucide="eye" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">
+      <i data-lucide="log-in" style="width:18px;height:18px;"></i>
+      Masuk ke Admin Panel
+    </button>
+
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN DASHBOARD ===== -->
+<div id="adminDashboard">
+
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <span class="admin-header-logo">⚡ LebihFit</span>
+      <span class="admin-badge"><i data-lucide="shield" style="width:9px;height:9px;display:inline;"></i> ADMIN</span>
+    </div>
+    <div class="admin-header-right">
+      <span class="admin-user-info">Login sebagai: <span id="adminEmailDisplay"></span></span>
+      <button class="btn-sm btn-ghost" onclick="openChangePass()"><i data-lucide="key" style="width:13px;height:13px;"></i> Ganti Password</button>
+      <button class="btn-sm btn-danger" onclick="doLogout()"><i data-lucide="log-out" style="width:13px;height:13px;"></i> Logout</button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="admin-body">
+
+    <!-- Sidebar -->
+    <nav class="admin-sidebar">
+      <span class="sidebar-label">Menu</span>
+      <button class="sidebar-item active" id="nav-users" onclick="switchTab('users')">
+        <i data-lucide="users"></i> Semua User
+      </button>
+      <button class="sidebar-item" id="nav-admins" onclick="switchTab('admins')">
+        <i data-lucide="user-check"></i> Kelola Admin
+      </button>
+      <div class="sidebar-divider"></div>
+      <span class="sidebar-label">Akun</span>
+      <button class="sidebar-item" onclick="openChangePass()">
+        <i data-lucide="key"></i> Ganti Password
+      </button>
+    </nav>
+
+    <!-- Content -->
+    <main class="admin-content">
+
+      <!-- ===== TAB: USERS ===== -->
+      <section id="tab-users" class="content-section active">
+        <div class="section-header">
+          <h2><i data-lucide="users" style="width:20px;height:20px;"></i> Manajemen User</h2>
+          <button class="btn-sm btn-primary" onclick="loadAllUsers()">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh
+          </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total User</div>
+            <div class="stat-value accent" id="statTotal">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pro Lifetime</div>
+            <div class="stat-value success" id="statLifetime">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pro Berbatas</div>
+            <div class="stat-value" style="color:var(--accent)" id="statTimeBased">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Trial / Expired</div>
+            <div class="stat-value warning" id="statTrial">-</div>
+          </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="filter-bar">
+          <input type="text" id="searchInput" placeholder="Cari email / nama..." oninput="filterUsers()">
+          <select id="filterStatus" onchange="filterUsers()">
+            <option value="all">Semua Status</option>
+            <option value="lifetime">Lifetime</option>
+            <option value="pro">Pro Berbatas</option>
+            <option value="trial">Trial / Expired</option>
+            <option value="expired">Pro Expired</option>
+          </select>
+        </div>
+
+        <!-- Table -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Email & No HP</th>
+                  <th>Nama</th>
+                  <th>Status Langganan</th>
+                  <th>Bergabung</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody">
+                <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text2);">Memuat data user...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== TAB: ADMINS ===== -->
+      <section id="tab-admins" class="content-section">
+        <div class="section-header">
+          <h2><i data-lucide="user-check" style="width:20px;height:20px;"></i> Kelola Admin</h2>
+        </div>
+        <div class="card" style="max-width:500px;">
+          <p style="font-size:0.85rem;color:var(--text2);margin-bottom:16px;">Tambahkan admin yang bisa mengelola user. Admin tidak bisa menambah/hapus admin lain.</p>
+          <div style="display:flex;gap:10px;margin-bottom:20px;">
+            <input type="email" id="newAdminEmailInput" placeholder="email@contoh.com" style="flex:1;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text1);font-family:Inter,sans-serif;font-size:0.9rem;outline:none;">
+            <button class="btn-sm btn-primary" style="padding:0 18px;" onclick="addAdmin()"><i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah</button>
+          </div>
+          <div id="adminListContainer">
+            <p style="color:var(--text2);font-size:0.85rem;">Memuat daftar admin...</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===== MODAL: EDIT SUBSCRIPTION ===== -->
+<div class="modal-overlay hidden" id="subModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3><i data-lucide="edit-3" style="width:16px;height:16px;color:var(--accent);"></i> Edit Langganan User</h3>
+      <button class="modal-close" onclick="closeSubModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div class="modal-form-group">
+      <label>Email User</label>
+      <input type="text" id="subModalEmail" disabled>
+    </div>
+    <div class="modal-form-group">
+      <label>Pilih Paket</label>
+      <select id="subModalSelect">
+        <option value="trial">🔄 Reset Free Trial (3 Hari)</option>
+        <option value="month1">📅 1 Bulan (30 Hari)</option>
+        <option value="month3">📅 3 Bulan (90 Hari)</option>
+        <option value="month6">📅 6 Bulan (180 Hari)</option>
+        <option value="year">🗓️ 1 Tahun (365 Hari)</option>
+        <option value="lifetime">♾️ Lifetime (Selamanya)</option>
+        <option value="revoke">🚫 Cabut Akses (Blokir)</option>
+      </select>
+    </div>
+    <div id="subModalInfo" style="font-size:0.8rem;color:var(--text2);margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSubModal()">Batal</button>
+      <button class="btn-save" onclick="saveSubscription()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: GANTI PASSWORD ===== -->
+<div class="modal-overlay hidden" id="changePassModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3><i data-lucide="key" style="width:16px;height:16px;color:var(--accent);"></i> Ganti Password</h3>
+      <button class="modal-close" onclick="closeChangePass()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div class="modal-form-group">
+      <label>Password Baru</label>
+      <div class="input-wrapper">
+        <input type="password" id="newPassInput" placeholder="Min. 8 karakter...">
+        <button class="toggle-pass" onclick="togglePass('newPassInput', this)">
+          <i data-lucide="eye" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </div>
+    <div class="modal-form-group">
+      <label>Konfirmasi Password Baru</label>
+      <div class="input-wrapper">
+        <input type="password" id="confirmPassInput" placeholder="Ulangi password baru...">
+        <button class="toggle-pass" onclick="togglePass('confirmPassInput', this)">
+          <i data-lucide="eye" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </div>
+    <div class="login-error" id="passError" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeChangePass()">Batal</button>
+      <button class="btn-save" onclick="doChangePassword()">Ganti Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FIREBASE SCRIPTS ===== -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAF6xiX9am_Gmv4xf0f1hRZKlV-w7NzIcM",
+  authDomain: "lebihfittools.firebaseapp.com",
+  databaseURL: "https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "lebihfittools",
+  storageBucket: "lebihfittools.firebasestorage.app",
+  messagingSenderId: "842679721902",
+  appId: "1:842679721902:web:99f81ad767dc372739323f"
+};
+
+firebase.initializeApp(firebaseConfig);
+const fbDb = firebase.database();
+const fbAuth = firebase.auth();
+
+// ===== SUPER ADMIN EMAIL =====
+const SUPER_ADMIN = 'jadilebihfit@gmail.com';
+
+// ===== INIT =====
+lucide.createIcons();
+
+// State
+let allUsersData = {};
+let currentEditSafeEmail = '';
+let currentEditEmail = '';
+
+// Auth state change
+fbAuth.onAuthStateChanged(user => {
+  if (user) {
+    if (user.email !== SUPER_ADMIN) {
+      // Cek apakah admin biasa
+      const safe = user.email.replace(/[.#$[\]]/g, '_');
+      fbDb.ref(`admins/${safe}`).once('value').then(snap => {
+        if (snap.val() === true) {
+          showDashboard(user);
+        } else {
+          showToast('Akses ditolak. Bukan akun admin.', 'error');
+          fbAuth.signOut();
+          showLoginPage();
+        }
+      });
+    } else {
+      showDashboard(user);
+    }
+  } else {
+    showLoginPage();
+  }
+});
+
+// ===== LOGIN =====
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+
+  if (!email || !password) {
+    showLoginError('Isi email dan password dulu!');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:#0d0f14;"></span> Masuk...';
+  errEl.style.display = 'none';
+
+  try {
+    await fbAuth.signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged akan handle sisanya
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="log-in" style="width:18px;height:18px;"></i> Masuk ke Admin Panel';
+    lucide.createIcons();
+    let msg = 'Login gagal. Cek email dan password.';
+    if (err.code === 'auth/user-not-found') msg = 'Email tidak ditemukan.';
+    else if (err.code === 'auth/wrong-password') msg = 'Password salah.';
+    else if (err.code === 'auth/invalid-email') msg = 'Format email tidak valid.';
+    showLoginError(msg);
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function showLoginPage() {
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('adminDashboard').style.display = 'none';
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="log-in" style="width:18px;height:18px;"></i> Masuk ke Admin Panel';
+  lucide.createIcons();
+}
+
+function showDashboard(user) {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('adminDashboard').style.display = 'flex';
+  document.getElementById('adminEmailDisplay').textContent = user.email;
+  lucide.createIcons();
+  loadAllUsers();
+  if (user.email === SUPER_ADMIN) {
+    loadAdmins();
+  }
+}
+
+function doLogout() {
+  if (!confirm('Yakin mau logout?')) return;
+  fbAuth.signOut();
+}
+
+// ===== TABS =====
+function switchTab(tab) {
+  document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.getElementById(`nav-${tab}`).classList.add('active');
+  lucide.createIcons();
+}
+
+// ===== LOAD ALL USERS =====
+async function loadAllUsers() {
+  const tbody = document.getElementById('userTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text2);">Memuat data user...</td></tr>';
+  
+  try {
+    const snap = await fbDb.ref('users').once('value');
+    const users = snap.val();
+    
+    if (!users) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text2);">Belum ada user yang daftar.</td></tr>';
+      updateStats({});
+      return;
+    }
+    
+    allUsersData = users;
+    updateStats(users);
+    renderUserTable(users);
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--danger);">Gagal memuat data: ${err.message}</td></tr>`;
+  }
+}
+
+function updateStats(users) {
+  const keys = Object.keys(users);
+  let lifetime = 0, timeBased = 0, trial = 0;
+  const now = Date.now();
+  
+  keys.forEach(k => {
+    const meta = (users[k] || {}).lf_user_meta || {};
+    if (meta.isPro) lifetime++;
+    else if (meta.proUntil && new Date(meta.proUntil).getTime() > now) timeBased++;
+    else trial++;
+  });
+  
+  document.getElementById('statTotal').textContent = keys.length;
+  document.getElementById('statLifetime').textContent = lifetime;
+  document.getElementById('statTimeBased').textContent = timeBased;
+  document.getElementById('statTrial').textContent = trial;
+}
+
+function getStatusInfo(meta) {
+  const now = Date.now();
+  if (!meta) return { label: 'Trial', type: 'trial' };
+  if (meta.isPro) return { label: 'Lifetime', type: 'lifetime' };
+  if (meta.proUntil) {
+    const until = new Date(meta.proUntil).getTime();
+    if (until > now) return { label: `Pro s.d. ${meta.proUntil}`, type: 'pro' };
+    else return { label: `Expired ${meta.proUntil}`, type: 'expired' };
+  }
+  return { label: 'Trial / Expired', type: 'trial' };
+}
+
+function renderUserTable(users) {
+  const tbody = document.getElementById('userTableBody');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filterStatus = document.getElementById('filterStatus').value;
+  const now = Date.now();
+  
+  let rows = '';
+  const keys = Object.keys(users);
+  
+  if (keys.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text2);">Belum ada user.</td></tr>';
+    return;
+  }
+
+  keys.forEach(safeEmail => {
+    const u = users[safeEmail] || {};
+    const profile = u.lf_profile || {};
+    const meta = u.lf_user_meta || {};
+    const phone = u.lf_user_phone || '-';
+    const origEmail = profile.email || safeEmail.replace(/_at_/g, '@').replace(/_dot_/g, '.').replace(/_/g, '.');
+    const name = profile.name || profile.lf_user_name || '—';
+    const joinedAt = meta.createdAt ? new Date(meta.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+    
+    const status = getStatusInfo(meta);
+    
+    // Filter by status
+    if (filterStatus !== 'all' && status.type !== filterStatus) return;
+    
+    // Filter by search
+    if (search && !origEmail.toLowerCase().includes(search) && !name.toLowerCase().includes(search)) return;
+    
+    rows += `
+      <tr>
+        <td>
+          <div style="font-weight:500;">${origEmail}</div>
+          <div style="font-size:0.75rem;color:var(--text2);">${phone}</div>
+        </td>
+        <td>${name}</td>
+        <td><span class="badge badge-${status.type}">${status.label}</span></td>
+        <td style="color:var(--text2);font-size:0.82rem;">${joinedAt}</td>
+        <td>
+          <button class="btn-sm btn-warning" onclick="openSubModal('${safeEmail}', '${origEmail}')">
+            <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = rows || '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2);">Tidak ada user yang cocok.</td></tr>';
+  lucide.createIcons();
+}
+
+function filterUsers() {
+  renderUserTable(allUsersData);
+}
+
+// ===== SUBSCRIPTION MODAL =====
+function openSubModal(safeEmail, origEmail) {
+  currentEditSafeEmail = safeEmail;
+  currentEditEmail = origEmail;
+  document.getElementById('subModalEmail').value = origEmail;
+  
+  const meta = (allUsersData[safeEmail] || {}).lf_user_meta || {};
+  const select = document.getElementById('subModalSelect');
+  
+  if (meta.isPro) select.value = 'lifetime';
+  else if (meta.proUntil) select.value = 'month1';
+  else select.value = 'trial';
+  
+  updateSubModalInfo();
+  document.getElementById('subModal').classList.remove('hidden');
+}
+
+function closeSubModal() {
+  document.getElementById('subModal').classList.add('hidden');
+}
+
+document.getElementById('subModalSelect').addEventListener('change', updateSubModalInfo);
+
+function updateSubModalInfo() {
+  const val = document.getElementById('subModalSelect').value;
+  const info = document.getElementById('subModalInfo');
+  const msgs = {
+    trial: 'Reset masa trial user menjadi 3 hari dari sekarang.',
+    month1: `Akses Pro hingga: ${getDateStr(30)}`,
+    month3: `Akses Pro hingga: ${getDateStr(90)}`,
+    month6: `Akses Pro hingga: ${getDateStr(180)}`,
+    year: `Akses Pro hingga: ${getDateStr(365)}`,
+    lifetime: 'Akses Pro selamanya tanpa batas waktu.',
+    revoke: '⚠️ User akan diblokir total dan tidak bisa mengakses aplikasi.'
+  };
+  info.textContent = msgs[val] || '';
+  info.style.display = 'block';
+  info.style.color = val === 'revoke' ? 'var(--danger)' : 'var(--text2)';
+}
+
+function getDateStr(addDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + addDays);
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+async function saveSubscription() {
+  if (!currentEditSafeEmail) return;
+  const val = document.getElementById('subModalSelect').value;
+  const metaRef = fbDb.ref(`users/${currentEditSafeEmail}/lf_user_meta`);
+  
+  let updateData = { isPro: false, proUntil: null };
+  
+  if (val === 'lifetime') {
+    updateData = { isPro: true, proUntil: null };
+  } else if (val === 'trial') {
+    updateData = { isPro: false, proUntil: null, createdAt: Date.now() };
+  } else if (val === 'revoke') {
+    updateData = { isPro: false, proUntil: null, createdAt: 0 };
+  } else {
+    const days = { month1: 30, month3: 90, month6: 180, year: 365 }[val];
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    updateData = { isPro: false, proUntil: d.toISOString().split('T')[0] };
+  }
+  
+  try {
+    await metaRef.update(updateData);
+    showToast('✅ Langganan berhasil diperbarui!', 'success');
+    closeSubModal();
+    loadAllUsers();
+  } catch (err) {
+    showToast('❌ Gagal memperbarui: ' + err.message, 'error');
+  }
+}
+
+// ===== ADMINS =====
+async function loadAdmins() {
+  const container = document.getElementById('adminListContainer');
+  try {
+    const snap = await fbDb.ref('admins').once('value');
+    const admins = snap.val() || {};
+    const keys = Object.keys(admins);
+    
+    if (keys.length === 0) {
+      container.innerHTML = '<p style="color:var(--text2);font-size:0.85rem;">Belum ada admin tambahan.</p>';
+      return;
+    }
+    
+    container.innerHTML = keys.map(safe => `
+      <div class="admin-list-item">
+        <span>${safe.replace(/_at_/g, '@').replace(/_dot_/g, '.').replace(/_/g, '.')}</span>
+        <button class="btn-sm btn-danger" onclick="removeAdmin('${safe}')"><i data-lucide="trash-2" style="width:12px;height:12px;"></i> Hapus</button>
+      </div>
+    `).join('');
+    lucide.createIcons();
+  } catch (err) {
+    container.innerHTML = '<p style="color:var(--danger);font-size:0.85rem;">Gagal memuat admin.</p>';
+  }
+}
+
+async function addAdmin() {
+  const input = document.getElementById('newAdminEmailInput');
+  const email = input.value.trim().toLowerCase();
+  if (!email.includes('@') || !email.includes('.')) {
+    showToast('Email tidak valid!', 'error');
+    return;
+  }
+  const safe = email.replace(/[.#$[\]]/g, '_');
+  try {
+    await fbDb.ref(`admins/${safe}`).set(true);
+    input.value = '';
+    showToast(`Admin ${email} berhasil ditambahkan!`, 'success');
+    loadAdmins();
+  } catch (err) {
+    showToast('Gagal menambah admin: ' + err.message, 'error');
+  }
+}
+
+async function removeAdmin(safeEmail) {
+  if (!confirm('Yakin hapus admin ini?')) return;
+  try {
+    await fbDb.ref(`admins/${safeEmail}`).remove();
+    showToast('Admin dihapus.', 'success');
+    loadAdmins();
+  } catch (err) {
+    showToast('Gagal menghapus admin.', 'error');
+  }
+}
+
+// ===== CHANGE PASSWORD =====
+function openChangePass() {
+  document.getElementById('newPassInput').value = '';
+  document.getElementById('confirmPassInput').value = '';
+  document.getElementById('passError').style.display = 'none';
+  document.getElementById('changePassModal').classList.remove('hidden');
+}
+function closeChangePass() {
+  document.getElementById('changePassModal').classList.add('hidden');
+}
+
+async function doChangePassword() {
+  const newPass = document.getElementById('newPassInput').value;
+  const confirmPass = document.getElementById('confirmPassInput').value;
+  const errEl = document.getElementById('passError');
+  
+  errEl.style.display = 'none';
+  
+  if (newPass.length < 8) {
+    errEl.textContent = 'Password minimal 8 karakter!';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (newPass !== confirmPass) {
+    errEl.textContent = 'Konfirmasi password tidak cocok!';
+    errEl.style.display = 'block';
+    return;
+  }
+  
+  try {
+    await fbAuth.currentUser.updatePassword(newPass);
+    showToast('✅ Password berhasil diubah!', 'success');
+    closeChangePass();
+  } catch (err) {
+    let msg = 'Gagal mengubah password.';
+    if (err.code === 'auth/requires-recent-login') msg = 'Sesi sudah lama. Logout dan login ulang dulu, baru ganti password.';
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+}
+
+// ===== HELPERS =====
+function togglePass(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  btn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" style="width:16px;height:16px;"></i>`;
+  lucide.createIcons();
+}
+
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  clearTimeout(toastTimer);
+  
+  const icons = { success: 'check-circle', error: 'x-circle', info: 'info' };
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<i data-lucide="${icons[type] || 'info'}" style="width:16px;height:16px;"></i>${msg}`;
+  document.body.appendChild(toast);
+  lucide.createIcons();
+  
+  toastTimer = setTimeout(() => toast.remove(), 3500);
+}
+</script>
+</body>
+</html>
