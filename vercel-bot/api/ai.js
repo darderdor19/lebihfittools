@@ -118,7 +118,7 @@ module.exports = async function handler(req, res) {
         model: selectedModel,
         messages: messages,
         temperature: 0.2,
-        max_tokens: 2500
+        max_tokens: 1024
       };
       if (json) {
         body.response_format = { type: 'json_object' };
