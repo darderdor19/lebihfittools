@@ -361,9 +361,9 @@ Instruksi:
    - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
 4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
-5. Lakukan kalkulasi WAJIB: (Nilai gizi per 100g) * (Estimasi Berat Gram / 100). Jika porsi bukan 100g, JANGAN berikan nilai 100g!
+5. Lakukan kalkulasi WAJIB: (Nilai gizi per 100g) * (Estimasi Berat Gram / 100). Jika porsi bukan 100g, JANGAN berikan nilai 100g! Wajib kalikan juga SEMUA mikronutrisi!
 6. Berikan jawaban dalam JSON dengan format berikut:
-{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian (misal: 165 kcal * 5 = 825 kcal)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
+{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
   const content = [{ type: 'text', text: prompt }];
@@ -445,9 +445,9 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
        - Protein = 109 + 0 = 109g
        - Karbohidrat = 0 + 50 = 50g
 6. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
-8. WAJIB KALIKAN SEMUA GIZI PER 100g DENGAN FAKTOR PENGALI (Berat Gram / 100). JIKA PORSI 500g, KALIKAN SEMUA NILAI DENGAN 5! JANGAN BERIKAN NILAI 100g JIKA PORSI BUKAN 100g!
+8. WAJIB KALIKAN SEMUA GIZI PER 100g (TERMASUK MIKRONUTRISI: sodium, kalsium, besi, vitC, dll) DENGAN FAKTOR PENGALI (Berat Gram / 100). JIKA PORSI 500g, KALIKAN SEMUA NILAI DENGAN 5! JANGAN BERIKAN NILAI 100g JIKA PORSI BUKAN 100g!
 9. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
-{"calculation":"tuliskan langkah perkalian disini (misal: 165 kcal * 5 = 825 kcal)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
+{"calculation":"tuliskan langkah perkalian makro DAN MIKRO disini (misal: kalori 165*6=990, sodium 74*6=444, kalsium 15*6=90)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
 Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.1-8b-instant');
   
