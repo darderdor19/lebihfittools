@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyvX93Dx936kVdgUcx_dFJu1WJBvkS0jNtxW9PnhAaLnWvxN1p1-77mCfgOHmd9bDll/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwu6alUbDmowVe7qbEmzWP7DLvCTO1OffBK3IL6uM2QMZ-X3fMqVkfpapb5k1GaVvXP/exec";
 const ADMIN_TELEGRAM = "https://t.me/lebihfit"; // Link Telegram untuk Upgrade Pro/Support
 let tempAuthEmail = "";
 let tempAuthName = "";
@@ -127,6 +127,18 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
 
     clearAuthUser();
     setAuthUser(email, name);
+
+    // Send data to Google Spreadsheet via GAS Web App (Fire and forget)
+    try {
+        fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ email: email, name: name, phone: phone })
+        }).catch(err => console.error("GAS fetch error:", err));
+    } catch (e) {
+        console.error("Error sending to GAS:", e);
+    }
 
     // Save phone to Firebase if provided
     if (phone) {
