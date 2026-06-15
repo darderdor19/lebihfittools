@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyvX93Dx936kVdgUcx_dFJu1WJBvkS0jNtxW9PnhAaLnWvxN1p1-77mCfgOHmd9bDll/exec";
-const ADMIN_WHATSAPP = "6285183060608"; // Ganti dengan nomor WhatsApp admin LebihFit (format internasional tanpa +)
+const ADMIN_TELEGRAM = "https://t.me/lebihfit"; // Link Telegram untuk Upgrade Pro/Support
 let tempAuthEmail = "";
 let tempAuthName = "";
 
@@ -410,8 +410,7 @@ function showTrialExpiredOverlay(email, createdAt) {
 
     const upgradeBtn = document.getElementById('btnUpgradeProTrial');
     if (upgradeBtn) {
-        const message = encodeURIComponent(`Halo Admin LebihFit, saya ingin upgrade akun saya (${email}) ke paket Pro.`);
-        upgradeBtn.href = `https://wa.me/${ADMIN_WHATSAPP}?text=${message}`;
+        upgradeBtn.href = ADMIN_TELEGRAM;
     }
 
     const appContainer = document.getElementById('app');
@@ -440,8 +439,7 @@ function renderMembershipStatus() {
 
     if (!badge || !expiryText || !upgradeBtn) return;
 
-    const message = encodeURIComponent(`Halo Admin LebihFit, saya ingin upgrade akun saya (${authUser.email}) ke paket Pro.`);
-    upgradeBtn.href = `https://wa.me/${ADMIN_WHATSAPP}?text=${message}`;
+    upgradeBtn.href = ADMIN_TELEGRAM;
 
     if (cachedIsPro) {
         badge.textContent = 'Pro Member';
