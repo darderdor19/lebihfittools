@@ -691,7 +691,7 @@ async function onFoodPortionInput(chatId, userId, text) {
 async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY is not set in Vercel environment variables.');
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
   
   const parts = [{ text: prompt }];
   if (Array.isArray(images)) {
