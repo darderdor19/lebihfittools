@@ -152,17 +152,28 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
     // Cache trial info
     const safeEmail = email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
     if (fbDb) {
+        // Cek meta user
         const snap = await fbDb.ref(`users/${safeEmail}/lf_user_meta`).once('value');
         const meta = snap.val();
         if (!meta) {
-            // First-time login → write createdAt
             const now = Date.now();
             await fbDb.ref(`users/${safeEmail}/lf_user_meta`).set({ createdAt: now, isPro: false });
             localStorage.setItem('lf_user_created_at', JSON.stringify(now));
             localStorage.setItem('lf_user_is_pro', JSON.stringify(false));
+            localStorage.removeItem('lf_user_pro_until');
         } else {
             localStorage.setItem('lf_user_created_at', JSON.stringify(meta.createdAt));
             localStorage.setItem('lf_user_is_pro', JSON.stringify(meta.isPro || false));
+            if (meta.proUntil) localStorage.setItem('lf_user_pro_until', JSON.stringify(meta.proUntil));
+            else localStorage.removeItem('lf_user_pro_until');
+        }
+        
+        // Cek admin status
+        const adminSnap = await fbDb.ref(`admins/${safeEmail}`).once('value');
+        if (email === 'jadilebihfit@gmail.com' || adminSnap.val() === true) {
+            document.getElementById('navAdminBtn').style.display = '';
+        } else {
+            document.getElementById('navAdminBtn').style.display = 'none';
         }
     } else {
         // No Firebase DB: use local first-run tracking
@@ -363,6 +374,7 @@ async function checkTrialStatus() {
     const safeEmail = email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
     let createdAt = null;
     let isPro = false;
+    let proUntil = null;
 
     if (fbDb) {
         try {
@@ -371,8 +383,11 @@ async function checkTrialStatus() {
             if (meta) {
                 createdAt = meta.createdAt;
                 isPro = meta.isPro || false;
+                proUntil = meta.proUntil || null;
                 localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
                 localStorage.setItem('lf_user_is_pro', JSON.stringify(isPro));
+                if (proUntil) localStorage.setItem('lf_user_pro_until', JSON.stringify(proUntil));
+                else localStorage.removeItem('lf_user_pro_until');
             }
         } catch (err) {
             console.error('[checkTrialStatus] Failed to fetch meta from Firebase:', err);
@@ -390,9 +405,18 @@ async function checkTrialStatus() {
         isPro = localStorage.getItem('lf_user_is_pro') === 'true';
     }
 
-    const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days
+    const cachedProUntil = localStorage.getItem('lf_user_pro_until');
+    if (!proUntil && cachedProUntil) proUntil = JSON.parse(cachedProUntil);
+
     const now = Date.now();
-    const isExpired = !isPro && (now - createdAt) > trialDuration;
+    let isTimeBasedPro = false;
+    if (proUntil) {
+        const untilDate = new Date(proUntil).getTime();
+        if (untilDate > now) isTimeBasedPro = true;
+    }
+
+    const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days
+    const isExpired = !isPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
 
     if (isExpired) {
         showTrialExpiredOverlay(email, createdAt);
@@ -443,6 +467,7 @@ function renderMembershipStatus() {
 
     const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
     const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+    const cachedProUntil = localStorage.getItem('lf_user_pro_until');
 
     const badge = document.getElementById('membershipStatusBadge');
     const expiryRow = document.getElementById('membershipExpiryRow');
@@ -459,6 +484,29 @@ function renderMembershipStatus() {
         badge.style.color = '#10b981';
         expiryText.textContent = 'Selamanya (Akses Penuh)';
         upgradeBtn.style.display = 'none';
+    } else if (cachedProUntil) {
+        const untilDate = new Date(JSON.parse(cachedProUntil));
+        const now = Date.now();
+        
+        badge.textContent = 'Pro Member';
+        badge.style.background = 'rgba(16, 185, 129, 0.1)';
+        badge.style.color = '#10b981';
+        
+        if (untilDate.getTime() > now) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            expiryText.textContent = `Berlaku s.d. ${untilDate.toLocaleDateString('id-ID', options)}`;
+            expiryText.style.color = 'var(--text2)';
+            upgradeBtn.style.display = '';
+            upgradeBtn.innerHTML = 'Perpanjang Langganan';
+        } else {
+            badge.textContent = 'Pro Kedaluwarsa';
+            badge.style.background = 'rgba(239, 68, 68, 0.1)';
+            badge.style.color = '#ef4444';
+            expiryText.textContent = 'Telah Berakhir';
+            expiryText.style.color = '#ef4444';
+            upgradeBtn.style.display = '';
+            upgradeBtn.innerHTML = 'Perbarui Langganan';
+        }
     } else {
         badge.textContent = 'Free Trial (3 Hari)';
         badge.style.background = 'rgba(245, 158, 11, 0.1)';

@@ -669,7 +669,10 @@
           <span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span>
         </button>
         <button class="nav-btn" onclick="openConsultantPage()">
-          <span class="nav-icon"><i data-lucide="message-square" style="color: var(--accent);"></i></span><span class="nav-label">AI Consultant</span>
+          <i data-lucide="bot"></i> Konsultan AI
+        </button>
+        <button id="navAdminBtn" class="nav-btn" data-page="admin" onclick="showPage('admin')" style="display:none; color: var(--danger);">
+          <i data-lucide="shield"></i> Admin Panel
         </button>
         <a href="https://t.me/jadilebihfit_bot" target="_blank" class="nav-btn" style="text-decoration: none;">
           <span class="nav-icon"><i data-lucide="send" style="color: var(--accent);"></i></span><span class="nav-label">Bot Telegram</span>
@@ -1769,6 +1772,43 @@
           <p class="setting-desc">LebihFit v1.0 — Smart nutrition tracker. Dibuat dan dikembangkan oleh <b><a href="https://instagram.com/jadilebihfit" target="_blank" style="color: var(--accent);">@jadilebihfit</a></b>.</p>
         </div>
       </div>
+      <!-- PAGE: ADMIN PANEL -->
+      <div id="page-admin" class="page">
+        <h2 class="page-title"><i data-lucide="shield" style="color:var(--danger)"></i> Admin Panel</h2>
+        <p style="color:var(--text2);margin-bottom:24px;font-size:0.95rem;">Dashboard untuk mengelola user dan langganan.</p>
+        
+        <div class="section-card">
+          <h3 class="section-title"><i data-lucide="users"></i> Daftar User</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:0.9rem;" id="adminUsersTable">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border);color:var(--text2);text-align:left;">
+                  <th style="padding:10px;">Email</th>
+                  <th style="padding:10px;">Nama</th>
+                  <th style="padding:10px;">Status Pro</th>
+                  <th style="padding:10px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersList">
+                <tr><td colspan="4" style="text-align:center;padding:20px;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Super Admin Only: Manage Admins -->
+        <div class="section-card" id="superAdminSection" style="display:none;margin-top:20px;">
+          <h3 class="section-title"><i data-lucide="user-check"></i> Kelola Admin</h3>
+          <p style="font-size:0.85rem;color:var(--text2);margin-bottom:12px;">Tambahkan email admin pembantu (Hanya Super Admin yang bisa melihat ini).</p>
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <input type="email" id="newAdminEmail" class="form-input" placeholder="Email admin baru..." style="flex:1;">
+            <button class="btn-primary" onclick="addAdmin()" style="width:auto;"><i data-lucide="plus"></i> Tambah</button>
+          </div>
+          <ul id="adminList" style="list-style:none;padding:0;margin:0;">
+            <li style="color:var(--text2);font-size:0.85rem;">Memuat daftar admin...</li>
+          </ul>
+        </div>
+      </div>
 
     </main>
   </div>
@@ -1850,6 +1890,33 @@
           <button type="submit" class="btn-primary" style="flex:1;">Simpan Update</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ADMIN: SET SUBSCRIPTION MODAL -->
+  <div id="adminSubModal" class="modal-overlay hidden" style="z-index:9999999;">
+    <div class="modal-card" style="max-width:400px;">
+      <div class="modal-header">
+        <h3><i data-lucide="edit-3" style="color:var(--accent);"></i> Edit Langganan</h3>
+        <button class="modal-close" onclick="closeAdminSubModal()"><i data-lucide="x"></i></button>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>User Email</label>
+        <input type="text" id="adminSubEmail" class="form-input" disabled style="background:var(--bg3);">
+      </div>
+      <div class="form-group">
+        <label>Pilih Paket Langganan</label>
+        <select id="adminSubSelect" class="form-input">
+          <option value="trial">Free Trial (Reset 3 Hari)</option>
+          <option value="month">1 Bulan</option>
+          <option value="year">1 Tahun</option>
+          <option value="lifetime">Lifetime (Akses Selamanya)</option>
+          <option value="revoke">Cabut Akses (Blokir)</option>
+        </select>
+      </div>
+      <div class="form-actions" style="margin-top:20px;">
+        <button class="btn-primary" onclick="saveAdminSub()" style="width:100%;">Simpan Perubahan</button>
+      </div>
     </div>
   </div>
 
@@ -1949,5 +2016,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="core.js?v=18"></script>
   <script src="app.js?v=18"></script>
+  <script src="admin.js?v=1"></script>
 </body>
 </html>
