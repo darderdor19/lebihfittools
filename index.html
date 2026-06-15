@@ -1190,42 +1190,6 @@
             <p class="page-subtitle">Kelola API dan data kamu</p>
           </div>
         </div>
-        <div class="section-card">
-          <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;"></i> Pengaturan AI</h3>
-          <p class="setting-desc">Kelola pengaturan model kecerdasan buatan (AI) yang digunakan untuk mendampingi program latihan kamu.</p>
-          <div class="form-group" style="margin-top: 12px;">
-            <label>Model AI Consultant</label>
-            <div class="custom-select-wrapper" id="openRouterModelSelectWrapper">
-              <button type="button" class="custom-select-trigger" id="customModelSelectTrigger">
-                <span id="customModelSelectValue">Server Ultra (Llama 3.3 70B - Rekomendasi Utama)</span>
-                <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
-              </button>
-              <div class="custom-options-menu" id="customModelOptionsMenu">
-                <div class="custom-option selected" data-value="llama-3.3-70b-versatile">
-                  <span class="option-text">Server Ultra (Llama 3.3 70B - Rekomendasi Utama)</span>
-                  <i data-lucide="check" class="check-icon"></i>
-                </div>
-                <div class="custom-option" data-value="deepseek-r1-distill-llama-70b">
-                  <span class="option-text">Server Premium (DeepSeek R1 - Detil & Penalaran)</span>
-                  <i data-lucide="check" class="check-icon hidden"></i>
-                </div>
-                <div class="custom-option" data-value="llama-3.1-8b-instant">
-                  <span class="option-text">Server Fast (Llama 3.1 8B - Super Cepat)</span>
-                  <i data-lucide="check" class="check-icon hidden"></i>
-                </div>
-                <div class="custom-option" data-value="mixtral-8x7b-32768">
-                  <span class="option-text">Server Standard (Mixtral 8x7B - Stabil)</span>
-                  <i data-lucide="check" class="check-icon hidden"></i>
-                </div>
-              </div>
-              <input type="hidden" id="openRouterModelSelect" value="llama-3.3-70b-versatile">
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="btn-primary" onclick="saveApiKey()"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan API Keys</button>
-          </div>
-          <div id="apiStatus" class="api-status"></div>
-        </div>
         <!-- TELEGRAM CONNECT -->
         <div class="section-card" id="telegramSection">
           <h3 class="section-title"><i data-lucide="send" style="display:inline-block;vertical-align:text-bottom;"></i> Telegram Bot</h3>
@@ -1415,7 +1379,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="core.js?v=14"></script>
-  <script src="app.js?v=14"></script>
+  <script src="core.js?v=15"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

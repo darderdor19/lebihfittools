@@ -17,14 +17,6 @@ let tempAuthName = "";
 async function initApp() {
     const profile = getProfile();
     const authUser = getAuthUser();
-    
-    initCustomModelSelect();
-    const openRouterModel = getOpenRouterModel();
-    if (openRouterModel) {
-        document.getElementById('openRouterModelSelect').value = openRouterModel;
-        if (window.syncCustomModelSelect) window.syncCustomModelSelect(openRouterModel);
-    }
-
     updateApiStatus(true);
 
     if (!authUser) {
@@ -3427,13 +3419,6 @@ document.getElementById('recalcForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Settings
-function saveApiKey() {
-    const openRouterModel = document.getElementById('openRouterModelSelect').value;
-    setOpenRouterModel(openRouterModel);
-    showToast('Pengaturan AI disimpan', 'success');
-}
-
 function openConsultantPage() {
     window.open('consultant.html?v=' + Date.now(), '_blank');
 }
@@ -3444,6 +3429,7 @@ function forceRefreshPage() {
 
 function updateApiStatus(hasKey) {
     const div = document.getElementById('apiStatus');
+    if (!div) return;
     if (hasKey) {
         div.innerHTML = '<i data-lucide="check-circle" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;color:var(--success)"></i> API Key tersimpan. Fitur siap digunakan.';
         div.className = 'api-status ok';
@@ -5725,59 +5711,4 @@ function renderPhysicalAnalysisUI(data) {
 
     return html;
 }
-
-function initCustomModelSelect() {
-    const trigger = document.getElementById('customModelSelectTrigger');
-    const menu = document.getElementById('customModelOptionsMenu');
-    const hiddenInput = document.getElementById('openRouterModelSelect');
-    const displayValue = document.getElementById('customModelSelectValue');
-    const options = document.querySelectorAll('.custom-option');
-
-    if (!trigger || !menu || !hiddenInput) return;
-
-    // Synchronize UI from the value of hiddenInput
-    function syncCustomSelect(val) {
-        options.forEach(opt => {
-            const optVal = opt.getAttribute('data-value');
-            const check = opt.querySelector('.check-icon');
-            if (optVal === val) {
-                opt.classList.add('selected');
-                if (check) check.classList.remove('hidden');
-                if (displayValue) displayValue.textContent = opt.querySelector('.option-text').textContent;
-            } else {
-                opt.classList.remove('selected');
-                if (check) check.classList.add('hidden');
-            }
-        });
-    }
-
-    // Initialize state
-    syncCustomSelect(hiddenInput.value);
-
-    // Toggle menu
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        menu.classList.toggle('show');
-    });
-
-    // Option selection
-    options.forEach(opt => {
-        opt.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const val = opt.getAttribute('data-value');
-            hiddenInput.value = val;
-            syncCustomSelect(val);
-            menu.classList.remove('show');
-        });
-    });
-
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
-            menu.classList.remove('show');
-        }
-    });
-
-    // Expose synchronization globally so it can be updated programmatically
-    window.syncCustomModelSelect = syncCustomSelect;
-}
+
