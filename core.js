@@ -303,7 +303,7 @@ function getMaskedAIError(originalError) {
   }
 }
 
-async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', isVision = false, isGroqVision = false) {
+async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', isVision = false, isGroqVision = false, retries = 1) {
   let endpoint = '/api/ai';
   if (window.location.hostname !== 'lebihfittools.vercel.app') {
     endpoint = 'https://lebihfittools.vercel.app/api/ai';
@@ -312,7 +312,7 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
   const body = { model, messages, json, isVision };
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout
   
   let res;
   try {
@@ -334,7 +334,28 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
   try {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
+        const errMsg = err.error?.message || `HTTP ${res.status}`;
+        
+        // Handle Gemini Rate Limits gracefully
+        if (res.status === 429 || errMsg.includes('Quota exceeded') || errMsg.includes('retry')) {
+           if (retries > 0) {
+               console.warn("[lebihfit] Rate limit hit, attempting automatic retry...", errMsg);
+               const match = errMsg.match(/retry in ([\d\.]+)s/i);
+               let waitMs = 5000; 
+               if (match && match[1]) {
+                   waitMs = (parseFloat(match[1]) + 1) * 1000;
+               }
+               if (waitMs > 35000) waitMs = 10000; 
+               
+               if (typeof showToast === 'function') {
+                   showToast(`Sistem AI sedang antre... (Delay ${Math.round(waitMs/1000)}s)`, 'info');
+               }
+               
+               await new Promise(resolve => setTimeout(resolve, waitMs));
+               return await callAI(messages, json, model, isVision, isGroqVision, retries - 1);
+           }
+        }
+        throw new Error(errMsg);
       }
       const data = await res.json();
       if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
