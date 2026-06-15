@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyvX93Dx936kVdgUcx_dFJu1WJBvkS0jNtxW9PnhAaLnWvxN1p1-77mCfgOHmd9bDll/exec";
+const ADMIN_WHATSAPP = "6285183060608"; // Ganti dengan nomor WhatsApp admin LebihFit (format internasional tanpa +)
 let tempAuthEmail = "";
 let tempAuthName = "";
 
@@ -328,6 +329,145 @@ function resetAuth() {
     _pendingGoogleUser = null;
 }
 
+// ===== FREE TRIAL CHECKER =====
+async function checkTrialStatus() {
+    const authUser = getAuthUser();
+    if (!authUser) return false;
+
+    const email = authUser.email;
+    const safeEmail = email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
+    let createdAt = null;
+    let isPro = false;
+
+    if (fbDb) {
+        try {
+            const snap = await fbDb.ref(`users/${safeEmail}/lf_user_meta`).once('value');
+            const meta = snap.val();
+            if (meta) {
+                createdAt = meta.createdAt;
+                isPro = meta.isPro || false;
+                localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
+                localStorage.setItem('lf_user_is_pro', JSON.stringify(isPro));
+            }
+        } catch (err) {
+            console.error('[checkTrialStatus] Failed to fetch meta from Firebase:', err);
+        }
+    }
+
+    if (!createdAt) {
+        const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+        if (cachedCreatedAt) {
+            createdAt = parseInt(JSON.parse(cachedCreatedAt));
+        } else {
+            createdAt = Date.now();
+            localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
+        }
+        isPro = localStorage.getItem('lf_user_is_pro') === 'true';
+    }
+
+    const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days
+    const now = Date.now();
+    const isExpired = !isPro && (now - createdAt) > trialDuration;
+
+    if (isExpired) {
+        showTrialExpiredOverlay(email, createdAt);
+        return true;
+    } else {
+        const overlay = document.getElementById('trialExpiredOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        return false;
+    }
+}
+
+function showTrialExpiredOverlay(email, createdAt) {
+    const overlay = document.getElementById('trialExpiredOverlay');
+    if (!overlay) return;
+
+    const emailEl = document.getElementById('trialExpiredEmail');
+    if (emailEl) emailEl.textContent = email;
+
+    const dateEl = document.getElementById('trialExpiredDate');
+    if (dateEl) {
+        const trialDuration = 3 * 24 * 60 * 60 * 1000;
+        const expiryTime = createdAt + trialDuration;
+        const expiryDate = new Date(expiryTime);
+        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        dateEl.textContent = expiryDate.toLocaleDateString('id-ID', options);
+    }
+
+    const upgradeBtn = document.getElementById('btnUpgradeProTrial');
+    if (upgradeBtn) {
+        const message = encodeURIComponent(`Halo Admin LebihFit, saya ingin upgrade akun saya (${email}) ke paket Pro.`);
+        upgradeBtn.href = `https://wa.me/${ADMIN_WHATSAPP}?text=${message}`;
+    }
+
+    const appContainer = document.getElementById('app');
+    if (appContainer) appContainer.classList.add('hidden');
+
+    const landingPage = document.getElementById('landingPage');
+    if (landingPage) landingPage.classList.add('hidden');
+
+    overlay.classList.remove('hidden');
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function renderMembershipStatus() {
+    const authUser = getAuthUser();
+    if (!authUser) return;
+
+    const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+    const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+
+    const badge = document.getElementById('membershipStatusBadge');
+    const expiryRow = document.getElementById('membershipExpiryRow');
+    const expiryText = document.getElementById('membershipExpiryText');
+    const upgradeBtn = document.getElementById('btnUpgradeProSettings');
+
+    if (!badge || !expiryText || !upgradeBtn) return;
+
+    const message = encodeURIComponent(`Halo Admin LebihFit, saya ingin upgrade akun saya (${authUser.email}) ke paket Pro.`);
+    upgradeBtn.href = `https://wa.me/${ADMIN_WHATSAPP}?text=${message}`;
+
+    if (cachedIsPro) {
+        badge.textContent = 'Pro Member';
+        badge.style.background = 'rgba(16, 185, 129, 0.1)';
+        badge.style.color = '#10b981';
+        expiryText.textContent = 'Selamanya (Akses Penuh)';
+        upgradeBtn.style.display = 'none';
+    } else {
+        badge.textContent = 'Free Trial (3 Hari)';
+        badge.style.background = 'rgba(245, 158, 11, 0.1)';
+        badge.style.color = '#f59e0b';
+        upgradeBtn.style.display = '';
+
+        if (cachedCreatedAt) {
+            const createdAt = parseInt(JSON.parse(cachedCreatedAt));
+            const trialDuration = 3 * 24 * 60 * 60 * 1000;
+            const expiryTime = createdAt + trialDuration;
+            const now = Date.now();
+            const timeLeft = expiryTime - now;
+
+            if (timeLeft <= 0) {
+                expiryText.textContent = 'Telah Berakhir';
+                expiryText.style.color = '#ef4444';
+            } else {
+                const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+                const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                if (days > 0) {
+                    expiryText.textContent = `${days} hari ${hours} jam tersisa`;
+                } else {
+                    expiryText.textContent = `${hours} jam tersisa`;
+                }
+                expiryText.style.color = 'var(--text2)';
+            }
+        } else {
+            expiryText.textContent = '-';
+        }
+    }
+}
+
 // Navigation
 
 function showPage(pageId) {
@@ -354,7 +494,10 @@ function showPage(pageId) {
         renderTodayActivities();
         if (window.lucide) lucide.createIcons();
     }
-    if (pageId === 'settings') checkTelegramStatus();
+    if (pageId === 'settings') {
+        checkTelegramStatus();
+        renderMembershipStatus();
+    }
     if (pageId === 'calculator') {
         prefillRecalcForm();
     }
