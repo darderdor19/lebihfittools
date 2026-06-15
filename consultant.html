@@ -2375,7 +2375,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
         }
 
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
-        const model = localStorage.getItem(MODEL_NAME) || 'google/gemini-2.5-flash';
+        const model = localStorage.getItem(MODEL_NAME) || 'anthropic/claude-3.5-sonnet';
         
         // Build payload messages with system context and multimodal support
         const userContext = generateUserContextSummary(queryText);

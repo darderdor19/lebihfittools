@@ -82,7 +82,7 @@ const getApiKey = () => DB.get('lf_apikey');
 const setApiKey = k => DB.set('lf_apikey', k);
 const getVisionKey = () => DB.get('lf_visionkey');
 const setVisionKey = k => DB.set('lf_visionkey', k);
-const getOpenRouterModel = () => DB.get('lf_openroutermodel') || 'google/gemini-2.5-flash';
+const getOpenRouterModel = () => DB.get('lf_openroutermodel') || 'anthropic/claude-3.5-sonnet';
 const setOpenRouterModel = m => DB.set('lf_openroutermodel', m);
 const getAuthUser = () => {
   const email = DB.get('lf_user_email');
