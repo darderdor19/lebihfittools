@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Google Gemini API using GEMINI_API_KEY
-    const geminiKey = 'AQ.Ab8RN6IWzQOU0hk' + 'tb_LE4W-Z1JKoWBQx2QPNxv8zYMrVVsxcHA';
+    const geminiKey = process.env.GEMINI_API_KEY || ('AQ.Ab8RN6IWzQOU0hk' + 'tb_LE4W-Z1JKoWBQx2QPNxv8zYMrVVsxcHA');
     if (!geminiKey) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on Vercel.' });
     }
