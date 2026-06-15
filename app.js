@@ -20,8 +20,11 @@ async function initApp() {
     updateApiStatus(true);
 
     if (!authUser) {
-        document.getElementById('authOverlay').classList.remove('hidden');
+        document.getElementById('landingPage').classList.remove('hidden');
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('authOverlay').classList.add('hidden');
     } else {
+        document.getElementById('landingPage').classList.add('hidden');
         // Sync Firebase in the background
         syncFirebaseToLocal().then(() => {
             const updatedProfile = getProfile();
@@ -214,6 +217,7 @@ async function verifyOTP() {
             clearAuthUser();
             setAuthUser(data.data.email, data.data.name || tempAuthName);
             document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('landingPage').classList.add('hidden');
             showToast("Login Berhasil! Menyinkronkan data...", "info");
             
             // Sync Firebase in background
@@ -4909,11 +4913,21 @@ function handlePhysicalFileSelect(event) {
         }
         
         const reader = new FileReader();
-        reader.onload = function(e) {
-            physicalImagesList.push({
-                name: file.name,
-                base64: e.target.result
-            });
+        reader.onload = async function(e) {
+            try {
+                // Resize image to max 800x800 for upload efficiency
+                const resizedBase64 = await resizeImageBase64(e.target.result, 800, 800);
+                physicalImagesList.push({
+                    name: file.name,
+                    base64: resizedBase64
+                });
+            } catch (err) {
+                console.error("Error resizing image:", err);
+                physicalImagesList.push({
+                    name: file.name,
+                    base64: e.target.result
+                });
+            }
             processed++;
             if (processed === files.length) {
                 renderPhysicalPreviews();
@@ -5705,5 +5719,115 @@ function renderPhysicalAnalysisUI(data) {
     `;
 
     return html;
+}
+
+// ===== LANDING PAGE ACTIONS & DEMO CALCULATOR =====
+function openLoginModal() {
+    document.getElementById('authOverlay').classList.remove('hidden');
+    resetAuth();
+}
+
+function closeLoginModal() {
+    document.getElementById('authOverlay').classList.add('hidden');
+}
+
+function toggleFaq(item) {
+    const isActive = item.classList.contains('active');
+    document.querySelectorAll('.lp-faq-item').forEach(i => i.classList.remove('active'));
+    if (!isActive) {
+        item.classList.add('active');
+    }
+}
+
+async function calculateLpDemo(event) {
+    event.preventDefault();
+    const tb = parseFloat(document.getElementById('lp_tb').value);
+    const bb = parseFloat(document.getElementById('lp_bb').value);
+    const usia = parseFloat(document.getElementById('lp_usia').value);
+    const gender = document.getElementById('lp_gender').value;
+    const aktivitas = document.getElementById('lp_aktivitas').value;
+    const target = document.getElementById('lp_target').value;
+    const catatan = document.getElementById('lp_catatan').value;
+
+    const btnText = document.getElementById('lpCalcText');
+    const btnLoader = document.getElementById('lpCalcLoader');
+    btnText.classList.add('hidden');
+    btnLoader.classList.remove('hidden');
+
+    try {
+        // 1. Calculate BMR
+        let bmr = 0;
+        if (gender === 'pria') {
+            bmr = 88.362 + (13.397 * bb) + (4.799 * tb) - (5.677 * usia);
+        } else {
+            bmr = 447.593 + (9.247 * bb) + (3.098 * tb) - (4.330 * usia);
+        }
+
+        // 2. Calculate TDEE
+        let actFactor = 1.2;
+        if (aktivitas === 'light') actFactor = 1.375;
+        else if (aktivitas === 'moderate') actFactor = 1.55;
+        else if (aktivitas === 'active') actFactor = 1.725;
+        const tdee = bmr * actFactor;
+
+        // 3. Calculate Calorie Goal
+        let calGoal = tdee;
+        if (target === 'cutting_aggressive') calGoal = tdee - 750;
+        else if (target === 'cutting_slow') calGoal = tdee - 400;
+        else if (target === 'bulking_slow') calGoal = tdee + 300;
+        else if (target === 'bulking_aggressive') calGoal = tdee + 600;
+        if (calGoal < 1200) calGoal = 1200;
+
+        // 4. Macros calculation
+        const protein = bb * 2.0; // 2.0g per kg
+        const fat = (calGoal * 0.25) / 9; // 25% fat
+        const carbs = (calGoal - (protein * 4) - (fat * 9)) / 4;
+
+        // 5. Update UI values
+        document.getElementById('lpResCal').textContent = Math.round(calGoal).toLocaleString('id-ID');
+        document.getElementById('lpResTdee').textContent = Math.round(tdee).toLocaleString('id-ID');
+        document.getElementById('lpResBmr').textContent = Math.round(bmr).toLocaleString('id-ID');
+        document.getElementById('lpResProt').textContent = Math.round(protein) + 'g';
+        document.getElementById('lpResCarbs').textContent = Math.round(carbs) + 'g';
+        document.getElementById('lpResFat').textContent = Math.round(fat) + 'g';
+
+        // 6. Request AI advice in background, but show a simulated/fast result instantly first
+        document.getElementById('lpResNotesText').innerHTML = `<i>Merumuskan saran diet dari AI...</i>`;
+        
+        document.getElementById('lpResultPlaceholder').classList.add('hidden');
+        document.getElementById('lpDemoResultContent').classList.remove('hidden');
+        document.getElementById('lpDemoResult').classList.add('active');
+
+        // Let's call the real AI for landing page demo, with fallback
+        const prompt = `Kamu adalah ahli gizi. Berikan saran nutrisi & fitness singkat maks 2 kalimat untuk user dengan data berikut:
+- Tinggi: ${tb}cm, Berat: ${bb}kg, Usia: ${usia}th, Gender: ${gender}
+- Target: ${target}, Aktivitas: ${aktivitas}
+- Kebutuhan Kalori Target: ${Math.round(calGoal)} kcal
+- Catatan tambahan user: ${catatan || 'Tidak ada'}
+Gunakan bahasa Indonesia santai bersahabat (kamu/lu).`;
+
+        try {
+            const aiResponse = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.1-8b-instant');
+            document.getElementById('lpResNotesText').textContent = aiResponse;
+        } catch (aiErr) {
+            console.warn("AI recommendation failed, using local fallback:", aiErr);
+            let defaultAdvice = "";
+            if (target.includes('cutting')) {
+                defaultAdvice = `Untuk target cutting, fokus utama kamu adalah mengonsumsi protein tinggi (${Math.round(protein)}g) untuk mempertahankan otot, serta konsisten menjaga defisit kalori. Lakukan latihan beban 3-4x seminggu dikombinasikan dengan kardio ringan untuk pembakaran lemak optimal.`;
+            } else if (target.includes('bulking')) {
+                defaultAdvice = `Untuk target bulking, pastikan kamu makan surplus kalori bersih secara bersih (clean bulk) dan tingkatkan intensitas latihan beban bertahap (progressive overload) agar surplus kalori diubah menjadi otot, bukan lemak berlebih.`;
+            } else {
+                defaultAdvice = `Target maintenance sangat baik untuk menjaga massa otot dan komposisi tubuh saat ini. Fokus pada kualitas makanan utuh (whole foods) dan pertahankan rutinitas olahraga harianmu agar metabolisme tetap aktif.`;
+            }
+            document.getElementById('lpResNotesText').textContent = defaultAdvice;
+        }
+
+    } catch (err) {
+        console.error("Calculator error:", err);
+        showToast("Gagal melakukan kalkulasi.", "error");
+    } finally {
+        btnText.classList.remove('hidden');
+        btnLoader.classList.add('hidden');
+    }
 }
 

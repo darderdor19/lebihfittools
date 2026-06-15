@@ -20,9 +20,453 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 
+  <!-- LANDING PAGE -->
+  <div id="landingPage" class="landing-page hidden">
+    <!-- Navbar -->
+    <header class="lp-header">
+      <div class="lp-container lp-nav-container">
+        <div class="lp-logo">
+          <span class="logo-icon"><i data-lucide="flame"></i></span>
+          <span class="logo-text">LebihFit</span>
+        </div>
+        <nav class="lp-nav">
+          <a href="#lp-features">Fitur</a>
+          <a href="#lp-how">Cara Kerja</a>
+          <a href="#lp-demo">Kalkulator AI</a>
+          <a href="#lp-pricing">Harga</a>
+          <a href="#lp-faq">FAQ</a>
+        </nav>
+        <div class="lp-nav-actions">
+          <button class="btn-lp-login" id="lpLoginBtn" onclick="openLoginModal()">Masuk Dashboard</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="lp-hero">
+      <div class="lp-container lp-hero-grid">
+        <div class="lp-hero-content">
+          <div class="lp-badge">
+            <span class="lp-badge-icon">🔥</span>
+            <span class="lp-badge-text">Asisten Gizi & Fitness AI Pintar</span>
+          </div>
+          <h1>Transformasi Tubuh Lebih Presisi & Ilmiah dengan <span class="text-glow">Asisten AI</span></h1>
+          <p>Kalkulasi kalori instan lewat foto makanan, analisis postur tubuh/fisik secara visual, dan pelacakan olahraga presisi menggunakan formula sains medis. 100% didukung AI.</p>
+          <div class="lp-hero-actions">
+            <button class="btn-lp-primary" onclick="openLoginModal()">Mulai Sekarang (Gratis) <i data-lucide="arrow-right"></i></button>
+            <a href="#lp-demo" class="btn-lp-secondary">Coba Kalkulator AI</a>
+          </div>
+          <div class="lp-hero-stats">
+            <div class="lp-stat-item">
+              <h3>98.7%</h3>
+              <p>Akurasi Analisis Gizi AI</p>
+            </div>
+            <div class="lp-stat-item">
+              <h3>24/7</h3>
+              <p>Bimbingan Ahli Gizi AI</p>
+            </div>
+            <div class="lp-stat-item">
+              <h3>100%</h3>
+              <p>Sains & Data Medis</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="lp-hero-visual">
+          <div class="lp-mockup-wrapper">
+            <div class="lp-mockup-glow"></div>
+            <div class="lp-mockup-window">
+              <div class="lp-mockup-header">
+                <span class="lp-dot red"></span>
+                <span class="lp-dot yellow"></span>
+                <span class="lp-dot green"></span>
+                <span class="lp-mockup-title">LebihFit AI Analyzer — Preview</span>
+              </div>
+              <div class="lp-mockup-body">
+                <!-- Mockup Content -->
+                <div class="lp-mockup-grid">
+                  <div class="lp-mockup-card ring-card">
+                    <h4>Kebutuhan Kalori Harian</h4>
+                    <div class="lp-mockup-ring">
+                      <div class="lp-mockup-ring-text">
+                        <span class="val">1,850</span>
+                        <span class="lbl">Sisa kcal</span>
+                      </div>
+                    </div>
+                    <div class="lp-mockup-macros">
+                      <div class="macro-bar"><span class="label">P</span><span class="bar"><span class="fill" style="width: 70%;"></span></span><span class="num">112g</span></div>
+                      <div class="macro-bar"><span class="label">C</span><span class="bar"><span class="fill" style="width: 55%; background: var(--warning);"></span></span><span class="num">190g</span></div>
+                      <div class="macro-bar"><span class="label">F</span><span class="bar"><span class="fill" style="width: 40%; background: var(--danger);"></span></span><span class="num">52g</span></div>
+                    </div>
+                  </div>
+                  
+                  <div class="lp-mockup-card photo-card">
+                    <h4>AI Photo Scan</h4>
+                    <div class="lp-mockup-photo-preview">
+                      <div class="photo-placeholder">
+                        <i data-lucide="camera" style="width:24px;height:24px;color:var(--accent);"></i>
+                        <span>Dada Ayam & Singkong</span>
+                      </div>
+                    </div>
+                    <div class="lp-mockup-photo-stats">
+                      <div class="stat"><span class="lbl">Kalori</span><span class="val text-accent">450 kcal</span></div>
+                      <div class="stat"><span class="lbl">Protein</span><span class="val">38.5g</span></div>
+                      <div class="stat"><span class="lbl">Akurasi</span><span class="val text-success">Tinggi</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="lp-features" class="lp-features">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Fitur Unggulan LebihFit</h2>
+          <p>Semua yang Anda butuhkan untuk membangun tubuh ideal, terintegrasi dalam satu platform cerdas berbasis AI.</p>
+        </div>
+        
+        <div class="lp-features-grid">
+          <!-- Card 1 -->
+          <div class="lp-feature-card">
+            <div class="lp-feature-icon cyan"><i data-lucide="camera"></i></div>
+            <h3>AI Photo Food Analyzer</h3>
+            <p>Ambil foto makanan Anda. AI akan memprediksi berat secara logis, menghitung kalori, makronutrisi, serta 8 mikronutrisi penting secara ilmiah berdasarkan database gizi presisi.</p>
+            <div class="lp-feature-tag">Kalkulator Presisi</div>
+          </div>
+          <!-- Card 2 -->
+          <div class="lp-feature-card">
+            <div class="lp-feature-icon purple"><i data-lucide="scan-face"></i></div>
+            <h3>AI Physique & Posture Scan</h3>
+            <p>Unggah foto tubuh Anda (depan/samping). AI akan mendeteksi persentase lemak tubuh secara visual, menganalisis kelurusan postur (lordosis/kyphosis), dan memberikan saran koreksi olahraga.</p>
+            <div class="lp-feature-tag">Analisis Visual</div>
+          </div>
+          <!-- Card 3 -->
+          <div class="lp-feature-card">
+            <div class="lp-feature-icon green"><i data-lucide="dumbbell"></i></div>
+            <h3>AI Workout MET Tracker</h3>
+            <p>Catat latihan beban (gym/kalistenik) atau kardio Anda. Sistem menghitung pembakaran kalori riil menggunakan rumus medis MET (Metabolic Equivalent of Task) secara konsisten.</p>
+            <div class="lp-feature-tag">Sains Olahraga</div>
+          </div>
+          <!-- Card 4 -->
+          <div class="lp-feature-card">
+            <div class="lp-feature-icon orange"><i data-lucide="message-square"></i></div>
+            <h3>AI Dietitian Consultant</h3>
+            <p>Butuh konsultasi gizi cepat? Chat 24/7 dengan asisten AI gizi pribadi Anda. AI ini memahami catatan fisik, target kalori, dan riwayat makanan harian Anda untuk saran yang dipersonalisasi.</p>
+            <div class="lp-feature-tag">Bimbingan 24 Jam</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="lp-how" class="lp-how">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Cara Kerja LebihFit</h2>
+          <p>Transformasi tubuh Anda dalam 3 langkah mudah berbasis teknologi cerdas.</p>
+        </div>
+        <div class="lp-how-grid">
+          <div class="lp-how-step">
+            <div class="step-num">1</div>
+            <h3>Masuk & Set Profil</h3>
+            <p>Daftar/login dengan email Anda dalam 10 detik dan setup profil fisik serta target kebugaran Anda.</p>
+          </div>
+          <div class="lp-how-step">
+            <div class="step-num">2</div>
+            <h3>Catat Aktivitas Harian</h3>
+            <p>Foto makanan Anda atau log latihan beban/kardio Anda secara praktis lewat web atau Bot Telegram.</p>
+          </div>
+          <div class="lp-how-step">
+            <div class="step-num">3</div>
+            <h3>Lihat Hasil & Konsultasi</h3>
+            <p>Pantau analisis grafik kemajuan harian Anda, dan konsultasikan kendala diet Anda kepada AI gizi 24/7.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Telegram Promo Section -->
+    <section class="lp-telegram-promo">
+      <div class="lp-container lp-telegram-grid">
+        <div class="lp-telegram-visual">
+          <div class="lp-telegram-mockup">
+            <div class="telegram-header">
+              <i data-lucide="send" style="width:20px;height:20px;color:#0088cc;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
+              <span>LebihFit Telegram Bot</span>
+            </div>
+            <div class="telegram-body">
+              <div class="chat-bubble user">/add dada ayam bakar 200g</div>
+              <div class="chat-bubble bot">
+                <b>Piring Makan Berhasil Dicatat!</b><br>
+                Estimasi Gizi:<br>
+                • Kalori: 330 kcal<br>
+                • Protein: 62g | Lemak: 7.2g<br>
+                <i>Tersinkronisasi ke Dashboard Web LebihFit.</i>
+              </div>
+              <div class="chat-bubble user">/add lari sore 30 menit intensitas sedang</div>
+              <div class="chat-bubble bot">
+                <b>Olahraga Berhasil Dicatat!</b><br>
+                • Pembakaran: 350 kcal (MET: 5.0)<br>
+                <i>Kalori harian berhasil terupdate.</i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lp-telegram-content">
+          <div class="lp-tag">SINKRONISASI PRAKTIS</div>
+          <h2>Log Makanan Lebih Praktis via Telegram Bot</h2>
+          <p>Malas membuka web? Cukup kirim pesan teks atau foto makanan Anda langsung ke bot Telegram kami. AI akan menganalisis pesan Anda secara instan dan menyinkronkan datanya langsung ke akun web LebihFit Anda.</p>
+          <a href="https://t.me/jadilebihfit_bot" target="_blank" class="btn-lp-telegram"><i data-lucide="send" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;margin-right:8px;"></i> Coba Bot Telegram</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Calculator Demo -->
+    <section id="lp-demo" class="lp-demo">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Kalkulator Kebutuhan Gizi AI</h2>
+          <p>Cobain simulasi perhitungan kebutuhan gizi harian Anda langsung di bawah ini. Cepat, instan, dan gratis!</p>
+        </div>
+        
+        <div class="lp-demo-grid">
+          <!-- Form -->
+          <div class="lp-demo-form-card">
+            <h3>Masukkan Profil Anda</h3>
+            <form id="lpDemoForm" onsubmit="calculateLpDemo(event)" class="lp-demo-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Tinggi Badan (cm)</label>
+                  <input type="number" id="lp_tb" placeholder="170" min="100" max="250" required>
+                </div>
+                <div class="form-group">
+                  <label>Berat Badan (kg)</label>
+                  <input type="number" id="lp_bb" placeholder="70" min="30" max="300" required>
+                </div>
+                <div class="form-group">
+                  <label>Usia (tahun)</label>
+                  <input type="number" id="lp_usia" placeholder="25" min="10" max="100" required>
+                </div>
+                <div class="form-group">
+                  <label>Jenis Kelamin</label>
+                  <select id="lp_gender" required style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; color:var(--text); outline:none;">
+                    <option value="pria">Pria</option>
+                    <option value="wanita">Wanita</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group" style="margin-top: 12px;">
+                <label>Tingkat Aktivitas Harian</label>
+                <select id="lp_aktivitas" required style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; color:var(--text); outline:none;">
+                  <option value="sedentary">Sangat Jarang Olahraga (Sedentary)</option>
+                  <option value="light">Olahraga Ringan 1-3x/minggu</option>
+                  <option value="moderate" selected>Olahraga Sedang 3-5x/minggu</option>
+                  <option value="active">Olahraga Berat 6-7x/minggu</option>
+                </select>
+              </div>
+              
+              <div class="form-group" style="margin-top: 12px;">
+                <label>Target Diet Anda</label>
+                <select id="lp_target" required style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; color:var(--text); outline:none;">
+                  <option value="cutting_aggressive">Defisit Agresif (Cutting -1kg/minggu)</option>
+                  <option value="cutting_slow">Defisit Perlahan (Cutting -0.5kg/minggu)</option>
+                  <option value="maintain" selected>Pertahankan Berat Badan (Maintain)</option>
+                  <option value="bulking_slow">Surplus Perlahan (Bulking +0.5kg/minggu)</option>
+                  <option value="bulking_aggressive">Surplus Agresif (Bulking +1kg/minggu)</option>
+                </select>
+              </div>
+              
+              <div class="form-group" style="margin-top: 12px;">
+                <label>Catatan Diet & Alergi (Opsional)</label>
+                <textarea id="lp_catatan" placeholder="Contoh: alergi kacang, diabetes, vegetarian, ingin fokus bangun otot dada..." style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; color:var(--text); resize:vertical; min-height:60px; font-family:inherit; outline:none;"></textarea>
+              </div>
+              
+              <button type="submit" class="btn-lp-primary" style="margin-top: 16px; width:100%; justify-content:center;">
+                <span id="lpCalcText"><i data-lucide="calculator" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></i> Hitung Kalori Harian</span>
+                <span id="lpCalcLoader" class="hidden"><i data-lucide="loader" class="spin" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></i> Menghitung...</span>
+              </button>
+            </form>
+          </div>
+          
+          <!-- Result -->
+          <div class="lp-demo-result-card" id="lpDemoResult">
+            <div class="result-placeholder" id="lpResultPlaceholder">
+              <i data-lucide="calculator" style="width:48px;height:48px;color:var(--text3);margin-bottom:12px;"></i>
+              <h4>Hasil Perhitungan Gizi</h4>
+              <p>Masukkan data fisik Anda dan klik tombol hitung untuk melihat target kalori harian serta rekomendasi diet khusus AI.</p>
+            </div>
+            
+            <div class="result-content hidden" id="lpDemoResultContent">
+              <h3>Target Kebutuhan Harian Anda</h3>
+              <div class="lp-res-grid">
+                <div class="lp-res-item">
+                  <span class="val" id="lpResCal">0</span>
+                  <span class="lbl">Target Kalori (kcal)</span>
+                </div>
+                <div class="lp-res-item">
+                  <span class="val" id="lpResTdee">0</span>
+                  <span class="lbl">TDEE (Kalori Keluar)</span>
+                </div>
+                <div class="lp-res-item">
+                  <span class="val" id="lpResBmr">0</span>
+                  <span class="lbl">BMR (Metabolisme Basal)</span>
+                </div>
+              </div>
+              
+              <h4 style="margin-top: 20px; margin-bottom: 8px; color: var(--accent);">Target Nutrisi Makro</h4>
+              <div class="lp-res-macros">
+                <div class="macro-badge protein">
+                  <span class="lbl">Protein</span>
+                  <span class="val" id="lpResProt">0g</span>
+                </div>
+                <div class="macro-badge carbs">
+                  <span class="lbl">Karbo</span>
+                  <span class="val" id="lpResCarbs">0g</span>
+                </div>
+                <div class="macro-badge fat">
+                  <span class="lbl">Lemak</span>
+                  <span class="val" id="lpResFat">0g</span>
+                </div>
+              </div>
+              
+              <div class="lp-res-notes" style="margin-top: 20px;">
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 6px; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--accent);"></i>
+                  Rencana Nutrisi & Latihan dari AI Ahli Gizi:
+                </div>
+                <p id="lpResNotesText" style="font-size: 0.88rem; color: var(--text2); line-height: 1.6;"></p>
+              </div>
+              
+              <div style="margin-top: 20px; text-align: center;">
+                <button class="btn-lp-primary" onclick="openLoginModal()" style="width: 100%; justify-content: center;">Simpan Profil & Mulai Log Makanan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="lp-pricing" class="lp-pricing">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Pilihan Layanan LebihFit</h2>
+          <p>Mulai secara gratis, atau upgrade ke paket Pro untuk fitur analisis visual tubuh & gizi tanpa batas.</p>
+        </div>
+        
+        <div class="lp-pricing-grid">
+          <!-- Free Plan -->
+          <div class="lp-price-card">
+            <h3>Free Plan</h3>
+            <div class="price">Rp 0<span>/ selamanya</span></div>
+            <p>Cocok untuk personal yang ingin mencatat log gizi makanan dasar.</p>
+            <ul class="price-features">
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Log makanan harian (teks)</li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Kalkulasi TDEE & BMR standard</li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Log aktivitas & olahraga</li>
+              <li><i data-lucide="x" style="color:var(--danger);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Analisis foto makanan instan</li>
+              <li><i data-lucide="x" style="color:var(--danger);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Analisis postur & bentuk tubuh</li>
+              <li><i data-lucide="x" style="color:var(--danger);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Integrasi Bot Telegram</li>
+            </ul>
+            <button class="btn-lp-secondary" onclick="openLoginModal()" style="margin-top: 30px; width:100%; justify-content:center;">Pilih Paket Gratis</button>
+          </div>
+          
+          <!-- Pro Plan -->
+          <div class="lp-price-card premium active">
+            <div class="premium-badge">REKOMENDASI</div>
+            <h3>Pro Member</h3>
+            <div class="price">Rp 29.000<span>/ bulan</span></div>
+            <p>Terbaik untuk meningkatkan hasil fitness dengan AI visual canggih.</p>
+            <ul class="price-features">
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Semua fitur paket Free</li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> <b>Analisis Foto Makanan Tanpa Batas</b></li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> <b>Analisis Postur & Lemak Tubuh Visual</b></li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Integrasi Bot Telegram Real-time</li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Prioritas Server AI Ultra-Cepat</li>
+              <li><i data-lucide="check" style="color:var(--success);width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;"></i> Konsultan AI 24/7 Premium</li>
+            </ul>
+            <button class="btn-lp-primary" onclick="openLoginModal()" style="margin-top: 30px; width:100%; justify-content:center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);">Gabung Pro Sekarang</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="lp-faq" class="lp-faq">
+      <div class="lp-container">
+        <div class="lp-section-header">
+          <h2>Pertanyaan yang Sering Diajukan</h2>
+          <p>Punya pertanyaan tentang LebihFit? Temukan jawabannya di bawah ini.</p>
+        </div>
+        
+        <div class="lp-faq-list">
+          <div class="lp-faq-item" onclick="toggleFaq(this)">
+            <div class="lp-faq-q">
+              <span>Bagaimana cara AI LebihFit mendeteksi kandungan gizi dari foto?</span>
+              <i data-lucide="chevron-down"></i>
+            </div>
+            <div class="lp-faq-a">
+              <p>AI kami mendeteksi jenis makanan dan komponennya secara visual, memperkirakan porsi dalam gram secara logis, kemudian mencocokkan dengan database gizi ilmiah presisi (seperti USDA). AI LebihFit dikonfigurasi secara ketat untuk tidak meremehkan sisa minyak masakan, saus, dan berat tulang pada hidangan ayam/daging.</p>
+            </div>
+          </div>
+          <div class="lp-faq-item" onclick="toggleFaq(this)">
+            <div class="lp-faq-q">
+              <span>Apakah analisis postur tubuh visual aman & privat?</span>
+              <i data-lucide="chevron-down"></i>
+            </div>
+            <div class="lp-faq-a">
+              <p>Sangat aman. Foto postur tubuh yang diunggah diproses secara terenkripsi untuk mengevaluasi kerangka otot dan keseimbangan tubuh. Semua data postur hanya tersimpan secara privat di database Firebase Anda dan tidak disebarluaskan untuk kepentingan komersial.</p>
+            </div>
+          </div>
+          <div class="lp-faq-item" onclick="toggleFaq(this)">
+            <div class="lp-faq-q">
+              <span>Bagaimana cara menghubungkan dengan Bot Telegram?</span>
+              <i data-lucide="chevron-down"></i>
+            </div>
+            <div class="lp-faq-a">
+              <p>Setelah login ke dashboard LebihFit, Anda akan mendapatkan kode sinkronisasi unik di tab Settings. Cukup buka chat ke bot Telegram @jadilebihfit_bot, kirimkan perintah sinkronisasi dengan kode tersebut, dan bot otomatis terhubung ke akun web Anda.</p>
+            </div>
+          </div>
+          <div class="lp-faq-item" onclick="toggleFaq(this)">
+            <div class="lp-faq-q">
+              <span>Apakah data saya aman jika berganti perangkat?</span>
+              <i data-lucide="chevron-down"></i>
+            </div>
+            <div class="lp-faq-a">
+              <p>Ya, karena seluruh log makanan, latihan, dan profil disinkronisasikan ke Firebase Database real-time yang terhubung ke email Anda. Saat login di perangkat baru menggunakan email dan OTP, seluruh histori data Anda akan otomatis dimuat ulang.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="lp-footer">
+      <div class="lp-container">
+        <div class="lp-footer-top">
+          <div class="lp-logo">
+            <span class="logo-icon"><i data-lucide="flame"></i></span>
+            <span class="logo-text">LebihFit</span>
+          </div>
+          <p>Membantu Anda mencapai bentuk tubuh impian secara presisi, ilmiah, dan praktis menggunakan kekuatan AI.</p>
+        </div>
+        <div class="lp-footer-bottom">
+          <p>&copy; 2026 LebihFit. All rights reserved. Made for fitness enthusiasts.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
   <!-- AUTH OVERLAY -->
   <div id="authOverlay" class="onboarding-overlay hidden">
-    <div class="onboarding-card" style="max-width: 400px; text-align: center;">
+    <div class="onboarding-card" style="max-width: 400px; text-align: center; position: relative;">
+      <button type="button" class="modal-close" onclick="closeLoginModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text2); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; outline: none;"><i data-lucide="x"></i></button>
       <div class="onboarding-header">
         <div class="logo-glow"><i data-lucide="shield-check" style="width: 48px; height: 48px;"></i></div>
         <h1>Login</h1>
