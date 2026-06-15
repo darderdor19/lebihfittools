@@ -429,116 +429,47 @@ async function onStart(chatId, userId) {
 }
 
 async function promptLogin(chatId, userId) {
-  await setState(userId, 'AWAIT_EMAIL');
   return sendMessage(chatId,
-    '*LebihFit Tracker Bot*\n\n' +
-    'Halo! Untuk mulai, login dulu ya.\n\n' +
-    'Kirim *email* yang lu pakai di LebihFit web app:',
+    '⚠️ *Akses Ditolak*\n\n' +
+    'Lu belum login. Login bot sekarang cuma bisa dari Web App LebihFit.\n\n' +
+    'Cara login:\n' +
+    '1. Buka web LebihFit.\n' +
+    '2. Masuk ke menu *Pengaturan*.\n' +
+    '3. Klik tombol *Hubungkan Telegram*.\n\n' +
+    'Nanti lu bakal otomatis terhubung ke bot ini!',
     null
   );
 }
 
 async function onEmailInput(chatId, userId, email) {
-  email = email.trim().toLowerCase();
-  if (!email.includes('@') || !email.includes('.')) {
-    return sendMessage(chatId, 'Format email tidak valid. Coba lagi!');
-  }
-
-  // Simpan email sementara, minta OTP via GAS
-  await setCache(`${userId}_pending_email`, email);
-  await setState(userId, 'AWAIT_OTP');
-
   try {
-    const GAS_URL = process.env.GAS_WEBAPP_URL;
-    if (GAS_URL) {
-      const res = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'requestOTP', email, name: 'Bro' })
-      });
-      const json = await res.json();
-      if (!json.success) {
-        await setState(userId, null);
-        return sendMessage(chatId, `Gagal kirim OTP: ${json.error || 'Unknown error'}`);
-      }
-    } else {
-      console.warn('GAS_WEBAPP_URL not set, skipping OTP send');
-      await setState(userId, null);
-      await deleteCache(`${userId}_pending_email`);
-      return sendMessage(chatId,
-        `⚠️ *Konfigurasi Vercel Belum Lengkap*\n\n` +
-        `Bot tidak dapat mengirimkan OTP karena environment variable *GAS_WEBAPP_URL* belum diatur di Vercel.\n\n` +
-        `*Cara Mengatasi:*\n` +
-        `1. Masuk ke dashboard Vercel.\n` +
-        `2. Buka Settings -> Environment Variables untuk project bot ini.\n` +
-        `3. Tambahkan variable:\n` +
-        `   • Key: \`GAS_WEBAPP_URL\`\n` +
-        `   • Value: \`URL Web App Google Apps Script lu\`\n` +
-        `4. Klik *Save*, lalu lakukan **Redeploy** (Deploy ulang).\n\n` +
-        `Ketik /start lagi jika sudah selesai diatur!`,
-        { inline_keyboard: [[{ text: 'Kembali', callback_data: 'menu' }]] }
-      );
-    }
-
-    return sendMessage(chatId,
-      `📧 Kode OTP sudah dikirim ke *${email}*\n\n` +
-      'Masukkan kode 6 digit yang ada di email:',
-      { inline_keyboard: [[{ text: 'Batal', callback_data: 'menu' }]] }
-    );
-  } catch (err) {
-    console.error('onEmailInput error:', err);
-    await setState(userId, null);
-    return sendMessage(chatId, 'Gagal kirim OTP: ' + err.message);
-  }
-}
-
-async function onOtpInput(chatId, userId, otpInput) {
-  try {
-    const email = await getCache(`${userId}_pending_email`);
-    if (!email) {
-      await setState(userId, null);
-      return sendMessage(chatId, 'Sesi expired. Ketik /start untuk coba lagi.');
-    }
-
-    const GAS_URL = process.env.GAS_WEBAPP_URL;
-    if (GAS_URL) {
-      // Verify OTP via GAS
-      const res = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verifyOTP', email, otp: otpInput.trim() })
-      });
-      const json = await res.json();
-      if (!json.success) {
-        return sendMessage(chatId,
-          '❌ Kode OTP salah atau expired.\n\nCoba lagi atau /start untuk request OTP baru.',
-          { inline_keyboard: [[{ text: 'Request OTP Baru', callback_data: 'retry_login' }, { text: 'Batal', callback_data: 'menu' }]] }
-        );
-      }
-    } else {
-      return sendMessage(chatId, 'Konfigurasi GAS_WEBAPP_URL tidak ditemukan. Verifikasi dibatalkan.');
-    }
-
-    // OTP valid — link account
+    email = email.trim().toLowerCase();
+    
+    // Langsung link account tanpa OTP
     await setFirebase(`telegram_links/${userId}`, {
       email: email,
       chatId: chatId,
       linkedAt: new Date().toISOString()
     });
+    
     await setFirebase(`users/${safe(email)}/telegram_chat_id`, chatId.toString());
     await setState(userId, null);
-    await deleteCache(`${userId}_pending_email`);
-
+    
     const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
     const userName = (profile && (profile.name || profile.lf_user_name)) || 'Bro';
+    
     return sendMessage(chatId,
-      `✅ Login berhasil, *${userName}*!\n\nAkun LebihFit lu sudah terhubung. Pilih menu:`,
+      `✅ Login Berhasil, *${userName}*!\n\nAkun LebihFit lu udah terhubung sama bot ini.\nSekarang lu bisa nge-log makanan, minuman, dan aktivitas langsung dari sini.\n\nPilih menu di bawah:`,
       mainMenuKeyboard()
     );
   } catch (err) {
-    console.error('onOtpInput error:', err);
-    return sendMessage(chatId, 'Error verifikasi OTP: ' + err.message);
+    console.error('onEmailInput error:', err);
+    return sendMessage(chatId, 'Error verifikasi akun: ' + err.message);
   }
+}
+
+async function onOtpInput(chatId, userId, otpInput) {
+  return sendMessage(chatId, 'Sistem OTP sudah dinonaktifkan. Silakan login lewat web app.');
 }
 
 // ====================================================
