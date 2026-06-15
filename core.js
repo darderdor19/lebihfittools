@@ -11,9 +11,13 @@ const firebaseConfig = {
 };
 
 let fbDb = null;
+let fbAuth = null;
 if (firebaseConfig && firebaseConfig.apiKey && typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
     fbDb = firebase.database();
+    if (firebase.auth) {
+        fbAuth = firebase.auth();
+    }
 }
 
 function syncToFirebase(key, value) {

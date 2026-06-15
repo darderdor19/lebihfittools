@@ -26,7 +26,10 @@ async function initApp() {
     } else {
         document.getElementById('landingPage').classList.add('hidden');
         // Sync Firebase in the background
-        syncFirebaseToLocal().then(() => {
+        syncFirebaseToLocal().then(async () => {
+            const isTrialExpired = await checkTrialStatus();
+            if (isTrialExpired) return; // Stop showing app if expired
+
             const updatedProfile = getProfile();
             if (updatedProfile) {
                 document.getElementById('onboarding').classList.add('hidden');
@@ -40,40 +43,52 @@ async function initApp() {
         if (!profile) {
             document.getElementById('onboarding').classList.remove('hidden');
         } else {
-            document.getElementById('app').classList.remove('hidden');
-            renderProfileDisplay();
+            // Check trial status locally first to prevent flash of app
+            const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+            const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+            const trialDuration = 3 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const localExpired = cachedCreatedAt && (now - parseInt(JSON.parse(cachedCreatedAt))) > trialDuration;
             
-            // Check url params for deep linking
-            const urlParams = new URLSearchParams(window.location.search);
-            const pageParam = urlParams.get('page');
-            const rangeParam = urlParams.get('range');
-            const fromParam = urlParams.get('from');
-            const toParam = urlParams.get('to');
-            
-            const validPages = ['dashboard', 'log', 'activity', 'history', 'progress', 'calculator', 'settings'];
-            if (pageParam && validPages.includes(pageParam)) {
-                if (pageParam === 'history') {
-                    showPage('history');
-                    if (fromParam && toParam) {
-                        document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-                        document.getElementById('pCustom').classList.add('active');
-                        document.getElementById('customDateRange').classList.remove('hidden');
-                        document.getElementById('dateFrom').value = fromParam;
-                        document.getElementById('dateTo').value = toParam;
-                        loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
-                    } else if (rangeParam) {
-                        setPeriod(rangeParam);
+            if (localExpired && !cachedIsPro) {
+                showTrialExpiredOverlay(authUser.email, parseInt(JSON.parse(cachedCreatedAt)));
+            } else {
+                document.getElementById('app').classList.remove('hidden');
+                renderProfileDisplay();
+                
+                // Check url params for deep linking
+                const urlParams = new URLSearchParams(window.location.search);
+                const pageParam = urlParams.get('page');
+                const rangeParam = urlParams.get('range');
+                const fromParam = urlParams.get('from');
+                const toParam = urlParams.get('to');
+                
+                const validPages = ['dashboard', 'log', 'activity', 'history', 'progress', 'calculator', 'settings'];
+                if (pageParam && validPages.includes(pageParam)) {
+                    if (pageParam === 'history') {
+                        showPage('history');
+                        if (fromParam && toParam) {
+                            document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+                            document.getElementById('pCustom').classList.add('active');
+                            document.getElementById('customDateRange').classList.remove('hidden');
+                            document.getElementById('dateFrom').value = fromParam;
+                            document.getElementById('dateTo').value = toParam;
+                            loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
+                        } else if (rangeParam) {
+                            setPeriod(rangeParam);
+                        } else {
+                            setPeriod('7');
+                        }
                     } else {
-                        setPeriod('7');
+                        showPage(pageParam);
                     }
                 } else {
-                    showPage(pageParam);
+                    showPage('dashboard');
                 }
-            } else {
-                showPage('dashboard');
             }
         }
     }
+}
 
     // Initialize Lucide icons if available
     if (window.lucide) {
@@ -88,180 +103,233 @@ async function initApp() {
     }
 }
 
-// ===== AUTHENTICATION =====
-async function requestOTP() {
-    const email = document.getElementById('authEmail').value.trim();
-    const name = document.getElementById('authName').value.trim();
-    
-    if (!name) {
-        showToast("Masukkan nama panggilan lu bro", "error");
-        return;
-    }
-    if (!email || !email.includes('@')) {
-        showToast("Masukkan email yang valid", "error");
-        return;
-    }
-    
-    if (GAS_URL === "URL_GAS_LU_DISINI") {
-        showToast("Setup URL Google Apps Script belum dilakukan!", "error");
-        return;
+// ===== AUTHENTICATION (Firebase Auth: Google + Email/Password) =====
+
+// Helper: called after a successful Firebase auth to set user in app
+async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone = null) {
+    const email = firebaseUser.email;
+    const name = firebaseUser.displayName || extraName || email.split('@')[0];
+    const phone = extraPhone || '';
+
+    clearAuthUser();
+    setAuthUser(email, name);
+
+    // Save phone to Firebase if provided
+    if (phone) {
+        const safeEmail = email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
+        if (fbDb) {
+            fbDb.ref(`users/${safeEmail}/lf_user_phone`).set(phone).catch(console.error);
+        }
+        localStorage.setItem('lf_user_phone', JSON.stringify(phone));
     }
 
-    const btn = document.getElementById('btnRequestOtp');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Mengirim...';
-    btn.disabled = true;
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-        
-        let res;
-        try {
-            res = await fetch(GAS_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'requestOTP', email, name }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-        } catch (err) {
-            clearTimeout(timeoutId);
-            if (err.name === 'AbortError') throw new Error('Koneksi ke server timeout (20s). Coba pakai koneksi lain bro.');
-            throw err;
-        }
-        
-        console.log('[OTP] Response status:', res.status, res.statusText);
-        const rawText = await res.text();
-        console.log('[OTP] Raw response:', rawText);
-        
-        let data;
-        try {
-            data = JSON.parse(rawText);
-        } catch(parseErr) {
-            console.error('[OTP] JSON parse failed:', parseErr, 'Raw:', rawText);
-            showToast("Server error: respons bukan JSON. Cek console.", "error");
-            return;
-        }
-        
-        console.log('[OTP] Parsed response:', data);
-        
-        if (data.success) {
-            tempAuthEmail = email;
-            tempAuthName = name;
-            document.getElementById('displayEmail').innerText = email;
-            document.getElementById('authStep1').classList.add('hidden');
-            document.getElementById('authStep2').classList.remove('hidden');
-            showToast("Kode OTP terkirim!", "success");
+    // Cache trial info
+    const safeEmail = email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
+    if (fbDb) {
+        const snap = await fbDb.ref(`users/${safeEmail}/lf_user_meta`).once('value');
+        const meta = snap.val();
+        if (!meta) {
+            // First-time login → write createdAt
+            const now = Date.now();
+            await fbDb.ref(`users/${safeEmail}/lf_user_meta`).set({ createdAt: now, isPro: false });
+            localStorage.setItem('lf_user_created_at', JSON.stringify(now));
+            localStorage.setItem('lf_user_is_pro', JSON.stringify(false));
         } else {
-            showToast(data.error || "Gagal mengirim OTP", "error");
+            localStorage.setItem('lf_user_created_at', JSON.stringify(meta.createdAt));
+            localStorage.setItem('lf_user_is_pro', JSON.stringify(meta.isPro || false));
         }
-    } catch (error) {
-        console.error('[OTP] Fetch error:', error);
-        showToast("Network error: " + error.message, "error");
+    } else {
+        // No Firebase DB: use local first-run tracking
+        if (!localStorage.getItem('lf_user_created_at')) {
+            localStorage.setItem('lf_user_created_at', JSON.stringify(Date.now()));
+            localStorage.setItem('lf_user_is_pro', JSON.stringify(false));
+        }
+    }
+
+    document.getElementById('authOverlay').classList.add('hidden');
+    document.getElementById('landingPage').classList.add('hidden');
+    showToast("Login Berhasil! Menyinkronkan data...", "info");
+
+    syncFirebaseToLocal().then(() => {
+        showToast("Sinkronisasi Selesai!", "success");
+        const updatedProfile = getProfile();
+        if (updatedProfile) {
+            document.getElementById('onboarding').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            renderProfileDisplay();
+            showPage('dashboard');
+        } else {
+            document.getElementById('onboarding').classList.remove('hidden');
+        }
+    }).catch(console.error);
+
+    const profile = getProfile();
+    if (!profile) {
+        document.getElementById('onboarding').classList.remove('hidden');
+    } else {
+        document.getElementById('app').classList.remove('hidden');
+        renderProfileDisplay();
+        showPage('dashboard');
+    }
+}
+
+// Google Sign-in
+let _pendingGoogleUser = null;
+async function loginWithGoogle() {
+    if (!fbAuth) {
+        showToast("Firebase Auth belum siap. Refresh halaman.", "error");
+        return;
+    }
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await fbAuth.signInWithPopup(provider);
+        const user = result.user;
+
+        // Check if phone is already saved
+        const safeEmail = user.email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
+        let phone = null;
+        if (fbDb) {
+            const snap = await fbDb.ref(`users/${safeEmail}/lf_user_phone`).once('value');
+            phone = snap.val();
+        }
+
+        if (!phone) {
+            // First time Google login → ask for phone
+            _pendingGoogleUser = user;
+            document.getElementById('authStepLogin').classList.add('hidden');
+            document.getElementById('authStepRegister').classList.add('hidden');
+            document.getElementById('authStepNoHp').classList.remove('hidden');
+        } else {
+            await onFirebaseAuthSuccess(user, null, phone);
+        }
+    } catch (err) {
+        console.error('[Google Auth]', err);
+        if (err.code === 'auth/popup-closed-by-user') return;
+        showToast("Login Google gagal: " + (err.message || err.code), "error");
+    }
+}
+
+async function saveGooglePhone() {
+    const phone = document.getElementById('googlePhoneInput').value.trim();
+    if (!phone || phone.length < 9) {
+        showToast("Masukkan nomor HP yang valid", "error");
+        return;
+    }
+    if (!_pendingGoogleUser) {
+        showToast("Sesi habis, silakan login ulang.", "error");
+        document.getElementById('authStepNoHp').classList.add('hidden');
+        document.getElementById('authStepLogin').classList.remove('hidden');
+        return;
+    }
+    const btn = document.getElementById('btnSaveGooglePhone');
+    btn.innerHTML = '⏳ Menyimpan...';
+    btn.disabled = true;
+    try {
+        await onFirebaseAuthSuccess(_pendingGoogleUser, null, phone);
+        _pendingGoogleUser = null;
     } finally {
-        btn.innerHTML = originalText;
+        btn.innerHTML = 'Selesaikan Pendaftaran';
         btn.disabled = false;
     }
 }
 
-async function verifyOTP() {
-    const otp = document.getElementById('authOtp').value.trim();
-    if (!otp || otp.length < 6) {
-        showToast("Masukkan 6 digit OTP", "error");
-        return;
-    }
+// Email/Password Login
+async function loginEmailPass() {
+    if (!fbAuth) { showToast("Firebase Auth belum siap.", "error"); return; }
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !email.includes('@')) { showToast("Email tidak valid", "error"); return; }
+    if (!password || password.length < 6) { showToast("Password minimal 6 karakter", "error"); return; }
 
-    const btn = document.getElementById('btnVerifyOtp');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '⏳ Verifikasi...';
+    const btn = document.getElementById('btnLoginEmail');
+    btn.innerHTML = '⏳ Masuk...';
     btn.disabled = true;
-
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-        
-        let res;
-        try {
-            res = await fetch(GAS_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'verifyOTP', email: tempAuthEmail, otp: otp }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-        } catch (err) {
-            clearTimeout(timeoutId);
-            if (err.name === 'AbortError') throw new Error('Koneksi ke server timeout (20s). Jaringan lagi bapuk bro.');
-            throw err;
-        }
-        
-        console.log('[OTP] Verify response status:', res.status, res.statusText);
-        const rawText = await res.text();
-        console.log('[OTP] Verify raw response:', rawText);
-        
-        let data;
-        try {
-            data = JSON.parse(rawText);
-        } catch(parseErr) {
-            console.error('[OTP] Verify JSON parse failed:', parseErr, 'Raw:', rawText);
-            showToast("Server error: respons bukan JSON. Cek console.", "error");
-            return;
-        }
-        
-        console.log('[OTP] Verify parsed response:', data);
-        
-        if (data.success) {
-            clearAuthUser();
-            setAuthUser(data.data.email, data.data.name || tempAuthName);
-            document.getElementById('authOverlay').classList.add('hidden');
-            document.getElementById('landingPage').classList.add('hidden');
-            showToast("Login Berhasil! Menyinkronkan data...", "info");
-            
-            // Sync Firebase in background
-            syncFirebaseToLocal().then(() => {
-                showToast("Sinkronisasi Selesai!", "success");
-                const updatedProfile = getProfile();
-                if (updatedProfile) {
-                    document.getElementById('onboarding').classList.add('hidden');
-                    document.getElementById('app').classList.remove('hidden');
-                    renderProfileDisplay();
-                    showPage('dashboard');
-                }
-            }).catch(console.error);
-            
-            // Check immediately if profile exists locally
-            if (!getProfile()) {
-                document.getElementById('onboarding').classList.remove('hidden');
-            } else {
-                document.getElementById('app').classList.remove('hidden');
-                renderProfileDisplay();
-                showPage('dashboard');
-            }
-        } else {
-            showToast(data.error || "OTP Salah", "error");
-        }
-    } catch (error) {
-        console.error('[OTP] Verify fetch error:', error);
-        showToast("Network error: " + error.message, "error");
+        const result = await fbAuth.signInWithEmailAndPassword(email, password);
+        await onFirebaseAuthSuccess(result.user);
+    } catch (err) {
+        console.error('[Email Login]', err);
+        const msgs = {
+            'auth/user-not-found': 'Email tidak terdaftar. Coba Daftar dulu ya.',
+            'auth/wrong-password': 'Password salah. Coba lagi.',
+            'auth/invalid-credential': 'Email atau password salah.',
+            'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi nanti.'
+        };
+        showToast(msgs[err.code] || "Login gagal: " + err.message, "error");
     } finally {
-        btn.innerHTML = originalText;
+        btn.innerHTML = 'Masuk Sekarang';
         btn.disabled = false;
+    }
+}
+
+// Email/Password Register
+async function registerEmailPass() {
+    if (!fbAuth) { showToast("Firebase Auth belum siap.", "error"); return; }
+    const name = document.getElementById('registerName').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const phone = document.getElementById('registerPhone').value.trim();
+    if (!name) { showToast("Nama panggilan wajib diisi", "error"); return; }
+    if (!email || !email.includes('@')) { showToast("Email tidak valid", "error"); return; }
+    if (!password || password.length < 6) { showToast("Password minimal 6 karakter", "error"); return; }
+    if (!phone || phone.length < 9) { showToast("Nomor HP tidak valid", "error"); return; }
+
+    const btn = document.getElementById('btnRegisterEmail');
+    btn.innerHTML = '⏳ Mendaftar...';
+    btn.disabled = true;
+    try {
+        const result = await fbAuth.createUserWithEmailAndPassword(email, password);
+        await result.user.updateProfile({ displayName: name });
+        await onFirebaseAuthSuccess(result.user, name, phone);
+    } catch (err) {
+        console.error('[Email Register]', err);
+        const msgs = {
+            'auth/email-already-in-use': 'Email sudah terdaftar. Coba Masuk ya.',
+            'auth/weak-password': 'Password terlalu lemah. Minimal 6 karakter.',
+            'auth/invalid-email': 'Format email tidak valid.'
+        };
+        showToast(msgs[err.code] || "Daftar gagal: " + err.message, "error");
+    } finally {
+        btn.innerHTML = 'Daftar Akun';
+        btn.disabled = false;
+    }
+}
+
+// Switch Login/Register Tab
+function switchAuthTab(tab) {
+    const loginPanel = document.getElementById('authStepLogin');
+    const registerPanel = document.getElementById('authStepRegister');
+    const noHpPanel = document.getElementById('authStepNoHp');
+    const tabLogin = document.getElementById('authTabLogin');
+    const tabRegister = document.getElementById('authTabRegister');
+
+    noHpPanel.classList.add('hidden');
+    if (tab === 'login') {
+        loginPanel.classList.remove('hidden');
+        registerPanel.classList.add('hidden');
+        tabLogin.style.borderBottom = '2px solid var(--accent)';
+        tabLogin.style.color = 'var(--accent)';
+        tabRegister.style.borderBottom = '2px solid transparent';
+        tabRegister.style.color = 'var(--text2)';
+    } else {
+        registerPanel.classList.remove('hidden');
+        loginPanel.classList.add('hidden');
+        tabRegister.style.borderBottom = '2px solid var(--accent)';
+        tabRegister.style.color = 'var(--accent)';
+        tabLogin.style.borderBottom = '2px solid transparent';
+        tabLogin.style.color = 'var(--text2)';
     }
 }
 
 function resetAuth() {
-    tempAuthEmail = "";
-    tempAuthName = "";
-    document.getElementById('authStep2').classList.add('hidden');
-    document.getElementById('authStep1').classList.remove('hidden');
-    document.getElementById('authOtp').value = "";
+    switchAuthTab('login');
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    _pendingGoogleUser = null;
 }
 
-
 // Navigation
+
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
