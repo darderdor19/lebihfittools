@@ -1771,3 +1771,91 @@ a{color:var(--accent);text-decoration:none}
 .history-details-content {
   animation: slideDownDetails 0.25s ease-out;
 }
+
+/* ===== CUSTOM SELECT DROPDOWN ===== */
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.custom-select-trigger {
+  width: 100%;
+  background: var(--surface2) !important;
+  border: 1px solid var(--border) !important;
+  padding: 14px 16px !important;
+  color: var(--text) !important;
+  border-radius: var(--radius-sm) !important;
+  outline: none;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: all 0.2s ease-in-out;
+  text-align: left;
+}
+.custom-select-trigger:hover {
+  border-color: rgba(94, 92, 230, 0.5) !important;
+  box-shadow: 0 0 10px rgba(94, 92, 230, 0.15);
+}
+.custom-select-trigger:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 12px rgba(94, 92, 230, 0.25);
+}
+.custom-options-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: #0d1420;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+}
+.custom-options-menu.show {
+  display: flex;
+}
+.custom-option {
+  padding: 14px 16px;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+  gap: 12px;
+}
+.custom-option:hover {
+  background: rgba(94, 92, 230, 0.12);
+  color: #ffffff;
+}
+.custom-option.selected {
+  background: rgba(94, 92, 230, 0.2) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+.custom-option .check-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.custom-option .check-icon.hidden {
+  display: none;
+}
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: scaleY(0.9) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}

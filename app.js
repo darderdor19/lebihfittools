@@ -23,8 +23,12 @@ async function initApp() {
     if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
     if (visionKey) document.getElementById('visionKeyInput').value = visionKey;
     
+    initCustomModelSelect();
     const openRouterModel = getOpenRouterModel();
-    if (openRouterModel) document.getElementById('openRouterModelSelect').value = openRouterModel;
+    if (openRouterModel) {
+        document.getElementById('openRouterModelSelect').value = openRouterModel;
+        if (window.syncCustomModelSelect) window.syncCustomModelSelect(openRouterModel);
+    }
 
     if (apiKey || visionKey) updateApiStatus(true);
 
@@ -5737,4 +5741,60 @@ function renderPhysicalAnalysisUI(data) {
     `;
 
     return html;
+}
+
+function initCustomModelSelect() {
+    const trigger = document.getElementById('customModelSelectTrigger');
+    const menu = document.getElementById('customModelOptionsMenu');
+    const hiddenInput = document.getElementById('openRouterModelSelect');
+    const displayValue = document.getElementById('customModelSelectValue');
+    const options = document.querySelectorAll('.custom-option');
+
+    if (!trigger || !menu || !hiddenInput) return;
+
+    // Synchronize UI from the value of hiddenInput
+    function syncCustomSelect(val) {
+        options.forEach(opt => {
+            const optVal = opt.getAttribute('data-value');
+            const check = opt.querySelector('.check-icon');
+            if (optVal === val) {
+                opt.classList.add('selected');
+                if (check) check.classList.remove('hidden');
+                if (displayValue) displayValue.textContent = opt.querySelector('.option-text').textContent;
+            } else {
+                opt.classList.remove('selected');
+                if (check) check.classList.add('hidden');
+            }
+        });
+    }
+
+    // Initialize state
+    syncCustomSelect(hiddenInput.value);
+
+    // Toggle menu
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('show');
+    });
+
+    // Option selection
+    options.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = opt.getAttribute('data-value');
+            hiddenInput.value = val;
+            syncCustomSelect(val);
+            menu.classList.remove('show');
+        });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.remove('show');
+        }
+    });
+
+    // Expose synchronization globally so it can be updated programmatically
+    window.syncCustomModelSelect = syncCustomSelect;
 }

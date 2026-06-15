@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
   <div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.4s ease-out;">
@@ -1209,13 +1209,35 @@
           </div>
           <div class="form-group" style="margin-top: 12px;">
             <label>Model AI Consultant</label>
-            <select id="openRouterModelSelect" class="api-input" style="background:var(--surface2); border:1px solid var(--border); padding:14px 16px; color:var(--text); border-radius:var(--radius-sm); outline:none; height:auto;">
-              <option value="anthropic/claude-3.5-sonnet">Server Ultra (Sangat Cerdas & Paling Konsisten - Rekomendasi Utama)</option>
-              <option value="google/gemini-2.5-pro">Server Premium (Sangat Cerdik & Akurat - Analisis Mendalam)</option>
-              <option value="google/gemini-2.5-flash">Server Fast (Sangat Cepat & Responsif - Kecepatan Maksimal)</option>
-              <option value="deepseek/deepseek-chat">Server Standard (Responsif & Efisien - Keseimbangan Optimal)</option>
-              <option value="meta-llama/llama-3.3-70b-instruct">Server Eco (Handal, Stabil & Efektif)</option>
-            </select>
+            <div class="custom-select-wrapper" id="openRouterModelSelectWrapper">
+              <button type="button" class="custom-select-trigger" id="customModelSelectTrigger">
+                <span id="customModelSelectValue">Server Ultra (Sangat Cerdas & Paling Konsisten - Rekomendasi Utama)</span>
+                <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+              </button>
+              <div class="custom-options-menu" id="customModelOptionsMenu">
+                <div class="custom-option selected" data-value="anthropic/claude-3.5-sonnet">
+                  <span class="option-text">Server Ultra (Sangat Cerdas & Paling Konsisten - Rekomendasi Utama)</span>
+                  <i data-lucide="check" class="check-icon"></i>
+                </div>
+                <div class="custom-option" data-value="google/gemini-2.5-pro">
+                  <span class="option-text">Server Premium (Sangat Cerdik & Akurat - Analisis Mendalam)</span>
+                  <i data-lucide="check" class="check-icon hidden"></i>
+                </div>
+                <div class="custom-option" data-value="google/gemini-2.5-flash">
+                  <span class="option-text">Server Fast (Sangat Cepat & Responsif - Kecepatan Maksimal)</span>
+                  <i data-lucide="check" class="check-icon hidden"></i>
+                </div>
+                <div class="custom-option" data-value="deepseek/deepseek-chat">
+                  <span class="option-text">Server Standard (Responsif & Efisien - Keseimbangan Optimal)</span>
+                  <i data-lucide="check" class="check-icon hidden"></i>
+                </div>
+                <div class="custom-option" data-value="meta-llama/llama-3.3-70b-instruct">
+                  <span class="option-text">Server Eco (Handal, Stabil & Efektif)</span>
+                  <i data-lucide="check" class="check-icon hidden"></i>
+                </div>
+              </div>
+              <input type="hidden" id="openRouterModelSelect" value="anthropic/claude-3.5-sonnet">
+            </div>
           </div>
           <div class="form-actions">
             <button class="btn-primary" onclick="saveApiKey()"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan API Keys</button>
@@ -1412,6 +1434,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="core.js?v=8"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
