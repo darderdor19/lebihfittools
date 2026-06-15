@@ -1068,9 +1068,12 @@
   <header class="chat-header">
     <div class="header-logo">
       <button class="hamburger-btn" onclick="toggleChatSidebar()"><i data-lucide="menu"></i></button>
-      <div onclick="startNewChat()" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-        <i data-lucide="message-square" class="logo-icon" style="width: 24px; height: 24px;"></i>
-        <h1>AI Consultant</h1>
+      <div onclick="startNewChat()" style="display: flex; flex-direction: column; cursor: pointer; justify-content: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i data-lucide="message-square" class="logo-icon" style="width: 20px; height: 20px;"></i>
+          <h1 style="font-size: 1.15rem; margin: 0; line-height: 1.2;">AI Consultant</h1>
+        </div>
+        <span id="activeModelLabel" style="font-size: 0.68rem; color: var(--text3); margin-top: 2px;">Active Server: Loading...</span>
       </div>
     </div>
     <div style="display: flex; gap: 8px;">
@@ -1275,8 +1278,29 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     let userLogs = {};
     let userActivities = {};
 
-    // Initialize Page
     document.addEventListener('DOMContentLoaded', () => {
+      // Self-healing check for old model settings
+      let activeModel = localStorage.getItem('lf_openroutermodel');
+      const oldModels = [
+          'meta-llama/llama-3.3-70b-instruct:free',
+          'anthropic/claude-3.5-sonnet',
+          'google/gemini-2.5-flash',
+          'google/gemini-2.5-pro',
+          'deepseek/deepseek-chat',
+          'meta-llama/llama-3.3-70b-instruct',
+          'meta-llama/llama-3.2-3b-instruct:free',
+          'nousresearch/hermes-3-llama-3.1-405b:free'
+      ];
+      if (!activeModel || oldModels.includes(activeModel)) {
+          activeModel = 'openrouter/free';
+          localStorage.setItem('lf_openroutermodel', activeModel);
+      }
+      
+      const labelEl = document.getElementById('activeModelLabel');
+      if (labelEl) {
+        labelEl.textContent = `Active Server: ${activeModel}`;
+      }
+
       if(window.lucide) lucide.createIcons();
       getUserSession();
     });
