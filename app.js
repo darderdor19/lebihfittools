@@ -111,7 +111,7 @@ async function requestOTP() {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
         
         let res;
         try {
@@ -177,7 +177,7 @@ async function verifyOTP() {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
         
         let res;
         try {
@@ -1973,7 +1973,7 @@ Buat analisis komprehensif dalam HTML VALID (tanpa markdown/code block). Wajib a
 
 Jangan gunakan emoji sama sekali. Gunakan layout HTML yang bersih, elegan, dan profesional. Gunakan div dengan border-left berwarna sesuai status. JAWAB HANYA HTML VALID.`;
     try {
-        const raw = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
+        const raw = await callAI([{ role: 'user', content: prompt }], false, 'llama3-70b-8192');
         let cleanHtml = (raw || '').trim().replace(/```html\n?/gi,'').replace(/```\n?/gi,'').trim();
         const aiHtml = `
             <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:6px 10px;background:rgba(94,92,230,0.1);border-radius:8px;font-size:0.78rem;color:#8b8ff0;">
@@ -2440,7 +2440,7 @@ async function updateDailyAIAnalysis(logs, profile, email) {
 
         const prompt = `Kamu adalah ahli gizi dan pelatih fitness profesional. Evaluasi asupan gizi + kegiatan HARI INI untuk user LebihFit berikut, dan berikan analisis yang mendalam, personal, serta actionable dalam bahasa Indonesia gaul yang ramah (pakai "lu/kamu"):\n\n== DATA HARI INI ==\nProfil: ${profile.gender || '?'}, ${profile.bb || '?'}kg/${profile.tb || '?'}cm, Usia: ${profile.usia || '?'}th, Aktivitas: ${profile.aktivitas || '?'}, Goal: ${profile.target || 'maintenance'}\n\nMakanan tercatat (${logs.length} item):\n${foodList}\n\nTotal aktual vs Target harian:\n- Kalori: ${Math.round(totals.cal)} kcal vs ${calTarget} kcal → ${calStatus}\n- Protein: ${totals.protein.toFixed(1)}g vs ${targetProtein}g (${Math.round((totals.protein/targetProtein)*100)}%)\n- Karbohidrat: ${totals.carbs.toFixed(1)}g vs ${targetCarbs}g (${Math.round((totals.carbs/targetCarbs)*100)}%)\n- Lemak: ${totals.fat.toFixed(1)}g vs ${targetFat}g (${Math.round((totals.fat/targetFat)*100)}%)\n- Serat: ${totals.fiber.toFixed(1)}g (ideal ≥25g)\n- Gula: ${totals.sugar.toFixed(1)}g (batas <50g)\n- Sodium: ${Math.round(totals.sodium)}mg (batas <2300mg)\n\n== KEGIATAN HARI INI ==\n${activityContext}\n\n== FORMAT RESPONS ==\nTulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Wajib ada bagian:\n\n1. Status Kalori → <div style="padding:12px 14px;border-left:4px solid [WARNA];border-radius:8px;margin-bottom:10px;background:[BG]"> — isi: status, dampak ke goal, saran konkret untuk sisa hari ini atau besok\n\n2. Analisis Makronutrisi → heading + 3 div (protein, karbo, lemak) masing2 dengan:\n   - Status (KURANG/OK/BERLEBIH)\n   - Dampak spesifik ke tubuh/performa latihan  \n   - Saran makanan konkret untuk melengkapi hari ini / besok\n\n3. Kaitkan nutrisi dengan kegiatan hari ini: apakah asupan mendukung latihan yang dilakukan? Recovery otot cukup? Tidur cukup?\n\n4. Mikronutrisi (jika serat<25 atau gula>50 atau sodium>2300) → ringkas dalam 1 div\n\n5. Saran Aktivitas → berdasarkan sisa kalori, goal, dan kegiatan yang sudah dilakukan hari ini\n\n6. Prioritas Besok → 2-3 hal terpenting yang harus diperbaiki besok (format <ul><li>)\n\nGunakan warna: hijau = OK/cukup, merah = kurang/berlebih bahaya, kuning = perlu perhatian, biru = cutting/defisit. Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. JAWAB HANYA HTML, tanpa teks di luar tag HTML.`;
 
-        const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama-3.3-70b-versatile');
+        const rawHtml = await callAI([{ role: 'user', content: prompt }], false, 'llama3-70b-8192');
 
         if (rawHtml) {
             // Clean up any markdown code fences
@@ -4348,7 +4348,7 @@ Kembalikan respons dalam JSON dengan format persis seperti ini:
   }
 }`;
 
-        const rawJson = await callAI([{ role: 'user', content: prompt }], true, 'llama-3.3-70b-versatile');
+        const rawJson = await callAI([{ role: 'user', content: prompt }], true, 'llama3-70b-8192');
         let data = null;
         try {
             let cleanJson = rawJson.trim();
@@ -5706,4 +5706,4 @@ function renderPhysicalAnalysisUI(data) {
 
     return html;
 }
-
+

@@ -98,7 +98,7 @@ const getOpenRouterModel = () => {
         'openrouter/free'
     ];
     if (!model || oldModels.includes(model)) {
-        model = 'llama-3.3-70b-versatile';
+        model = 'llama3-70b-8192';
         DB.set('lf_openroutermodel', model);
     }
     return model;
@@ -303,7 +303,7 @@ function getMaskedAIError(originalError) {
   }
 }
 
-async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile', isVision = false, isGroqVision = false) {
+async function callAI(messages, json = false, model = 'llama3-70b-8192', isVision = false, isGroqVision = false) {
   let endpoint = '/api/ai';
   if (window.location.hostname !== 'lebihfittools.vercel.app') {
     endpoint = 'https://lebihfittools.vercel.app/api/ai';
@@ -312,7 +312,7 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
   const body = { model, messages, json, isVision };
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
   
   let res;
   try {
@@ -451,7 +451,7 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
 8. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
 {"cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
 Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama3-70b-8192');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   try {
@@ -479,7 +479,7 @@ async function calcAI(profile) {
 Jawab dalam JSON format:
 {"cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"bmr":0,"tdee":0,"notes":"penjelasan singkat dalam bahasa Indonesia max 3 kalimat"}
 Semua angka dalam satuan standar. Jawab HANYA dengan JSON valid.`;
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama3-70b-8192');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   try {
@@ -568,7 +568,7 @@ SANGAT PENTING: Untuk gram makronutrisi, Anda WAJIB membagi persentase kalori de
 Jawab HANYA dengan JSON valid format berikut tanpa markdown/teks lain:
 {"kcal":0,"fatG":0,"carbG":0,"proteinG":0,"analysis":"isi feedback di sini"}`;
 
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.3-70b-versatile');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama3-70b-8192');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   

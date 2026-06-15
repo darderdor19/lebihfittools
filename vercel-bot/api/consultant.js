@@ -106,7 +106,7 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'GROQ_API_KEY is not configured on Vercel.' });
       }
       const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-      const selectedModel = model || 'llama-3.3-70b-versatile';
+      const selectedModel = model || 'llama3-70b-8192';
 
       const response = await fetch(endpoint, {
         method: 'POST',

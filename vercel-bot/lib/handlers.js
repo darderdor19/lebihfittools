@@ -1949,7 +1949,7 @@ const GROQ_KEY = process.env.GROQ_API_KEY;
 async function callGroqAPI(messages, maxTokens = 2500, jsonMode = false) {
   if (!GROQ_KEY) throw new Error('GROQ_API_KEY env variable is not set');
   const body = {
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama3-70b-8192',
     messages,
     max_tokens: maxTokens,
     temperature: 0

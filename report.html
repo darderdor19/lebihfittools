@@ -1034,7 +1034,7 @@ Tulis evaluasi dalam HTML VALID (TANPA markdown, TANPA code block). Struktur waj
 
 Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan, dan profesional. Gunakan warna/gaya CSS yang cocok dengan format cetakan PDF putih/terang. HANYA respons HTML VALID tanpa teks pembuka/penutup.`;
 
-          const raw = await callAI([{ role: 'user', content: prompt }], apiKey, false, 'llama-3.3-70b-versatile');
+          const raw = await callAI([{ role: 'user', content: prompt }], apiKey, false, 'llama3-70b-8192');
           let cleanHtml = (raw || '').trim().replace(/```html\n?/gi,'').replace(/```\n?/gi,'').trim();
 
           const bannerHtml = `
@@ -1118,7 +1118,7 @@ Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan
     }
 
     // ===== CALL AI HELPER =====
-    async function callAI(messages, apiKey, json = false, model = 'llama-3.3-70b-versatile') {
+    async function callAI(messages, apiKey, json = false, model = 'llama3-70b-8192') {
       if (!apiKey) throw new Error('API Key belum diset.');
       const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
       const body = { model: model, messages, max_tokens: 2500 };

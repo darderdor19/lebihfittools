@@ -1292,7 +1292,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
           'openrouter/free'
       ];
       if (!activeModel || oldModels.includes(activeModel)) {
-          activeModel = 'llama-3.3-70b-versatile';
+          activeModel = 'llama3-70b-8192';
           localStorage.setItem('lf_openroutermodel', activeModel);
       }
       
@@ -2395,7 +2395,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
 
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
-        const model = localStorage.getItem(MODEL_NAME) || 'llama-3.3-70b-versatile';
+        const model = localStorage.getItem(MODEL_NAME) || 'llama3-70b-8192';
         
         // Build payload messages with system context and multimodal support
         const userContext = generateUserContextSummary(queryText);
