@@ -2375,7 +2375,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
         }
 
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
-        const model = localStorage.getItem(MODEL_NAME) || 'meta-llama/llama-3.3-70b-instruct:free';
+        const model = localStorage.getItem(MODEL_NAME) || 'openrouter/free';
         
         // Build payload messages with system context and multimodal support
         const userContext = generateUserContextSummary(queryText);
