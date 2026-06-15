@@ -16,91 +16,104 @@ let tempAuthEmail = "";
 let tempAuthName = "";
 
 async function initApp() {
-    const profile = getProfile();
-    const authUser = getAuthUser();
-    updateApiStatus(true);
-
-    if (!authUser) {
-        document.getElementById('landingPage').classList.remove('hidden');
-        document.getElementById('app').classList.add('hidden');
-        document.getElementById('authOverlay').classList.add('hidden');
-    } else {
-        document.getElementById('landingPage').classList.add('hidden');
-        // Sync Firebase in the background
-        syncFirebaseToLocal().then(async () => {
-            const isTrialExpired = await checkTrialStatus();
-            if (isTrialExpired) return; // Stop showing app if expired
-
-            const updatedProfile = getProfile();
-            if (updatedProfile) {
-                document.getElementById('onboarding').classList.add('hidden');
-                document.getElementById('app').classList.remove('hidden');
-                renderProfileDisplay();
-            }
-        }).catch(console.error);
-        
-        // Show UI immediately based on local state
+    try {
         const profile = getProfile();
-        if (!profile) {
-            document.getElementById('onboarding').classList.remove('hidden');
+        const authUser = getAuthUser();
+        updateApiStatus(true);
+
+        if (!authUser) {
+            document.getElementById('landingPage').classList.remove('hidden');
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('authOverlay').classList.add('hidden');
         } else {
-            // Check trial status locally first to prevent flash of app
-            const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
-            const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
-            const trialDuration = 3 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            const localExpired = cachedCreatedAt && (now - parseInt(JSON.parse(cachedCreatedAt))) > trialDuration;
+            document.getElementById('landingPage').classList.add('hidden');
+            // Sync Firebase in the background
+            syncFirebaseToLocal().then(async () => {
+                const isTrialExpired = await checkTrialStatus();
+                if (isTrialExpired) return; // Stop showing app if expired
+
+                const updatedProfile = getProfile();
+                if (updatedProfile) {
+                    document.getElementById('onboarding').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                    renderProfileDisplay();
+                }
+            }).catch(console.error);
             
-            if (localExpired && !cachedIsPro) {
-                showTrialExpiredOverlay(authUser.email, parseInt(JSON.parse(cachedCreatedAt)));
+            // Show UI immediately based on local state
+            const profile = getProfile();
+            if (!profile) {
+                document.getElementById('onboarding').classList.remove('hidden');
             } else {
-                document.getElementById('app').classList.remove('hidden');
-                renderProfileDisplay();
-                
-                // Check url params for deep linking
-                const urlParams = new URLSearchParams(window.location.search);
-                const pageParam = urlParams.get('page');
-                const rangeParam = urlParams.get('range');
-                const fromParam = urlParams.get('from');
-                const toParam = urlParams.get('to');
-                
-                const validPages = ['dashboard', 'log', 'activity', 'history', 'progress', 'calculator', 'settings'];
-                if (pageParam && validPages.includes(pageParam)) {
-                    if (pageParam === 'history') {
-                        showPage('history');
-                        if (fromParam && toParam) {
-                            document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-                            document.getElementById('pCustom').classList.add('active');
-                            document.getElementById('customDateRange').classList.remove('hidden');
-                            document.getElementById('dateFrom').value = fromParam;
-                            document.getElementById('dateTo').value = toParam;
-                            loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
-                        } else if (rangeParam) {
-                            setPeriod(rangeParam);
+                // Check trial status locally first to prevent flash of app
+                let localExpired = false;
+                const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+                try {
+                    if (cachedCreatedAt) {
+                        const createdAt = parseInt(JSON.parse(cachedCreatedAt));
+                        const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+                        const trialDuration = 3 * 24 * 60 * 60 * 1000;
+                        const now = Date.now();
+                        localExpired = !cachedIsPro && (now - createdAt) > trialDuration;
+                        
+                        if (localExpired) {
+                            showTrialExpiredOverlay(authUser.email, createdAt);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing trial info:", e);
+                }
+
+                if (!localExpired) {
+                    document.getElementById('app').classList.remove('hidden');
+                    renderProfileDisplay();
+                    
+                    // Check url params for deep linking
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const pageParam = urlParams.get('page');
+                    const rangeParam = urlParams.get('range');
+                    const fromParam = urlParams.get('from');
+                    const toParam = urlParams.get('to');
+                    
+                    const validPages = ['dashboard', 'log', 'activity', 'history', 'progress', 'calculator', 'settings'];
+                    if (pageParam && validPages.includes(pageParam)) {
+                        if (pageParam === 'history') {
+                            showPage('history');
+                            if (fromParam && toParam) {
+                                document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+                                document.getElementById('pCustom').classList.add('active');
+                                document.getElementById('customDateRange').classList.remove('hidden');
+                                document.getElementById('dateFrom').value = fromParam;
+                                document.getElementById('dateTo').value = toParam;
+                                loadHistoryData(new Date(fromParam.replace(/-/g, '/')), new Date(toParam.replace(/-/g, '/')));
+                            } else if (rangeParam) {
+                                setPeriod(rangeParam);
+                            } else {
+                                setPeriod('7');
+                            }
                         } else {
-                            setPeriod('7');
+                            showPage(pageParam);
                         }
                     } else {
-                        showPage(pageParam);
+                        showPage('dashboard');
                     }
-                } else {
-                    showPage('dashboard');
                 }
             }
         }
-    }
-}
+    } catch (err) {
+        console.error("Error in initApp:", err);
+    } finally {
+        // Initialize Lucide icons if available
+        if (window.lucide) {
+            try { lucide.createIcons(); } catch (e) {}
+        }
 
-    // Initialize Lucide icons if available
-    if (window.lucide) {
-        lucide.createIcons();
-    }
-
-    // Hide loading screen
-    const loader = document.getElementById('loadingOverlay');
-    if (loader) {
-        loader.style.opacity = '0';
-        setTimeout(() => loader.style.display = 'none', 400);
+        // Hide loading screen
+        const loader = document.getElementById('loadingOverlay');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 400);
+        }
     }
 }
 
