@@ -1,7 +1,7 @@
 // ===== FIREBASE CONFIG (TUGAS USER) =====
 // Paste firebaseConfig Anda di dalam kurung kurawal di bawah ini:
 const firebaseConfig = {
-  apiKey: "AIzaSyAf6sIX9am_Gmv4xf0FiHRZX1V-w7NzIcM",
+  apiKey: "AIzaSyAF6xiX9am_Gmv4xf0f1hRZKlV-w7NzIcM",
   authDomain: "lebihfittools.firebaseapp.com",
   databaseURL: "https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "lebihfittools",
