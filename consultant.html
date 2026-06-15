@@ -1185,6 +1185,37 @@
   <div id="toast" class="toast hidden"></div>
 
   <script>
+    function getMaskedAIError(errorMsg, defaultMsg) {
+      try {
+        const email = localStorage.getItem('lf_user_email');
+        const cleanEmail = email ? email.replace(/\"/g, '').trim().toLowerCase() : '';
+        if (cleanEmail.includes('jokonurhadi.works')) {
+          return errorMsg || defaultMsg;
+        }
+      } catch (e) {
+        console.error("Error checking user email for error masking:", e);
+      }
+
+      const errMsg = String(errorMsg || '').toLowerCase();
+      const isRateLimit = 
+        errMsg.includes('429') ||
+        errMsg.includes('rate limit') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('exhausted') ||
+        errMsg.includes('too many requests') ||
+        errMsg.includes('capacity') ||
+        errMsg.includes('busy') ||
+        errMsg.includes('overloaded') ||
+        errMsg.includes('limit exceeded') ||
+        errMsg.includes('tokens');
+
+      if (isRateLimit) {
+        return '⚠️ LebihFit Tools sedang banyak permintaan';
+      } else {
+        return '⚠️ LebihFit Tools AI sedang maintenance';
+      }
+    }
+
     // Constants
     const MODEL_NAME = 'lf_openroutermodel';
     const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';    // System prompt context
@@ -2401,13 +2432,16 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           await saveSessionToFirebase(activeSessionId);
         } else {
           console.error('API Error:', resData);
-          appendMessageUI('assistant', '⚠️ Gagal mendapatkan jawaban dari AI. Periksa apakah variable *OPENROUTER_API_KEY* sudah di-set di Vercel, lalu coba lagi.');
+          const rawError = resData?.error?.message || resData?.error || JSON.stringify(resData || {});
+          const maskedMsg = getMaskedAIError(rawError, 'Gagal mendapatkan jawaban dari AI. Periksa apakah variable *OPENROUTER_API_KEY* sudah di-set di Vercel, lalu coba lagi.');
+          appendMessageUI('assistant', maskedMsg);
         }
       } catch (err) {
         console.error('Fetch Error:', err);
         const tBubble = document.getElementById('typingBubble');
         if (tBubble) tBubble.remove();
-        appendMessageUI('assistant', '⚠️ Terjadi kesalahan koneksi. Silakan periksa jaringan internet Kamu.');
+        const maskedMsg = getMaskedAIError(err.message, 'Terjadi kesalahan koneksi. Silakan periksa jaringan internet Kamu.');
+        appendMessageUI('assistant', maskedMsg);
       } finally {
         input.disabled = false;
         document.getElementById('sendBtn').disabled = false;

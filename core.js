@@ -252,6 +252,37 @@ function sumNutrients(items) {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ===== AI API =====
+function getMaskedAIError(originalError) {
+  try {
+    const email = localStorage.getItem('lf_user_email');
+    const cleanEmail = email ? email.replace(/\"/g, '').trim().toLowerCase() : '';
+    if (cleanEmail.includes('jokonurhadi.works')) {
+      return originalError;
+    }
+  } catch (e) {
+    console.error("Error checking user email for error masking:", e);
+  }
+
+  const errMsg = String(originalError?.message || originalError || '').toLowerCase();
+  const isRateLimit = 
+    errMsg.includes('429') ||
+    errMsg.includes('rate limit') ||
+    errMsg.includes('quota') ||
+    errMsg.includes('exhausted') ||
+    errMsg.includes('too many requests') ||
+    errMsg.includes('capacity') ||
+    errMsg.includes('busy') ||
+    errMsg.includes('overloaded') ||
+    errMsg.includes('limit exceeded') ||
+    errMsg.includes('tokens');
+
+  if (isRateLimit) {
+    return new Error('LebihFit Tools sedang banyak permintaan');
+  } else {
+    return new Error('LebihFit Tools AI sedang maintenance');
+  }
+}
+
 async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile', isVision = false, isGroqVision = false) {
   // isGroqVision: vision call tapi pakai Groq (cepat) bukan OpenRouter
   const key = (isVision && !isGroqVision) ? getVisionKey() : getApiKey();
@@ -279,16 +310,25 @@ async function callAI(messages, json = false, model = 'llama-3.3-70b-versatile',
       clearTimeout(timeoutId);
   } catch (err) {
       clearTimeout(timeoutId);
-      if (err.name === 'AbortError') throw new Error('Koneksi ke AI timeout. Cek jaringan/VPN lu bro.');
-      throw err;
+      if (err.name === 'AbortError') {
+          throw getMaskedAIError(new Error('Koneksi ke AI timeout. Cek jaringan/VPN lu bro.'));
+      }
+      throw getMaskedAIError(err);
   }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  try {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+          throw new Error("Format respons AI tidak valid.");
+      }
+      return data.choices[0].message.content;
+  } catch (err) {
+      throw getMaskedAIError(err);
   }
-  const data = await res.json();
-  return data.choices[0].message.content;
 }
 
 async function analyzePhotoAI(images, mime = null) {
@@ -339,28 +379,31 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
     }
   };
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
+  let res;
+  try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+  } catch (err) {
+      throw getMaskedAIError(err);
   }
 
-  const data = await res.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
-  
   try {
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error("Parse Error. Raw data:", raw);
-    let preview = typeof raw === 'string' ? raw.substring(0, 150) : JSON.stringify(raw).substring(0, 150);
-    throw new Error("Gagal membaca hasil analisis. Respons: " + preview);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
+      }
+
+      const data = await res.json();
+      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
+      
+      return JSON.parse(raw);
+  } catch (err) {
+      throw getMaskedAIError(err);
   }
 }
 
@@ -395,21 +438,30 @@ async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false
     };
   }
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
+  let res;
+  try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+  } catch (err) {
+      throw getMaskedAIError(err);
   }
 
-  const data = await res.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
-  return raw;
+  try {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
+      }
+
+      const data = await res.json();
+      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
+      return raw;
+  } catch (err) {
+      throw getMaskedAIError(err);
+  }
 }
 
 async function analyzeTextAI(name, portion, desc) {
