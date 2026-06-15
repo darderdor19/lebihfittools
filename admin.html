@@ -169,6 +169,31 @@
     display: none;
   }
 
+  .login-success {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: var(--success);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .forgot-link {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 0.82rem;
+    color: var(--text2);
+  }
+  .forgot-link a {
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .forgot-link a:hover { text-decoration: underline; }
+
   /* ===== ADMIN DASHBOARD ===== */
   #adminDashboard { display: none; flex-direction: column; min-height: 100vh; }
 
@@ -491,6 +516,11 @@
     </button>
 
     <div class="login-error" id="loginError"></div>
+    <div class="login-success" id="loginSuccess"></div>
+    
+    <div class="forgot-link">
+      <a onclick="openForgotPass()">🔑 Lupa Password? Reset via Email</a>
+    </div>
   </div>
 </div>
 
@@ -675,6 +705,26 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeChangePass()">Batal</button>
       <button class="btn-save" onclick="doChangePassword()">Ganti Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: LUPA PASSWORD ===== -->
+<div class="modal-overlay hidden" id="forgotPassModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3><i data-lucide="mail" style="width:16px;height:16px;color:var(--accent);"></i> Reset Password via Email</h3>
+      <button class="modal-close" onclick="closeForgotPass()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:16px;">Masukkan email admin kamu. Kami akan kirimkan link reset password ke email tersebut.</p>
+    <div class="modal-form-group">
+      <label>Email Admin</label>
+      <input type="email" id="forgotEmailInput" placeholder="admin@email.com">
+    </div>
+    <div id="forgotMsg" style="display:none;font-size:0.83rem;padding:10px 12px;border-radius:8px;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeForgotPass()">Batal</button>
+      <button class="btn-save" onclick="doForgotPassword()">Kirim Link Reset</button>
     </div>
   </div>
 </div>
@@ -1088,6 +1138,48 @@ async function doChangePassword() {
 }
 
 // ===== HELPERS =====
+// ===== LUPA PASSWORD =====
+function openForgotPass() {
+  const emailInput = document.getElementById('loginEmail');
+  document.getElementById('forgotEmailInput').value = emailInput ? emailInput.value : '';
+  document.getElementById('forgotMsg').style.display = 'none';
+  document.getElementById('forgotPassModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeForgotPass() {
+  document.getElementById('forgotPassModal').classList.add('hidden');
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgotEmailInput').value.trim();
+  const msgEl = document.getElementById('forgotMsg');
+  
+  if (!email.includes('@')) {
+    msgEl.textContent = 'Masukkan email yang valid!';
+    msgEl.style.background = 'rgba(239,68,68,0.1)';
+    msgEl.style.color = 'var(--danger)';
+    msgEl.style.display = 'block';
+    return;
+  }
+  
+  try {
+    await fbAuth.sendPasswordResetEmail(email);
+    msgEl.textContent = `✅ Link reset password sudah dikirim ke ${email}. Cek inbox / folder spam kamu!`;
+    msgEl.style.background = 'rgba(16,185,129,0.1)';
+    msgEl.style.color = 'var(--success)';
+    msgEl.style.display = 'block';
+  } catch (err) {
+    let msg = 'Gagal mengirim email reset.';
+    if (err.code === 'auth/user-not-found') msg = 'Email tidak terdaftar di sistem.';
+    else if (err.code === 'auth/invalid-email') msg = 'Format email tidak valid.';
+    msgEl.textContent = msg;
+    msgEl.style.background = 'rgba(239,68,68,0.1)';
+    msgEl.style.color = 'var(--danger)';
+    msgEl.style.display = 'block';
+  }
+}
+
 function togglePass(inputId, btn) {
   const input = document.getElementById(inputId);
   const isPass = input.type === 'password';
