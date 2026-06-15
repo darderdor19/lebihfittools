@@ -17,11 +17,6 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GROQ_ASSISTANT_KEY || process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Neither GROQ_ASSISTANT_KEY nor GROQ_API_KEY is set in Vercel environment variables.' });
-  }
-
   try {
     const { messages, model } = req.body;
     if (!messages || !Array.isArray(messages)) {
@@ -38,14 +33,33 @@ module.exports = async function handler(req, res) {
       }
     });
 
-    const selectedModel = hasImage ? 'llama-3.2-11b-vision-preview' : (model || 'llama-3.3-70b-versatile');
+    let apiKey, endpoint, selectedModel, headers = { 'Content-Type': 'application/json' };
+    
+    if (hasImage) {
+      // Vision requests -> OpenRouter using google/gemini-2.5-flash
+      apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured on Vercel.' });
+      }
+      endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      selectedModel = 'google/gemini-2.5-flash';
+      headers['HTTP-Referer'] = 'https://lebihfittools.vercel.app';
+      headers['X-Title'] = 'LebihFit AI Consultant Vision';
+    } else {
+      // Text requests -> Groq
+      apiKey = process.env.GROQ_ASSISTANT_KEY || process.env.GROQ_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'Neither GROQ_ASSISTANT_KEY nor GROQ_API_KEY is configured on Vercel.' });
+      }
+      endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+      selectedModel = model || 'llama-3.3-70b-versatile';
+    }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify({
         model: selectedModel,
         messages: messages,

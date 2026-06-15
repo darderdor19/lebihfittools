@@ -366,116 +366,43 @@ Instruksi:
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
-  // Use getVisionKey() which will fall back to process.env.GEMINI_API_KEY on the server
-  let key = getVisionKey();
-  if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
-      key = process.env.GEMINI_API_KEY;
-  }
-  if (!key) throw new Error("Gemini API Key belum diset. Buka Settings.");
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-  
-  const parts = [{ text: prompt }];
+  const content = [{ type: 'text', text: prompt }];
   if (Array.isArray(images)) {
     images.forEach(img => {
-      parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
+      content.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     });
   } else {
-    parts.push({ inline_data: { mime_type: mime, data: images } });
+    content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${images}` } });
   }
 
-  const body = {
-    contents: [{
-      parts: parts
-    }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.0
-    }
-  };
-
-  let res;
+  const messages = [{ role: 'user', content }];
+  
   try {
-      res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
+    const raw = await callAI(messages, true, 'google/gemini-2.5-flash', true);
+    if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
+    return JSON.parse(raw);
   } catch (err) {
-      throw getMaskedAIError(err);
-  }
-
-  try {
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
-      }
-
-      const data = await res.json();
-      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
-      
-      return JSON.parse(raw);
-  } catch (err) {
-      throw getMaskedAIError(err);
+    throw getMaskedAIError(err);
   }
 }
 
 async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false) {
-  let key = getVisionKey();
-  if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
-      key = process.env.GEMINI_API_KEY;
-  }
-  if (!key) throw new Error("Gemini API Key belum diset. Buka Settings.");
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-  
-  const parts = [{ text: promptText }];
+  const content = [{ type: 'text', text: promptText }];
   if (Array.isArray(images)) {
     images.forEach(img => {
-      parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
+      content.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     });
   } else {
-    parts.push({ inline_data: { mime_type: mime, data: images } });
+    content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${images}` } });
   }
 
-  const body = {
-    contents: [{
-      parts: parts
-    }]
-  };
-
-  if (jsonMode) {
-    body.generationConfig = {
-      responseMimeType: "application/json",
-      temperature: 0.0
-    };
-  }
-
-  let res;
+  const messages = [{ role: 'user', content }];
+  
   try {
-      res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
+    const raw = await callAI(messages, jsonMode, 'google/gemini-2.5-flash', true);
+    return raw;
   } catch (err) {
-      throw getMaskedAIError(err);
-  }
-
-  try {
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status} dari Gemini API`);
-      }
-
-      const data = await res.json();
-      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
-      return raw;
-  } catch (err) {
-      throw getMaskedAIError(err);
+    throw getMaskedAIError(err);
   }
 }
 
