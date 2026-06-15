@@ -424,28 +424,26 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
 - Minyak Goreng / Margarin (per 10g / 1 sdm): 88 kcal | Karbo: 0g | Protein: 0g | Lemak: 10g | Serat: 0g | Gula: 0g | Sodium: 0mg | Kalsium: 0mg | Besi: 0mg | VitC: 0mg | VitD: 0mcg | Zinc: 0mg
 
 == INSTRUKSI KALKULASI SECARA KETAT ==
-1. Ekstrak berat masing-masing bahan dalam gram (misal: dada ayam 545g, singkong 500g).
+1. Ekstrak berat masing-masing bahan dalam gram (misal: Bahan A 545g, Bahan B 500g).
 2. Bedakan Berat Mentah vs Matang secara logis:
    - Jika deskripsi mengandung kata "fillet", "mentah", "raw", gunakan data "MENTAH".
    - Jika tidak disebutkan secara spesifik, asumsikan berat yang diinput adalah berat mentah sebelum dimasak kecuali konteksnya jelas-jelas matang.
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK (0g lemak tambahan). Jangan menambah kalori/lemak minyak goreng ke dalamnya.
 4. ATURAN MULTI-BAHAN (SANGAT PENTING):
-   - Jika terdapat lebih dari 1 bahan makanan (misal: "dada ayam fillet 545g dan singkong 500g"):
+   - Jika terdapat lebih dari 1 bahan makanan (misal: "Bahan A 545g dan Bahan B 500g"):
      - Hitung kandungan nutrisi masing-masing bahan secara terpisah terlebih dahulu.
-     - JANGAN PERNAH menjumlahkan total berat (545g + 500g = 1045g) lalu mengalikan seluruh berat tersebut dengan gizi dada ayam. Ini salah!
+     - JANGAN PERNAH menjumlahkan total berat (545g + 500g = 1045g) lalu mengalikan seluruh berat tersebut dengan gizi satu bahan. Ini salah!
      - Jumlahkan hasil akhir nutrisi dari masing-masing bahan di akhir.
 5. CONTOH DETAIL PERHITUNGAN MULTI-BAHAN:
-   - Input: "dada ayam fillet 545g dan singkong 500g dimasak air-fryer tanpa bumbu/minyak"
-     - Langkah 1: Hitung dada ayam fillet mentah 545g -> Faktor pengali = 5.45.
-       - Kalori = 120 * 5.45 = 654 kcal, Protein = 23 * 5.45 = 125.4g, Lemak = 2.5 * 5.45 = 13.6g
-     - Langkah 2: Hitung singkong 500g -> Faktor pengali = 5.0.
-       - Kalori = 160 * 5.0 = 800 kcal, Karbo = 38 * 5.0 = 190g, Protein = 1.3 * 5.0 = 6.5g, Lemak = 0.3 * 5.0 = 1.5g, Serat = 1.8 * 5.0 = 9g
+   - Input: "Bahan A 545g dan Bahan B 500g"
+     - Langkah 1: Hitung Bahan A 545g -> Faktor pengali = 5.45.
+       - Kalori = 100 * 5.45 = 545 kcal, Protein = 20 * 5.45 = 109g
+     - Langkah 2: Hitung Bahan B 500g -> Faktor pengali = 5.0.
+       - Kalori = 50 * 5.0 = 250 kcal, Karbo = 10 * 5.0 = 50g
      - Langkah 3: Jumlahkan total gizi akhir:
-       - Kalori = 654 + 800 = 1454 kcal
-       - Protein = 125.4 + 6.5 = 131.9g
-       - Karbohidrat = 0 + 190 = 190g
-       - Lemak = 13.6 + 1.5 = 15.1g
-       - Serat = 0 + 9 = 9g
+       - Kalori = 545 + 250 = 795 kcal
+       - Protein = 109 + 0 = 109g
+       - Karbohidrat = 0 + 50 = 50g
 6. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
 7. Untuk makanan lain, gunakan nilai gizi resmi per 100g dari USDA secara logis dan lakukan perkalian berat yang sama secara ketat.
 8. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
