@@ -2655,9 +2655,9 @@ a{color:var(--accent);text-decoration:none}
 
 .lp-pricing-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 32px;
-  max-width: 900px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -2847,6 +2847,10 @@ a{color:var(--accent);text-decoration:none}
   }
   .lp-demo-grid {
     grid-template-columns: 1fr;
+  }
+  .lp-pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 450px;
   }
 }
 
