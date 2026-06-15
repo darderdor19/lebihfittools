@@ -113,7 +113,7 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'GROQ_API_KEY is not configured on Vercel.' });
       }
 
-      const selectedModel = 'llama3-70b-8192';
+      const selectedModel = 'llama-3.1-8b-instant';
       const body = {
         model: selectedModel,
         messages: messages,
