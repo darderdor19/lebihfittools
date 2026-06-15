@@ -82,6 +82,8 @@ const getApiKey = () => DB.get('lf_apikey');
 const setApiKey = k => DB.set('lf_apikey', k);
 const getVisionKey = () => DB.get('lf_visionkey');
 const setVisionKey = k => DB.set('lf_visionkey', k);
+const getAssistantKey = () => DB.get('lf_assistantkey');
+const setAssistantKey = k => DB.set('lf_assistantkey', k);
 const getOpenRouterModel = () => {
     let model = DB.get('lf_openroutermodel');
     const oldModels = [
@@ -92,10 +94,11 @@ const getOpenRouterModel = () => {
         'deepseek/deepseek-chat',
         'meta-llama/llama-3.3-70b-instruct',
         'meta-llama/llama-3.2-3b-instruct:free',
-        'nousresearch/hermes-3-llama-3.1-405b:free'
+        'nousresearch/hermes-3-llama-3.1-405b:free',
+        'openrouter/free'
     ];
     if (!model || oldModels.includes(model)) {
-        model = 'openrouter/free';
+        model = 'llama-3.3-70b-versatile';
         DB.set('lf_openroutermodel', model);
     }
     return model;

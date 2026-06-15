@@ -1208,35 +1208,38 @@
             </div>
           </div>
           <div class="form-group" style="margin-top: 12px;">
+            <label>Secret Token (Assistant - Chat AI Consultant) <span style="font-size:0.75rem;color:var(--text3);font-weight:400;">(Opsional, jika mau memisahkan limit chat)</span></label>
+            <div class="api-input-wrap">
+              <input type="password" id="assistantKeyInput" placeholder="gsk_... (opsional)" class="api-input">
+              <button class="btn-icon" onclick="toggleApiVis('assistantKeyInput')" title="Show/Hide"><i data-lucide="eye"></i></button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 12px;">
             <label>Model AI Consultant</label>
             <div class="custom-select-wrapper" id="openRouterModelSelectWrapper">
               <button type="button" class="custom-select-trigger" id="customModelSelectTrigger">
-                <span id="customModelSelectValue">Server Ultra (Otomatis & Paling Stabil - Rekomendasi Utama)</span>
+                <span id="customModelSelectValue">Server Ultra (Llama 3.3 70B - Rekomendasi Utama)</span>
                 <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
               </button>
               <div class="custom-options-menu" id="customModelOptionsMenu">
-                <div class="custom-option selected" data-value="openrouter/free">
-                  <span class="option-text">Server Ultra (Otomatis & Paling Stabil - Rekomendasi Utama)</span>
+                <div class="custom-option selected" data-value="llama-3.3-70b-versatile">
+                  <span class="option-text">Server Ultra (Llama 3.3 70B - Rekomendasi Utama)</span>
                   <i data-lucide="check" class="check-icon"></i>
                 </div>
-                <div class="custom-option" data-value="google/gemma-4-31b-it:free">
-                  <span class="option-text">Server Premium (Sangat Cerdas & Detil)</span>
+                <div class="custom-option" data-value="deepseek-r1-distill-llama-70b">
+                  <span class="option-text">Server Premium (DeepSeek R1 - Detil & Penalaran)</span>
                   <i data-lucide="check" class="check-icon hidden"></i>
                 </div>
-                <div class="custom-option" data-value="google/gemma-4-26b-a4b-it:free">
-                  <span class="option-text">Server Fast (Sangat Cepat & Responsif)</span>
+                <div class="custom-option" data-value="llama-3.1-8b-instant">
+                  <span class="option-text">Server Fast (Llama 3.1 8B - Super Cepat)</span>
                   <i data-lucide="check" class="check-icon hidden"></i>
                 </div>
-                <div class="custom-option" data-value="qwen/qwen3-coder:free">
-                  <span class="option-text">Server Standard (Responsif & Efisien)</span>
-                  <i data-lucide="check" class="check-icon hidden"></i>
-                </div>
-                <div class="custom-option" data-value="liquid/lfm-2.5-1.2b-instruct:free">
-                  <span class="option-text">Server Eco (Stabil & Hemat Energi)</span>
+                <div class="custom-option" data-value="mixtral-8x7b-32768">
+                  <span class="option-text">Server Standard (Mixtral 8x7B - Stabil)</span>
                   <i data-lucide="check" class="check-icon hidden"></i>
                 </div>
               </div>
-              <input type="hidden" id="openRouterModelSelect" value="openrouter/free">
+              <input type="hidden" id="openRouterModelSelect" value="llama-3.3-70b-versatile">
             </div>
           </div>
           <div class="form-actions">
@@ -1433,7 +1436,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="core.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="core.js?v=13"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
