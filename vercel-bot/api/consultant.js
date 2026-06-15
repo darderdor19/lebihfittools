@@ -17,9 +17,9 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_ASSISTANT_KEY || process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'GROQ_API_KEY is not set in Vercel environment variables.' });
+    return res.status(500).json({ error: 'Neither GROQ_ASSISTANT_KEY nor GROQ_API_KEY is set in Vercel environment variables.' });
   }
 
   try {
