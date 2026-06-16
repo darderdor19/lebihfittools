@@ -14,6 +14,7 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbwu6alUbDmowVe7qbEmzWP7
 const ADMIN_TELEGRAM = "https://t.me/lebihfit"; // Link Telegram untuk Upgrade Pro/Support
 let tempAuthEmail = "";
 let tempAuthName = "";
+let loginSource = "";
 
 async function initApp() {
     try {
@@ -151,6 +152,10 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
 
     // Cache trial info
     const safeEmail = email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
+    let isExpired = false;
+    let isBlocked = false;
+    let createdAt = null;
+
     if (fbDb) {
         // Cek meta user
         const snap = await fbDb.ref(`users/${safeEmail}/lf_user_meta`).once('value');
@@ -161,11 +166,30 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
             localStorage.setItem('lf_user_created_at', JSON.stringify(now));
             localStorage.setItem('lf_user_is_pro', JSON.stringify(false));
             localStorage.removeItem('lf_user_pro_until');
+            localStorage.removeItem('lf_user_is_blocked');
+            createdAt = now;
         } else {
-            localStorage.setItem('lf_user_created_at', JSON.stringify(meta.createdAt));
-            localStorage.setItem('lf_user_is_pro', JSON.stringify(meta.isPro || false));
-            if (meta.proUntil) localStorage.setItem('lf_user_pro_until', JSON.stringify(meta.proUntil));
-            else localStorage.removeItem('lf_user_pro_until');
+            createdAt = meta.createdAt;
+            isBlocked = meta.isBlocked || false;
+            const isPro = meta.isPro || false;
+            
+            localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
+            localStorage.setItem('lf_user_is_pro', JSON.stringify(isPro));
+            localStorage.setItem('lf_user_is_blocked', JSON.stringify(isBlocked));
+            if (meta.proUntil) {
+                localStorage.setItem('lf_user_pro_until', JSON.stringify(meta.proUntil));
+            } else {
+                localStorage.removeItem('lf_user_pro_until');
+            }
+
+            const now = Date.now();
+            let isTimeBasedPro = false;
+            if (meta.proUntil) {
+                const untilDate = new Date(meta.proUntil).getTime();
+                if (untilDate > now) isTimeBasedPro = true;
+            }
+            const trialDuration = 3 * 24 * 60 * 60 * 1000;
+            isExpired = !isPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
         }
         
         // Cek admin status
@@ -177,10 +201,46 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
         }
     } else {
         // No Firebase DB: use local first-run tracking
-        if (!localStorage.getItem('lf_user_created_at')) {
-            localStorage.setItem('lf_user_created_at', JSON.stringify(Date.now()));
+        const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+        if (!cachedCreatedAt) {
+            createdAt = Date.now();
+            localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
             localStorage.setItem('lf_user_is_pro', JSON.stringify(false));
+            localStorage.removeItem('lf_user_pro_until');
+            localStorage.removeItem('lf_user_is_blocked');
+        } else {
+            createdAt = parseInt(JSON.parse(cachedCreatedAt));
+            const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+            isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
+            const trialDuration = 3 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            isExpired = !cachedIsPro && (now - createdAt) > trialDuration;
         }
+    }
+
+    if (isExpired || isBlocked) {
+        document.getElementById('authOverlay').classList.add('hidden');
+        
+        // Setup details in the overlay
+        showTrialExpiredOverlay(email, createdAt || Date.now());
+        
+        // Keep the overlay hidden for now, show the landing page
+        const overlay = document.getElementById('trialExpiredOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        
+        const lp = document.getElementById('landingPage');
+        if (lp) lp.classList.remove('hidden');
+        
+        const appContainer = document.getElementById('app');
+        if (appContainer) appContainer.classList.add('hidden');
+        
+        alert("kamu sudah mencoba trial dan trial nya sudah habis");
+        
+        setTimeout(() => {
+            const pricingSection = document.getElementById('lp-pricing');
+            if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        return;
     }
 
     document.getElementById('authOverlay').classList.add('hidden');
@@ -6030,7 +6090,41 @@ function renderPhysicalAnalysisUI(data) {
 }
 
 // ===== LANDING PAGE ACTIONS & DEMO CALCULATOR =====
-function openLoginModal() {
+function openLoginModal(source = '') {
+    loginSource = source;
+    
+    // Check if user is already logged in and expired
+    const authUser = getAuthUser();
+    if (authUser) {
+        const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+        const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+        const cachedProUntil = localStorage.getItem('lf_user_pro_until');
+        const cachedIsBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
+        
+        let isExpired = false;
+        let createdAt = null;
+        if (cachedCreatedAt) {
+            createdAt = parseInt(JSON.parse(cachedCreatedAt));
+            const now = Date.now();
+            let isTimeBasedPro = false;
+            if (cachedProUntil) {
+                const untilDate = new Date(JSON.parse(cachedProUntil)).getTime();
+                if (untilDate > now) isTimeBasedPro = true;
+            }
+            const trialDuration = 3 * 24 * 60 * 60 * 1000;
+            isExpired = !cachedIsPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
+        }
+        
+        if (source === 'trial' && (isExpired || cachedIsBlocked)) {
+            alert("kamu sudah mencoba trial dan trial nya sudah habis");
+            const pricingSection = document.getElementById('lp-pricing');
+            if (pricingSection) {
+                pricingSection.scrollIntoView({ behavior: 'smooth' });
+            }
+            return;
+        }
+    }
+
     document.getElementById('authOverlay').classList.remove('hidden');
     resetAuth();
 }
