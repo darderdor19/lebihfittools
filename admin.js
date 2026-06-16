@@ -72,7 +72,9 @@ function renderUsersTable() {
         
         // Determine status
         let statusHtml = '';
-        if (meta.isPro) {
+        if (meta.isBlocked) {
+            statusHtml = '<span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">🚫 DIBLOKIR</span>';
+        } else if (meta.isPro) {
             statusHtml = '<span style="background:rgba(16,185,129,0.1);color:#10b981;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Lifetime</span>';
         } else if (meta.proUntil) {
             const untilDate = new Date(meta.proUntil).getTime();
@@ -80,6 +82,14 @@ function renderUsersTable() {
                 statusHtml = `<span style="background:rgba(16,185,129,0.1);color:#10b981;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Pro s.d. ${meta.proUntil}</span>`;
             } else {
                 statusHtml = '<span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Pro Expired</span>';
+            }
+        } else if (meta.createdAt) {
+            const trialEnd = meta.createdAt + (3 * 24 * 60 * 60 * 1000);
+            if (Date.now() > trialEnd) {
+                statusHtml = '<span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Trial Habis</span>';
+            } else {
+                const daysLeft = Math.ceil((trialEnd - Date.now()) / (24 * 60 * 60 * 1000));
+                statusHtml = `<span style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Trial (${daysLeft} hari lagi)</span>`;
             }
         } else {
             statusHtml = '<span style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Trial / Expired</span>';
@@ -108,7 +118,9 @@ function openAdminSubModal(safeEmail, originalEmail) {
     const meta = adminAllUsers[safeEmail].lf_user_meta || {};
     const select = document.getElementById('adminSubSelect');
     
-    if (meta.isPro) {
+    if (meta.isBlocked) {
+        select.value = 'revoke';
+    } else if (meta.isPro) {
         select.value = 'lifetime';
     } else if (meta.proUntil) {
         select.value = 'month'; // default select
@@ -129,30 +141,28 @@ async function saveAdminSub() {
     const selectValue = document.getElementById('adminSubSelect').value;
     const metaRef = fbDb.ref(`users/${currentEditSafeEmail}/lf_user_meta`);
     
-    let isPro = false;
-    let proUntil = null;
+    let updateData = {};
     
     if (selectValue === 'lifetime') {
-        isPro = true;
+        updateData = { isPro: true, proUntil: null, isBlocked: false };
     } else if (selectValue === 'month') {
         const d = new Date();
         d.setDate(d.getDate() + 30);
-        proUntil = d.toISOString().split('T')[0];
+        updateData = { isPro: false, proUntil: d.toISOString().split('T')[0], isBlocked: false };
     } else if (selectValue === 'year') {
         const d = new Date();
         d.setDate(d.getDate() + 365);
-        proUntil = d.toISOString().split('T')[0];
+        updateData = { isPro: false, proUntil: d.toISOString().split('T')[0], isBlocked: false };
     } else if (selectValue === 'trial') {
-        await metaRef.child('createdAt').set(Date.now());
+        // Reset trial: set createdAt to now so they get a fresh 3-day trial
+        updateData = { isPro: false, proUntil: null, isBlocked: false, createdAt: Date.now() };
     } else if (selectValue === 'revoke') {
-        await metaRef.child('createdAt').set(0);
+        // Block user completely
+        updateData = { isPro: false, proUntil: null, isBlocked: true };
     }
     
     try {
-        await metaRef.update({
-            isPro: isPro,
-            proUntil: proUntil
-        });
+        await metaRef.update(updateData);
         showToast('Berhasil update langganan!', 'success');
         closeAdminSubModal();
         loadAllUsers(); 

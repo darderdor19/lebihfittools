@@ -375,6 +375,7 @@ async function checkTrialStatus() {
     let createdAt = null;
     let isPro = false;
     let proUntil = null;
+    let isBlocked = false;
 
     if (fbDb) {
         try {
@@ -384,8 +385,10 @@ async function checkTrialStatus() {
                 createdAt = meta.createdAt;
                 isPro = meta.isPro || false;
                 proUntil = meta.proUntil || null;
+                isBlocked = meta.isBlocked || false;
                 localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
                 localStorage.setItem('lf_user_is_pro', JSON.stringify(isPro));
+                localStorage.setItem('lf_user_is_blocked', JSON.stringify(isBlocked));
                 if (proUntil) localStorage.setItem('lf_user_pro_until', JSON.stringify(proUntil));
                 else localStorage.removeItem('lf_user_pro_until');
             }
@@ -394,7 +397,7 @@ async function checkTrialStatus() {
         }
     }
 
-    if (!createdAt) {
+    if (createdAt === null || createdAt === undefined) {
         const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
         if (cachedCreatedAt) {
             createdAt = parseInt(JSON.parse(cachedCreatedAt));
@@ -403,6 +406,13 @@ async function checkTrialStatus() {
             localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
         }
         isPro = localStorage.getItem('lf_user_is_pro') === 'true';
+        isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
+    }
+
+    // Blocked users are always expired
+    if (isBlocked) {
+        showTrialExpiredOverlay(email, createdAt);
+        return true;
     }
 
     const cachedProUntil = localStorage.getItem('lf_user_pro_until');
@@ -446,7 +456,23 @@ function showTrialExpiredOverlay(email, createdAt) {
 
     const upgradeBtn = document.getElementById('btnUpgradeProTrial');
     if (upgradeBtn) {
-        upgradeBtn.href = ADMIN_TELEGRAM;
+        // Redirect to LP pricing section instead of Telegram
+        upgradeBtn.href = '#lp-pricing';
+        upgradeBtn.removeAttribute('target');
+        upgradeBtn.onclick = function(e) {
+            e.preventDefault();
+            // Hide overlay and app, show landing page scrolled to pricing
+            overlay.classList.add('hidden');
+            document.getElementById('app').classList.add('hidden');
+            const lp = document.getElementById('landingPage');
+            if (lp) {
+                lp.classList.remove('hidden');
+                setTimeout(() => {
+                    const pricingSection = document.getElementById('lp-pricing');
+                    if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        };
     }
 
     const appContainer = document.getElementById('app');

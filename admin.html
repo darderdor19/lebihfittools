@@ -900,11 +900,19 @@ function updateStats(users) {
 function getStatusInfo(meta) {
   const now = Date.now();
   if (!meta) return { label: 'Trial', type: 'trial' };
+  if (meta.isBlocked) return { label: '🚫 DIBLOKIR', type: 'expired' };
   if (meta.isPro) return { label: 'Lifetime', type: 'lifetime' };
   if (meta.proUntil) {
     const until = new Date(meta.proUntil).getTime();
     if (until > now) return { label: `Pro s.d. ${meta.proUntil}`, type: 'pro' };
     else return { label: `Expired ${meta.proUntil}`, type: 'expired' };
+  }
+  // Check if trial is still active (3 days from createdAt)
+  if (meta.createdAt) {
+    const trialEnd = meta.createdAt + (3 * 24 * 60 * 60 * 1000);
+    if (now > trialEnd) return { label: 'Trial Habis', type: 'expired' };
+    const daysLeft = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
+    return { label: `Trial (${daysLeft} hari lagi)`, type: 'trial' };
   }
   return { label: 'Trial / Expired', type: 'trial' };
 }
@@ -1017,19 +1025,19 @@ async function saveSubscription() {
   const val = document.getElementById('subModalSelect').value;
   const metaRef = fbDb.ref(`users/${currentEditSafeEmail}/lf_user_meta`);
   
-  let updateData = { isPro: false, proUntil: null };
+  let updateData = {};
   
   if (val === 'lifetime') {
-    updateData = { isPro: true, proUntil: null };
+    updateData = { isPro: true, proUntil: null, isBlocked: false };
   } else if (val === 'trial') {
-    updateData = { isPro: false, proUntil: null, createdAt: Date.now() };
+    updateData = { isPro: false, proUntil: null, isBlocked: false, createdAt: Date.now() };
   } else if (val === 'revoke') {
-    updateData = { isPro: false, proUntil: null, createdAt: 0 };
+    updateData = { isPro: false, proUntil: null, isBlocked: true };
   } else {
     const days = { month1: 30, month3: 90, month6: 180, year: 365 }[val];
     const d = new Date();
     d.setDate(d.getDate() + days);
-    updateData = { isPro: false, proUntil: d.toISOString().split('T')[0] };
+    updateData = { isPro: false, proUntil: d.toISOString().split('T')[0], isBlocked: false };
   }
   
   try {
