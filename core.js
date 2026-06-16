@@ -387,8 +387,9 @@ Instruksi:
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
 4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
 5. Lakukan kalkulasi WAJIB: (Nilai gizi per 100g) * (Estimasi Berat Gram / 100). Jika porsi bukan 100g, JANGAN berikan nilai 100g! Wajib kalikan juga SEMUA mikronutrisi!
-6. Berikan jawaban dalam JSON dengan format berikut:
-{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
+6. Jangan biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut. Hitung secara realistis!
+7. Berikan jawaban dalam JSON dengan format berikut:
+{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
   const content = [{ type: 'text', text: prompt }];
@@ -468,10 +469,10 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
    - Jika ada saus sachet (tomat, sambal), kecap, atau mayo, WAJIB dihitung.
    - 1 sachet saus sambal/tomat (~10g) mengandung sekitar 2-4g Karbohidrat (gula). Jangan berikan nilai Karbo 0g jika ada saus.
 7. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
-8. WAJIB KALIKAN SEMUA GIZI PER 100g (TERMASUK MIKRONUTRISI: sodium, kalsium, besi, vitC, dll) DENGAN FAKTOR PENGALI DAGING/MAKANAN BERSIH YANG LOGIS. Jawab dengan nilai realistis.
+8. WAJIB KALIKAN SEMUA GIZI PER 100g (TERMASUK MIKRONUTRISI: sodium, kalsium, besi, vitC, dll) DENGAN FAKTOR PENGALI DAGING/MAKANAN BERSIH YANG LOGIS. Jawab dengan nilai realistis. JANGAN biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut.
 9. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
-{"calculation":"tuliskan langkah perkalian makro DAN MIKRO disini (misal: kalori 165*6=990, sodium 74*6=444, kalsium 15*6=90)","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
-Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
+{"calculation":"tuliskan langkah perkalian makro DAN MIKRO disini (misal: kalori 165*6=990, sodium 74*6=444, kalsium 15*6=90)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8}
+All nutritional values should be estimated realistically. Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.1-8b-instant');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
