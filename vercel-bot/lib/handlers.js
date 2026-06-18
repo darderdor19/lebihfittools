@@ -231,6 +231,12 @@ async function handleCallback(cb) {
 
   if (data === 'menu') return showMainMenu(chatId, userId);
   if (data === 'dashboard') return email ? showDashboard(chatId, email) : promptLogin(chatId, userId);
+  
+  if (data === 'log_food' || data === 'log_food_photo') {
+    await deleteCache(`${userId}_food_photo_desc`);
+    await deleteCache(`${userId}_food_photos_arr`);
+  }
+
   if (data === 'log_food') return email ? promptFoodInput(chatId, userId) : promptLogin(chatId, userId);
   if (data === 'log_food_manual') return email ? startFoodManual(chatId, userId) : promptLogin(chatId, userId);
   if (data === 'log_food_photo') return email ? startFoodPhoto(chatId, userId) : promptLogin(chatId, userId);
@@ -685,6 +691,12 @@ async function handlePhotoInput(chatId, userId, photos, caption) {
     cachedData[fileId] = { mime, base64 };
     await setCache(cacheKey, cachedData);
 
+    if (caption && caption.trim()) {
+      const existingDesc = await getCache(`${userId}_food_photo_desc`);
+      const newDesc = existingDesc ? `${existingDesc} ${caption.trim()}` : caption.trim();
+      await setCache(`${userId}_food_photo_desc`, newDesc);
+    }
+
     const count = Object.keys(cachedData).length;
 
     let msg = `✅ Foto ke-${count} berhasil ditambahkan.\n\n`;
@@ -717,9 +729,16 @@ async function processFoodPhotos(chatId, userId) {
       return sendMessage(chatId, 'Belum ada foto yang diunggah.', { inline_keyboard: [[{ text: 'Ulangi', callback_data: 'log_food_photo' }]] });
     }
     const images = Object.values(cachedData);
+    const userDesc = await getCache(`${userId}_food_photo_desc`) || '';
     
-    const prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
-Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
+    let prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
+Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).`;
+
+    if (userDesc) {
+      prompt += `\n\n== DESKRIPSI TAMBAHAN DARI USER (Gunakan detail ini untuk memandu analisis gizi, porsi, dan bahan secara akurat): ==\n"${userDesc}"`;
+    }
+
+    prompt += `
 
 Instruksi:
 1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
@@ -732,9 +751,9 @@ Instruksi:
    - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
 3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
 4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
-5. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100).
+5. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100). JANGAN biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut. Hitung secara realistis!
 6. Berikan jawaban dalam JSON dengan format berikut:
-{"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
+{"name":"nama makanan","portion":"estimasi porsi/berat","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
     const raw = await callGeminiVisionAPI(images, null, prompt, true);
@@ -790,11 +809,12 @@ async function saveFoodAI(chatId, userId, email) {
     const todayLogRef = `users/${safe(email)}/lf_logs/${dateKey}`;
     const todayLog = await getFirebase(todayLogRef) || { date: dateKey, items: [], totals: { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, calcium: 0, iron: 0, vitC: 0, vitD: 0, zinc: 0 } };
 
+    const userDesc = await getCache(`${userId}_food_photo_desc`) || '';
     const newItem = {
       id: uid(),
       name: parsed.name,
       portion: parsed.portion,
-      desc: parsed.notes || '',
+      desc: userDesc ? `${userDesc} (${parsed.notes || ''})` : (parsed.notes || ''),
       time: 'makan_siang', // default
       cal: parsed.cal,
       protein: parsed.protein,
@@ -822,6 +842,7 @@ async function saveFoodAI(chatId, userId, email) {
 
     await clearState(userId);
     await deleteCache(`${userId}_food_ai`);
+    await deleteCache(`${userId}_food_photo_desc`);
 
     return sendMessage(chatId, `✅ *Makanan Berhasil Dicatat (via AI)!*\n\n+ ${newItem.cal} kcal (${newItem.name})`, {
       inline_keyboard: [
