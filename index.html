@@ -1046,12 +1046,123 @@
           </div>
           <div id="photoPreviewWrap" class="hidden">
             <div id="foodPhotosGrid" style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-bottom:12px;"></div>
+            <div class="form-group text-left" style="margin-bottom: 20px; text-align: left;">
+              <label>Deskripsi Detail Makanan (Opsional)</label>
+              <textarea id="photoFoodDesc" placeholder="Contoh: Digoreng pakai minyak banyak, tambah telur dadar, tanpa gula..."></textarea>
+            </div>
             <div class="photo-actions">
               <button class="btn-secondary" onclick="clearPhoto()"><i data-lucide="trash-2" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Hapus Foto</button>
               <button class="btn-primary" id="analyzeBtn" onclick="analyzePhoto()"><i data-lucide="zap" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Analisis Nutrisi</button>
             </div>
           </div>
-          <div id="photoResult" class="hidden"></div>
+          <div id="photoResult" class="hidden" style="margin-top: 20px;">
+            <div style="background:var(--surface); border:1px solid var(--border); padding:16px; border-radius:12px; margin-bottom:20px;">
+              <h4 style="display:flex; align-items:center; gap:8px; margin-bottom:8px; color:var(--accent);">
+                <i data-lucide="sparkles" style="width:18px;height:18px;"></i> Hasil Analisis AI
+              </h4>
+              <p id="photoResultNotes" style="font-size:0.9rem; color:var(--text2); line-height:1.5; margin-bottom:0; font-style:italic;"></p>
+            </div>
+
+            <form id="photoFoodForm" class="food-form" onsubmit="savePhotoFood(event)">
+              <div class="form-group">
+                <label>Nama Makanan *</label>
+                <input type="text" id="photo_foodName" placeholder="Contoh: Nasi Goreng Ayam" required>
+              </div>
+              <div class="form-group">
+                <label>Porsi / Jumlah</label>
+                <input type="text" id="photo_foodPortion" placeholder="Contoh: 1 piring, 200g">
+              </div>
+              <div class="form-group">
+                <label>Deskripsi Detail Makanan (Opsional)</label>
+                <textarea id="photo_foodDesc" placeholder="Contoh: Digoreng pakai minyak banyak..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Waktu Makan</label>
+                <input type="hidden" id="photo_mealTime" value="makan_siang">
+                <div class="custom-select-trigger" onclick="openCustomSelect('photo_mealTime')">
+                  <span id="photo_mealTime_label">Makan Siang</span>
+                  <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+                </div>
+              </div>
+              
+              <div class="nutrisi-box">
+                <h4 class="nutrisi-box-title"><i data-lucide="flame"></i> Makronutrisi</h4>
+                <div class="nutrisi-grid">
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="flame"></i></div>
+                    <div class="nc-details">
+                      <label>Kalori (kcal) *</label>
+                      <input type="number" id="photo_foodCal" placeholder="0" min="0" step="any" required>
+                    </div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="drumstick"></i></div>
+                    <div class="nc-details">
+                      <label>Protein (g)</label>
+                      <input type="number" id="photo_foodProtein" placeholder="0" min="0" step="any">
+                    </div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="wheat"></i></div>
+                    <div class="nc-details">
+                      <label>Karbohidrat (g)</label>
+                      <input type="number" id="photo_foodCarbs" placeholder="0" min="0" step="any">
+                    </div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="apple"></i></div>
+                    <div class="nc-details">
+                      <label>Lemak (g)</label>
+                      <input type="number" id="photo_foodFat" placeholder="0" min="0" step="any">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="nutrisi-box" style="margin-top:20px;">
+                <h4 class="nutrisi-box-title"><i data-lucide="flask-conical"></i> Mikronutrisi (Opsional)</h4>
+                <div class="nutrisi-grid">
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="leaf"></i></div>
+                    <div class="nc-details"><label>Serat (g)</label><input type="number" id="photo_foodFiber" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="lollipop"></i></div>
+                    <div class="nc-details"><label>Gula (g)</label><input type="number" id="photo_foodSugar" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="salt"></i></div>
+                    <div class="nc-details"><label>Sodium (mg)</label><input type="number" id="photo_foodSodium" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="bone"></i></div>
+                    <div class="nc-details"><label>Kalsium (mg)</label><input type="number" id="photo_foodCalcium" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="anvil"></i></div>
+                    <div class="nc-details"><label>Zat Besi (mg)</label><input type="number" id="photo_foodIron" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="citrus"></i></div>
+                    <div class="nc-details"><label>Vit C (mg)</label><input type="number" id="photo_foodVitC" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="sun"></i></div>
+                    <div class="nc-details"><label>Vit D (mcg)</label><input type="number" id="photo_foodVitD" placeholder="0" min="0" step="any"></div>
+                  </div>
+                  <div class="nutrisi-card">
+                    <div class="nc-icon"><i data-lucide="hexagon"></i></div>
+                    <div class="nc-details"><label>Zinc (mg)</label><input type="number" id="photo_foodZinc" placeholder="0" min="0" step="any"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions" style="margin-top: 20px;">
+                <button type="button" class="btn-secondary" onclick="clearPhoto()">Batal</button>
+                <button type="submit" class="btn-primary" style="background-color: var(--accent);"><i data-lucide="save" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Simpan Makanan</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 

@@ -3030,7 +3030,18 @@ function clearPhoto() {
     document.getElementById('photoInput').value = '';
     foodImagesList = [];
     renderFoodPreviews();
-    document.getElementById('photoResult').classList.add('hidden');
+    const descEl = document.getElementById('photoFoodDesc');
+    if (descEl) descEl.value = '';
+    const resultEl = document.getElementById('photoResult');
+    if (resultEl) {
+        resultEl.classList.add('hidden');
+        const form = document.getElementById('photoFoodForm');
+        if (form) form.reset();
+        const labelEl = document.getElementById('photo_mealTime_label');
+        if (labelEl) labelEl.innerText = 'Makan Siang';
+        const mealTimeInput = document.getElementById('photo_mealTime');
+        if (mealTimeInput) mealTimeInput.value = 'makan_siang';
+    }
 }
 
 async function analyzePhoto() {
@@ -3038,47 +3049,76 @@ async function analyzePhoto() {
     
     const btn = document.getElementById('analyzeBtn');
     const resultDiv = document.getElementById('photoResult');
+    const userDesc = document.getElementById('photoFoodDesc').value.trim();
     
     try {
         btn.innerHTML = '⏳ Menganalisis...';
         btn.disabled = true;
         resultDiv.classList.add('hidden');
         
-        const res = await analyzePhotoAI(foodImagesList);
+        const res = await analyzePhotoAI(foodImagesList, null, userDesc);
         
-        // Populate manual form with results
-        document.getElementById('foodName').value = res.name || '';
-        document.getElementById('foodPortion').value = res.portion || '';
-        document.getElementById('foodCal').value = res.cal || 0;
-        document.getElementById('foodProtein').value = res.protein || 0;
-        document.getElementById('foodCarbs').value = res.carbs || 0;
-        document.getElementById('foodFat').value = res.fat || 0;
+        // Populate photo results form
+        document.getElementById('photoResultNotes').innerText = res.notes || 'Berikut perkiraan kandungan gizi makanan Anda dari AI.';
+        document.getElementById('photo_foodName').value = res.name || '';
+        document.getElementById('photo_foodPortion').value = res.portion || '';
+        document.getElementById('photo_foodDesc').value = userDesc;
         
-        document.getElementById('foodFiber').value = res.fiber || 0;
-        document.getElementById('foodSugar').value = res.sugar || 0;
-        document.getElementById('foodSodium').value = res.sodium || 0;
-        document.getElementById('foodCalcium').value = res.calcium || 0;
-        document.getElementById('foodIron').value = res.iron || 0;
-        document.getElementById('foodVitC').value = res.vitC || 0;
-        document.getElementById('foodVitD').value = res.vitD || 0;
-        document.getElementById('foodZinc').value = res.zinc || 0;
+        document.getElementById('photo_foodCal').value = res.cal || 0;
+        document.getElementById('photo_foodProtein').value = res.protein || 0;
+        document.getElementById('photo_foodCarbs').value = res.carbs || 0;
+        document.getElementById('photo_foodFat').value = res.fat || 0;
         
-        document.getElementById('nutrisiContainer').classList.remove('hidden');
-        document.getElementById('btnSimpanMakanan').classList.remove('hidden');
+        document.getElementById('photo_foodFiber').value = res.fiber || 0;
+        document.getElementById('photo_foodSugar').value = res.sugar || 0;
+        document.getElementById('photo_foodSodium').value = res.sodium || 0;
+        document.getElementById('photo_foodCalcium').value = res.calcium || 0;
+        document.getElementById('photo_foodIron').value = res.iron || 0;
+        document.getElementById('photo_foodVitC').value = res.vitC || 0;
+        document.getElementById('photo_foodVitD').value = res.vitD || 0;
+        document.getElementById('photo_foodZinc').value = res.zinc || 0;
         
-        switchLogTab('manual');
+        resultDiv.classList.remove('hidden');
         showToast('Analisis AI berhasil! Silakan cek dan simpan.', 'success');
-        clearPhoto();
         
     } catch (error) {
         showToast(error.message, 'error');
         resultDiv.innerHTML = `<p style="color:var(--danger)">Error: ${error.message}</p>`;
         resultDiv.classList.remove('hidden');
     } finally {
-        btn.innerHTML = '<i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;"></i> Analisis AI';
+        btn.innerHTML = '<i data-lucide="zap" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;"></i> Analisis Nutrisi';
         btn.disabled = false;
         if(window.lucide) lucide.createIcons();
     }
+}
+
+async function savePhotoFood(e) {
+    if (e) e.preventDefault();
+    const item = {
+        id: uid(),
+        date: todayKey(),
+        name: document.getElementById('photo_foodName').value,
+        portion: document.getElementById('photo_foodPortion').value,
+        mealTime: document.getElementById('photo_mealTime').value,
+        cal: parseFloat(document.getElementById('photo_foodCal').value) || 0,
+        protein: parseFloat(document.getElementById('photo_foodProtein').value) || 0,
+        carbs: parseFloat(document.getElementById('photo_foodCarbs').value) || 0,
+        fat: parseFloat(document.getElementById('photo_foodFat').value) || 0,
+        fiber: parseFloat(document.getElementById('photo_foodFiber').value) || 0,
+        sugar: parseFloat(document.getElementById('photo_foodSugar').value) || 0,
+        sodium: parseFloat(document.getElementById('photo_foodSodium').value) || 0,
+        calcium: parseFloat(document.getElementById('photo_foodCalcium').value) || 0,
+        iron: parseFloat(document.getElementById('photo_foodIron').value) || 0,
+        vitC: parseFloat(document.getElementById('photo_foodVitC').value) || 0,
+        vitD: parseFloat(document.getElementById('photo_foodVitD').value) || 0,
+        zinc: parseFloat(document.getElementById('photo_foodZinc').value) || 0,
+        desc: document.getElementById('photo_foodDesc').value || ''
+    };
+    
+    saveFoodItem(item);
+    showToast('Makanan berhasil disimpan!', 'success');
+    clearPhoto();
+    showPage('dashboard');
 }
 
 // Edit & Delete
@@ -3922,6 +3962,12 @@ const selectOptionsData = {
         {val: 'makan_siang', label: 'Makan Siang'},
         {val: 'makan_malam', label: 'Makan Malam'},
         {val: 'snack', label: 'Snack'}
+    ],
+    'photo_mealTime': [
+        {val: 'sarapan', label: 'Sarapan'},
+        {val: 'makan_siang', label: 'Makan Siang'},
+        {val: 'makan_malam', label: 'Makan Malam'},
+        {val: 'snack', label: 'Snack'}
     ]
 };
 
@@ -3929,7 +3975,8 @@ const selectTitles = {
     'gender': 'Jenis Kelamin',
     'aktivitas': 'Level Aktivitas',
     'mealTime': 'Waktu Makan',
-    'editMealTime': 'Waktu Makan'
+    'editMealTime': 'Waktu Makan',
+    'photo_mealTime': 'Waktu Makan'
 };
 
 function openCustomSelect(inputId) {

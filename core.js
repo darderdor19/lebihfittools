@@ -371,9 +371,15 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
   }
 }
 
-async function analyzePhotoAI(images, mime = null) {
-  const prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
-Tugas kamu adalah menganalisis foto makanan yang diunggah (bisa berupa satu foto atau beberapa foto yang menampilkan makanan yang sama atau komponen makanan yang berbeda dari hidangan tersebut), mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).
+async function analyzePhotoAI(images, mime = null, userDescription = '') {
+  let prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
+Tugas kamu adalah menganalisis foto makanan yang diunggah (bisa berupa satu foto atau beberapa foto yang menampilkan makanan yang sama atau komponen makanan yang berbeda dari hidangan tersebut), mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).`;
+
+  if (userDescription) {
+    prompt += `\n\n== DESKRIPSI TAMBAHAN DARI USER (Gunakan detail ini untuk memandu analisis gizi, porsi, dan bahan secara akurat): ==\n"${userDescription}"`;
+  }
+
+  prompt += `
 
 Instruksi:
 1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
