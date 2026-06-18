@@ -2653,12 +2653,17 @@ a{color:var(--accent);text-decoration:none}
   border-bottom: 1px solid var(--border);
 }
 
+.lp-pricing-container {
+  max-width: 1360px !important;
+}
+
 .lp-pricing-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
+  align-items: stretch;
 }
 
 @media (max-width: 1024px) {
@@ -2672,15 +2677,22 @@ a{color:var(--accent);text-decoration:none}
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 40px;
+  padding: 32px 20px; /* Reduced from 40px padding to give more horizontal room */
   position: relative;
   display: flex;
   flex-direction: column;
+  height: 100%; /* Ensure all cards stretch to same height */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.lp-price-card.premium {
-  border-color: var(--accent);
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.05);
+.lp-price-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 12px 30px rgba(0, 240, 255, 0.08);
+}
+
+.lp-price-card.premium.active:hover {
+  box-shadow: 0 12px 35px rgba(0, 240, 255, 0.2);
 }
 
 .premium-badge {
@@ -2697,48 +2709,59 @@ a{color:var(--accent);text-decoration:none}
 }
 
 .lp-price-card h3 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   margin-bottom: 12px;
 }
 
 .lp-price-card .price {
-  font-size: 2.5rem;
+  font-size: 2rem; /* Reduced from 2.5rem to prevent wrapping of the price amount */
   font-weight: 900;
   color: #fff;
   margin-bottom: 20px;
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
 .lp-price-card .price span {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text2);
   font-weight: 400;
 }
 
 .lp-price-card p {
   color: var(--text2);
-  font-size: 0.9rem;
-  margin-bottom: 30px;
+  font-size: 0.88rem;
+  margin-bottom: 24px;
   min-height: 40px;
+  line-height: 1.4;
 }
 
 .price-features {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: auto;
+  padding: 0;
 }
 
 .price-features li {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text2);
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.price-features li svg,
+.price-features li i {
+  flex-shrink: 0;
+  margin-top: 3px; /* Align icon nicely with the first line of text */
 }
 
 .price-features li b {
