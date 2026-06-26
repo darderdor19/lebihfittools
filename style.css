@@ -3189,6 +3189,14 @@ a{color:var(--accent);text-decoration:none}
   gap: 12px;
 }
 
+.lp-list-card, .lp-value-card, .lp-get-item, .lp-bonus-item, .lp-feature-card, .lp-compare-table, .lp-demo-form-card, .lp-demo-result-card {
+  /* Prevent GPU compositor rendering glitches on Chrome Android */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 .lp-list-card {
   display: flex;
   align-items: center;
@@ -3196,11 +3204,6 @@ a{color:var(--accent);text-decoration:none}
   padding: 16px 20px;
   background: var(--surface);
   border-radius: 12px;
-  /* Prevent GPU compositor rendering glitches on Chrome Android */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 .lp-list-card.pain {
