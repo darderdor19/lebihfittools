@@ -3148,7 +3148,7 @@ a{color:var(--accent);text-decoration:none}
     font-size: 1.6rem;
   }
   #lp-closing {
-    padding: 60px 0;
+    padding: 48px 0 !important;
   }
 }
 
@@ -3156,5 +3156,23 @@ a{color:var(--accent);text-decoration:none}
   .lp-get-grid, .lp-bonus-grid {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+}
+
+/* Mobile Spacing, Typography & Performance Fixes */
+@media (max-width: 768px) {
+  .lp-features, .lp-how, .lp-demo, .lp-pricing, .lp-telegram-promo {
+    padding: 48px 0 !important;
+  }
+  .lp-section-header {
+    margin-bottom: 24px !important;
+  }
+  .lp-section-header h2 {
+    font-size: 1.8rem !important;
+  }
+  .lp-header {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(6, 11, 17, 0.98) !important;
   }
 }
