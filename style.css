@@ -3212,4 +3212,8 @@ a{color:var(--accent);text-decoration:none}
 
 .lp-list-card.gain {
   border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+#lp-pricing-1month {
+  scroll-margin-top: 100px;
 }
