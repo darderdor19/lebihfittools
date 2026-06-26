@@ -3175,4 +3175,35 @@ a{color:var(--accent);text-decoration:none}
     -webkit-backdrop-filter: none !important;
     background: rgba(6, 11, 17, 0.98) !important;
   }
+}
+
+/* Checklist Cards & GPU Compositor Fix */
+.lp-list-wrapper {
+  max-width: 580px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-list-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border-radius: 12px;
+  /* Prevent GPU compositor rendering glitches on Chrome Android */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.lp-list-card.pain {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.lp-list-card.gain {
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
