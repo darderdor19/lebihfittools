@@ -3216,4 +3216,450 @@ a{color:var(--accent);text-decoration:none}
 
 #lp-pricing-1month {
   scroll-margin-top: 100px;
+}
+
+/* ============================================================
+   LP v2 NEW ELEMENTS — Copywriting Overhaul
+   ============================================================ */
+
+/* Hero headline strikethrough */
+.text-strike {
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  color: var(--text2);
+}
+
+/* Hero trust row */
+.lp-hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+}
+.lp-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text2);
+}
+
+/* Section tag pill */
+.lp-section-tag {
+  display: inline-block;
+  background: rgba(0, 240, 255, 0.08);
+  color: var(--accent);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  border-radius: 100px;
+  padding: 4px 14px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+/* Ticker */
+.lp-ticker-wrap {
+  overflow: hidden;
+  background: rgba(0, 240, 255, 0.03);
+  border-top: 1px solid rgba(0, 240, 255, 0.07);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.07);
+  padding: 10px 0;
+}
+.lp-ticker {
+  display: flex;
+  width: max-content;
+  animation: lp-ticker 32s linear infinite;
+}
+.lp-ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 36px;
+  font-size: 0.8rem;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.lp-ticker-dot {
+  color: var(--accent);
+  font-size: 7px;
+}
+@keyframes lp-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Problem Grid */
+.lp-problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 36px;
+}
+.lp-problem-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+.lp-problem-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.lp-problem-text {
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--text2);
+}
+.lp-problem-text strong {
+  color: var(--text1);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+.lp-problem-callout {
+  margin-top: 32px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.04);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  text-align: center;
+}
+.lp-problem-callout p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text1);
+}
+
+/* Solution Cards */
+.lp-sol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+  margin-top: 48px;
+}
+.lp-sol-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+.lp-sol-card:hover {
+  border-color: rgba(0, 240, 255, 0.25);
+  transform: translateY(-3px);
+}
+.lp-sol-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.lp-sol-card:hover::after { opacity: 1; }
+.lp-sol-num {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: rgba(0, 240, 255, 0.1);
+  line-height: 1;
+  margin-bottom: 14px;
+}
+.lp-sol-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+.lp-sol-desc {
+  font-size: 0.87rem;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+/* Timeline (90 Hari) */
+.lp-timeline {
+  margin-top: 48px;
+  position: relative;
+}
+.lp-timeline::before {
+  content: '';
+  position: absolute;
+  left: 23px;
+  top: 16px;
+  bottom: 16px;
+  width: 1px;
+  background: var(--border);
+}
+.lp-timeline-item {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 40px;
+  position: relative;
+}
+.lp-timeline-dot {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text2);
+  flex-shrink: 0;
+  z-index: 1;
+}
+.lp-timeline-item.active .lp-timeline-dot {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 240, 255, 0.07);
+}
+.lp-timeline-content {
+  padding-top: 8px;
+}
+.lp-timeline-period {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+.lp-timeline-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.lp-timeline-desc {
+  font-size: 0.87rem;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+/* Why Different Grid */
+.lp-why-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+.lp-why-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  transform: translateZ(0);
+  transition: border-color 0.2s, transform 0.2s;
+}
+.lp-why-card:hover {
+  border-color: rgba(0, 240, 255, 0.2);
+  transform: translateY(-2px);
+}
+.lp-why-icon {
+  font-size: 26px;
+  margin-bottom: 12px;
+}
+.lp-why-card h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.lp-why-card p {
+  font-size: 0.83rem;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+/* Value Stack List */
+.lp-val-list {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.lp-val-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  transform: translateZ(0);
+}
+.lp-val-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.lp-val-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.lp-val-name {
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+.lp-val-sub {
+  font-size: 0.78rem;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.lp-val-price {
+  font-size: 0.82rem;
+  color: var(--text2);
+  text-align: right;
+  flex-shrink: 0;
+  text-decoration: line-through;
+}
+.lp-val-price span {
+  display: block;
+  font-size: 0.68rem;
+  text-decoration: none;
+  color: var(--text3);
+  margin-top: 1px;
+}
+.lp-val-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  margin-top: 8px;
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.lp-val-total-label {
+  font-size: 0.93rem;
+  font-weight: 600;
+}
+.lp-val-total-label span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text2);
+  font-weight: 400;
+  margin-top: 2px;
+}
+.lp-val-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.lp-val-real {
+  font-size: 0.93rem;
+  color: var(--text2);
+  text-decoration: line-through;
+}
+.lp-val-actual {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+.lp-val-per {
+  font-size: 0.82rem;
+  color: var(--text2);
+}
+
+/* Pricing per-day note */
+.lp-price-perday {
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 14px;
+  margin-top: -4px;
+}
+
+/* Risk Box */
+.lp-risk-box {
+  margin-top: 36px;
+  text-align: center;
+  padding: 26px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.lp-risk-box p {
+  font-size: 0.93rem;
+  color: var(--text2);
+  line-height: 1.8;
+}
+.lp-risk-box strong {
+  color: var(--text1);
+}
+
+/* text-center helper for section headers */
+.lp-section-header.text-center {
+  text-align: center;
+}
+.lp-section-header.text-center p {
+  margin: 0 auto;
+}
+
+/* ============================================================
+   LP v2 RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .lp-problem-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-sol-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-why-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp-val-item {
+    flex-wrap: wrap;
+  }
+  .lp-val-price {
+    text-align: left;
+    text-decoration: none;
+    color: var(--text2);
+  }
+  .lp-val-total {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .lp-hero-trust {
+    gap: 10px;
+  }
+}
+@media (max-width: 480px) {
+  .lp-why-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-timeline::before {
+    left: 19px;
+  }
+  .lp-timeline-dot {
+    width: 38px;
+    height: 38px;
+    font-size: 0.65rem;
+  }
 }
