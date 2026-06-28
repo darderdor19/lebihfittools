@@ -12,6 +12,7 @@
 
 const PROPS = PropertiesService.getScriptProperties();
 const FB_URL = 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FB_SECRET = PROPS.getProperty('FB_SECRET') || '';
 
 // ID Spreadsheet LebihFit Database (ambil dari URL spreadsheet lu)
 // Contoh: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
@@ -136,7 +137,9 @@ function safe(email) { return email.replace(/[.#$\[\]]/g, '_'); }
 
 function getFirebase(path) {
   try {
-    var res = UrlFetchApp.fetch(FB_URL + '/' + path + '.json', { muteHttpExceptions: true });
+    var url = FB_URL + '/' + path + '.json';
+    if (FB_SECRET) url += '?auth=' + FB_SECRET;
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     var val = JSON.parse(res.getContentText());
     return val === null ? null : val;
   } catch (e) { return null; }
@@ -144,7 +147,9 @@ function getFirebase(path) {
 
 function setFirebase(path, value) {
   try {
-    UrlFetchApp.fetch(FB_URL + '/' + path + '.json', {
+    var url = FB_URL + '/' + path + '.json';
+    if (FB_SECRET) url += '?auth=' + FB_SECRET;
+    UrlFetchApp.fetch(url, {
       method: value === null ? 'DELETE' : 'PUT',
       contentType: 'application/json',
       payload: value !== null ? JSON.stringify(value) : '',
