@@ -100,10 +100,10 @@ function setupTriggers() {
     ScriptApp.deleteTrigger(triggers[i]);
   }
 
-  // Bikin trigger baru: Sync spreadsheet setiap 6 jam
+  // Bikin trigger baru: Sync spreadsheet setiap 1 menit
   ScriptApp.newTrigger('syncUsersToSpreadsheet')
     .timeBased()
-    .everyHours(6)
+    .everyMinutes(1)
     .create();
 
   Logger.log('Triggers setup complete!');
