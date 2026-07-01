@@ -307,9 +307,9 @@ function getMaskedAIError(originalError) {
   }
 }
 
-async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', isVision = false, isGroqVision = false, retries = 1) {
+async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', isVision = false, isGroqVision = false, retries = 1, fallbackAttempted = false) {
   let endpoint = '/api/ai';
-  if (window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+  if (fallbackAttempted || window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
     endpoint = 'https://lebihfittools.vercel.app/api/ai';
   }
 
@@ -331,16 +331,14 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
       // If local API is not found (404), fallback to production Vercel
       if (res.status === 404 && endpoint === '/api/ai') {
         console.warn("[lebihfit] Local API endpoint not found (404), falling back to production Vercel API...");
-        endpoint = 'https://lebihfittools.vercel.app/api/ai';
-        return await callAI(messages, json, model, isVision, isGroqVision, retries);
+        return await callAI(messages, json, model, isVision, isGroqVision, retries, true);
       }
   } catch (err) {
       clearTimeout(timeoutId);
       // If local API connection fails, fallback to production Vercel
       if (endpoint === '/api/ai' && window.location.hostname !== 'lebihfittools.vercel.app') {
         console.warn("[lebihfit] Local API fetch failed, falling back to production Vercel API...", err);
-        endpoint = 'https://lebihfittools.vercel.app/api/ai';
-        return await callAI(messages, json, model, isVision, isGroqVision, retries);
+        return await callAI(messages, json, model, isVision, isGroqVision, retries, true);
       }
       if (err.name === 'AbortError') {
           throw getMaskedAIError(new Error('Koneksi ke AI timeout. Cek jaringan/VPN lu bro.'));
