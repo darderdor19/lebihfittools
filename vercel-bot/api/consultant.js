@@ -42,7 +42,8 @@ module.exports = async function handler(req, res) {
       const body = {
         model: model,
         messages: messages,
-        temperature: 0.7
+        temperature: 0.7,
+        max_tokens: 2048
       };
 
       const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {

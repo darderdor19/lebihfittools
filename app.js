@@ -2943,8 +2943,27 @@ async function analyzeTextFood() {
 let foodImagesList = []; // Array of { base64, mime, previewSrc }
 
 function handlePhotoUpload(input) {
+    // Auto close the picker popup
+    closeCustomSelect();
+
     if (input.files && input.files.length > 0) {
         const files = Array.from(input.files);
+        
+        // Auto save to device if taken from camera
+        const isFromCamera = (input.id === 'cameraInput');
+        if (isFromCamera) {
+            files.forEach(file => {
+                const url = URL.createObjectURL(file);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `lebihfit-camera-${Date.now()}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
         if (foodImagesList.length + files.length > 10) {
             showToast('Maksimal 10 foto, bro!', 'warning');
             input.value = '';

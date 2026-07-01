@@ -44,7 +44,8 @@ module.exports = async function handler(req, res) {
       const body = {
         model: model,
         messages: messages,
-        temperature: json ? 0.1 : 0.2
+        temperature: json ? 0.1 : 0.2,
+        max_tokens: json ? 1000 : 2048
       };
       if (json) {
         body.response_format = { type: "json_object" };
@@ -65,9 +66,14 @@ module.exports = async function handler(req, res) {
       }
 
       const data = await response.json();
-      const rawText = data.choices?.[0]?.message?.content;
+      let rawText = data.choices?.[0]?.message?.content;
       if (!rawText) {
         return res.status(500).json({ error: { message: "NVIDIA API did not return text content." } });
+      }
+
+      // Clean up markdown code blocks if the model outputs them in JSON mode
+      if (json && typeof rawText === 'string') {
+        rawText = rawText.replace(/```json|```/gi, '').trim();
       }
 
       return res.status(200).json({
