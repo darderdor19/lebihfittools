@@ -709,12 +709,17 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
 
 function selectOptimalPhoto(photos) {
   if (!photos || !Array.isArray(photos) || photos.length === 0) return null;
-  for (const photo of photos) {
-    if (photo && (photo.width >= 800 || photo.height >= 800)) {
-      return photo;
+  const sorted = [...photos].sort((a, b) => (a.width * a.height) - (b.width * b.height));
+  let best = sorted[0];
+  let minDiff = Math.abs(best.width - 640);
+  for (const photo of sorted) {
+    const diff = Math.abs(photo.width - 640);
+    if (diff < minDiff) {
+      minDiff = diff;
+      best = photo;
     }
   }
-  return photos[photos.length - 1];
+  return best;
 }
 
 // ===== HANDLE PHOTO INPUT =====

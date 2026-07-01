@@ -2253,7 +2253,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       // Call Vercel Backend Proxy
       try {
         let apiEndpoint = '/api/consultant';
-        if (window.location.hostname !== 'lebihfittools.vercel.app') {
+        if (window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
           apiEndpoint = 'https://lebihfittools.vercel.app/api/consultant';
         }
 
@@ -2429,16 +2429,33 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
         let response, resData;
 
         while (retries >= 0) {
-          response = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: apiMessages
-            })
-          });
+          try {
+            response = await fetch(apiEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: apiMessages
+              })
+            });
+
+            // If local API is not found (404), fallback to production Vercel
+            if (response.status === 404 && apiEndpoint === '/api/consultant') {
+              console.warn("[lebihfit] Local consultant API not found (404), falling back to production Vercel...");
+              apiEndpoint = 'https://lebihfittools.vercel.app/api/consultant';
+              continue;
+            }
+          } catch (fetchErr) {
+            // If local API connection fails, fallback to production Vercel
+            if (apiEndpoint === '/api/consultant' && window.location.hostname !== 'lebihfittools.vercel.app') {
+              console.warn("[lebihfit] Local consultant API connection failed, falling back to production Vercel...", fetchErr);
+              apiEndpoint = 'https://lebihfittools.vercel.app/api/consultant';
+              continue;
+            }
+            throw fetchErr;
+          }
 
           resData = await response.json();
 
@@ -2592,7 +2609,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           return;
         }
 
-        resizeImage(file, 800, 800, function(resizedBase64) {
+        resizeImage(file, 640, 640, function(resizedBase64) {
           attachedImages.push({
             name: file.name,
             base64: resizedBase64

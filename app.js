@@ -2982,14 +2982,14 @@ function handlePhotoUpload(input) {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX = 800;
+                    const MAX = 640;
                     let w = img.width, h = img.height;
                     if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
                     else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
                     canvas.width = w;
                     canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.70);
                     
                     foodImagesList.push({
                         base64: compressed.split(',')[1],
@@ -3074,12 +3074,14 @@ async function analyzePhoto() {
     const btn = document.getElementById('analyzeBtn');
     const resultDiv = document.getElementById('photoResult');
     const errorDiv = document.getElementById('photoResultError');
+    const loadingDiv = document.getElementById('photoResultLoading');
     const userDesc = document.getElementById('photoFoodDesc').value.trim();
     
     try {
         btn.innerHTML = '⏳ Menganalisis...';
         btn.disabled = true;
         resultDiv.classList.add('hidden');
+        if (loadingDiv) loadingDiv.classList.remove('hidden');
         if (errorDiv) errorDiv.classList.add('hidden');
         
         const res = await analyzePhotoAI(foodImagesList, null, userDesc);
@@ -3104,10 +3106,12 @@ async function analyzePhoto() {
         document.getElementById('photo_foodVitD').value = res.vitD || 0;
         document.getElementById('photo_foodZinc').value = res.zinc || 0;
         
+        if (loadingDiv) loadingDiv.classList.add('hidden');
         resultDiv.classList.remove('hidden');
         showToast('Analisis AI berhasil! Silakan cek dan simpan.', 'success');
         
     } catch (error) {
+        if (loadingDiv) loadingDiv.classList.add('hidden');
         showToast(error.message, 'error');
         if (errorDiv) {
             errorDiv.innerText = `Error: ${error.message}`;
@@ -5425,7 +5429,7 @@ function removePhysicalPhoto(event) {
     renderPhysicalPreviews();
 }
 
-function resizeImageBase64(base64Str, maxWidth = 800, maxHeight = 800) {
+function resizeImageBase64(base64Str, maxWidth = 640, maxHeight = 640) {
     return new Promise((resolve) => {
         const img = new Image();
         img.src = base64Str;
@@ -5448,7 +5452,7 @@ function resizeImageBase64(base64Str, maxWidth = 800, maxHeight = 800) {
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.75));
+            resolve(canvas.toDataURL('image/jpeg', 0.70));
         };
         img.onerror = () => {
             resolve(base64Str);
@@ -5482,10 +5486,24 @@ async function startPhysicalAnalysis() {
     }
     
     resultCard.style.display = 'block';
-    resultTextEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text2);padding:8px 0;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:lfSpin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="19.07"/></svg>
-        Menganalisis kondisi fisik dengan LebihFit Tools AI...
-    </div>`;
+    resultTextEl.innerHTML = `
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; backdrop-filter: blur(10px); margin-top: 16px;">
+            <div style="display: inline-block; position: relative; width: 64px; height: 64px; margin-bottom: 16px;">
+                <div style="box-sizing: border-box; display: block; position: absolute; width: 51px; height: 51px; margin: 6px; border: 4px solid var(--accent); border-radius: 50%; animation: lfSpin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: var(--accent) transparent transparent transparent;"></div>
+                <div style="box-sizing: border-box; display: block; position: absolute; width: 51px; height: 51px; margin: 6px; border: 4px solid var(--accent); border-radius: 50%; animation: lfSpin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: transparent var(--accent) transparent transparent; animation-delay: -0.15s;"></div>
+            </div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--text1); margin-bottom: 8px;">Menganalisis Kondisi Fisik</h4>
+            <p style="font-size: 0.88rem; color: var(--text2); max-width: 400px; margin: 0 auto 16px auto; line-height: 1.5;">
+                LebihFit Tools AI sedang memproses foto dan mengaitkan data aktivitas Anda...
+            </p>
+            <div style="background: rgba(255, 159, 10, 0.08); border: 1px dashed rgba(255, 159, 10, 0.3); border-radius: 8px; padding: 12px 16px; display: inline-flex; align-items: flex-start; gap: 8px; max-width: 500px; text-align: left; margin: 0 auto;">
+                <span style="font-size: 1.1rem; line-height: 1;">⚠️</span>
+                <div style="font-size: 0.78rem; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">
+                    <strong>PENTING:</strong> Analisis ini murni perkiraan visual AI dan estimasi berdasarkan data logs. Tidak menggantikan konsultasi medis/profesional medis sesungguhnya.
+                </div>
+            </div>
+        </div>
+    `;
     
     try {
         const profile = getProfile() || {};
