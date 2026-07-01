@@ -412,7 +412,9 @@ Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
   try {
     const raw = await callAI(messages, true, 'google/gemini-2.5-flash', true);
     if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
-    return JSON.parse(raw);
+    let cleanJson = raw.trim();
+    const match = cleanJson.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
   } catch (err) {
     throw getMaskedAIError(err);
   }

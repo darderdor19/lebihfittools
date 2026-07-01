@@ -163,9 +163,13 @@ module.exports = async function handler(req, res) {
       }
 
       const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) {
         return res.status(500).json({ error: { message: "Gemini API did not return text content." } });
+      }
+
+      if (json && typeof rawText === 'string') {
+        rawText = rawText.replace(/```json|```/gi, '').trim();
       }
 
       return res.status(200).json({

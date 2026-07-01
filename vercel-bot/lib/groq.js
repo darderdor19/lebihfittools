@@ -103,7 +103,13 @@ Nama Makanan / Deskripsi: "${text}"
 {"name":"nama makanan","portion":"estimasi porsi/berat","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
 Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
   const content = await callGroq([{ role: 'user', content: prompt }], true, 600);
-  return JSON.parse(content);
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    const match = content.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw e;
+  }
 }
 
 /**
