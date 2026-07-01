@@ -39,13 +39,29 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400) {
  * Same prompt as GAS version
  */
 async function analyzeFood(text) {
+  let referenceContext = "";
+  try {
+    const { searchFoodDatabase } = require('./foodSearch');
+    // Extract name before comma/porsi if format is "Nasi, porsi: 1"
+    const cleanName = text.split(',')[0].trim();
+    const dbMatches = await searchFoodDatabase(cleanName);
+    if (dbMatches && dbMatches.length > 0) {
+      referenceContext = "\n\n== DATABASE REFERENCE DITEMUKAN (Gunakan angka gizi per 100g ini secara ketat untuk kalkulasi gizi makanan user): ==\n";
+      dbMatches.forEach(item => {
+        referenceContext += `- ${item.name}: cal ${item.cal} kcal | protein ${item.protein}g | carbs ${item.carbs}g | fat ${item.fat}g | fiber ${item.fiber}g | sugar ${item.sugar}g | sodium ${item.sodium}mg | calcium ${item.calcium}mg | iron ${item.iron}mg | vitC ${item.vitC}mg | vitD ${item.vitD}mcg | zinc ${item.zinc}mg\n`;
+      });
+    }
+  } catch (dbErr) {
+    console.error('[groq.js] DB search error:', dbErr);
+  }
+
   const prompt = `Kamu adalah mesin kalkulator gizi dan database nutrisi makanan yang sangat akurat, konsisten, dan ilmiah.
 Tugas kamu adalah menghitung kandungan nutrisi makro dan mikro secara presisi berdasarkan data standar per 100g.
 
 == BAHAN UTAMA & PORSI / DESKRIPSI ==
 Nama Makanan / Deskripsi: "${text}"
 
-== DATABASE REFERENCE (Per 100g): ==
+== DATABASE REFERENCE (Per 100g): ==${referenceContext}
 - Singkong (mentah/rebus/air-fryer tanpa minyak): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
 - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
 - Dada Ayam Fillet MENTAH (raw): 120 kcal | Karbo: 0g | Protein: 23g | Lemak: 2.5g | Serat: 0g | Gula: 0g | Sodium: 65mg | Kalsium: 10mg | Besi: 0.7mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.8mg
