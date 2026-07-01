@@ -3051,6 +3051,11 @@ function clearPhoto() {
     renderFoodPreviews();
     const descEl = document.getElementById('photoFoodDesc');
     if (descEl) descEl.value = '';
+    const errorEl = document.getElementById('photoResultError');
+    if (errorEl) {
+        errorEl.innerText = '';
+        errorEl.classList.add('hidden');
+    }
     const resultEl = document.getElementById('photoResult');
     if (resultEl) {
         resultEl.classList.add('hidden');
@@ -3068,12 +3073,14 @@ async function analyzePhoto() {
     
     const btn = document.getElementById('analyzeBtn');
     const resultDiv = document.getElementById('photoResult');
+    const errorDiv = document.getElementById('photoResultError');
     const userDesc = document.getElementById('photoFoodDesc').value.trim();
     
     try {
         btn.innerHTML = '⏳ Menganalisis...';
         btn.disabled = true;
         resultDiv.classList.add('hidden');
+        if (errorDiv) errorDiv.classList.add('hidden');
         
         const res = await analyzePhotoAI(foodImagesList, null, userDesc);
         
@@ -3102,8 +3109,10 @@ async function analyzePhoto() {
         
     } catch (error) {
         showToast(error.message, 'error');
-        resultDiv.innerHTML = `<p style="color:var(--danger)">Error: ${error.message}</p>`;
-        resultDiv.classList.remove('hidden');
+        if (errorDiv) {
+            errorDiv.innerText = `Error: ${error.message}`;
+            errorDiv.classList.remove('hidden');
+        }
     } finally {
         btn.innerHTML = '<i data-lucide="zap" style="display:inline-block;vertical-align:text-bottom;width:18px;height:18px;"></i> Analisis Nutrisi';
         btn.disabled = false;

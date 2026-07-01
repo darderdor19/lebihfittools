@@ -632,7 +632,7 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
   const isNvidia = key.startsWith('nvapi-');
 
   if (isNvidia) {
-    const model = process.env.VISION_MODEL || 'qwen/qwen3.5-122b-a10b';
+    const model = process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct';
     const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
     const content = [{ type: 'text', text: prompt }];

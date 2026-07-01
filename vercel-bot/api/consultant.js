@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
 
     if (isNvidia) {
       const model = hasImage 
-        ? (process.env.VISION_MODEL || 'qwen/qwen3.5-122b-a10b') 
+        ? (process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct') 
         : (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct');
 
       const body = {

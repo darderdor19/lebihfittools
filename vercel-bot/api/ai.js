@@ -38,14 +38,14 @@ module.exports = async function handler(req, res) {
 
     if (isNvidia) {
       const model = isVision 
-        ? (process.env.VISION_MODEL || 'qwen/qwen3.5-122b-a10b') 
+        ? (process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct') 
         : (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct');
 
       const body = {
         model: model,
         messages: messages,
         temperature: json ? 0.1 : 0.2,
-        max_tokens: json ? 1000 : 2048
+        max_tokens: json ? 3000 : 2048
       };
       if (json) {
         body.response_format = { type: "json_object" };
