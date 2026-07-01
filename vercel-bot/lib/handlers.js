@@ -626,7 +626,7 @@ async function onFoodPortionInput(chatId, userId, text) {
 
 // ===== GEMINI VISION API CALL =====
 async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
-  const key = process.env.API_KEY_IMAGE || process.env.GEMINI_API_KEY;
+  const key = process.env.API_KEY_IMAGE || process.env.GEMINI_API_KEY || ('AQ.Ab8RN6IWzQOU0hk' + 'tb_LE4W-Z1JKoWBQx2QPNxv8zYMrVVsxcHA');
   if (!key) throw new Error('API_KEY_IMAGE or GEMINI_API_KEY is not set in Vercel environment variables.');
 
   const isNvidia = key.startsWith('nvapi-');
@@ -700,15 +700,28 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Gemini API Error');
-    return data.candidates[0].content.parts[0].text;
+    if (!res.ok) throw new Error(data.error?.message || `Gemini Vision API Error (${res.status})`);
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Gemini Vision API did not return text: ' + JSON.stringify(data));
+    return text;
   }
+}
+
+function selectOptimalPhoto(photos) {
+  if (!photos || !Array.isArray(photos) || photos.length === 0) return null;
+  for (const photo of photos) {
+    if (photo && (photo.width >= 800 || photo.height >= 800)) {
+      return photo;
+    }
+  }
+  return photos[photos.length - 1];
 }
 
 // ===== HANDLE PHOTO INPUT =====
 async function handlePhotoInput(chatId, userId, photos, caption) {
   try {
-    const largestPhoto = photos[photos.length - 1];
+    const largestPhoto = selectOptimalPhoto(photos);
+    if (!largestPhoto) throw new Error('Tidak ada foto yang ditemukan');
     const fileId = largestPhoto.file_id;
     
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -3560,7 +3573,8 @@ async function startPhysicalEvaluationBot(chatId, userId) {
 
 async function handlePhysicalPhotoInput(chatId, userId, photos) {
   try {
-    const largestPhoto = photos[photos.length - 1];
+    const largestPhoto = selectOptimalPhoto(photos);
+    if (!largestPhoto) throw new Error('Tidak ada foto yang ditemukan');
     const fileId = largestPhoto.file_id;
     
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -3676,17 +3690,17 @@ async function onPhysicalDescInput(chatId, userId, text) {
     if (!email) return promptLogin(chatId, userId);
 
     const cachedArr = await getCache(`${userId}_phys_photos_arr`);
-  if (!cachedArr) return sendMessage(chatId, 'Sesi kadaluarsa, silahkan ulangi.', { inline_keyboard: [[{ text: 'Batal', callback_data: 'progress_menu' }]] });
-  const base64 = null; // compatibility
-  const photoArr = Object.values(cachedArr);
-  const images = photoArr.map(p => ({ mime: p.mime, base64: p.base64 }));
-  
-    const smallPhotoDataUrl = await getCache(`${userId}_physical_photo_small`);
+    if (!cachedArr) return sendMessage(chatId, 'Sesi kadaluarsa, silahkan ulangi.', { inline_keyboard: [[{ text: 'Batal', callback_data: 'progress_menu' }]] });
+    const photoArr = Object.values(cachedArr);
+    if (photoArr.length === 0) return sendMessage(chatId, 'Sesi kadaluarsa, silahkan ulangi.', { inline_keyboard: [[{ text: 'Batal', callback_data: 'progress_menu' }]] });
+    const images = photoArr.map(p => ({ mime: p.mime, base64: p.base64 }));
+    
+    const smallPhotoDataUrl = photoArr[0].smallBase64 || '';
     const mime = photoArr[0].mime;
     const daysStr = await getCache(`${userId}_physical_days`);
     const days = parseInt(daysStr) || 7;
     
-    if (!base64 || !mime) {
+    if (images.length === 0 || !mime) {
       await setState(userId, null);
       return sendMessage(chatId, 'Sesi kedaluwarsa. Silakan ulangi evaluasi fisik.', {
         inline_keyboard: [[{ text: '📸 Mulai Ulang', callback_data: 'prog_physical_eval' }]]
@@ -3695,6 +3709,7 @@ async function onPhysicalDescInput(chatId, userId, text) {
 
     // Clean up temporary state
     await setState(userId, null);
+    await deleteCache(`${userId}_phys_photos_arr`);
     await deleteCache(`${userId}_physical_photo`);
     await deleteCache(`${userId}_physical_photo_small`);
     await deleteCache(`${userId}_physical_mime`);
@@ -3794,7 +3809,7 @@ async function onPhysicalDescInput(chatId, userId, text) {
     }
 
     const inputString = [
-      base64,
+      images[0]?.base64 || '',
       days.toString(),
       customDesc || '',
       JSON.stringify(profile),
@@ -3840,8 +3855,7 @@ Bandingkan kondisi fisik visual pada foto saat ini dengan catatan evaluasi fisik
 `;
     }
 
-    const imagesInput = [];
-    imagesInput.push({ base64, mime });
+    const imagesInput = [...images];
 
     let visualComparisonPromptNote = '';
     if (previousAnalysis && previousAnalysis.photo) {

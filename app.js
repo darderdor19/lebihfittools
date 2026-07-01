@@ -2982,14 +2982,14 @@ function handlePhotoUpload(input) {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX = 512;
+                    const MAX = 800;
                     let w = img.width, h = img.height;
                     if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
                     else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
                     canvas.width = w;
                     canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    const compressed = canvas.toDataURL('image/jpeg', 0.6);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
                     
                     foodImagesList.push({
                         base64: compressed.split(',')[1],
@@ -5425,7 +5425,7 @@ function removePhysicalPhoto(event) {
     renderPhysicalPreviews();
 }
 
-function resizeImageBase64(base64Str, maxWidth = 500, maxHeight = 500) {
+function resizeImageBase64(base64Str, maxWidth = 800, maxHeight = 800) {
     return new Promise((resolve) => {
         const img = new Image();
         img.src = base64Str;
@@ -5448,7 +5448,7 @@ function resizeImageBase64(base64Str, maxWidth = 500, maxHeight = 500) {
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
+            resolve(canvas.toDataURL('image/jpeg', 0.75));
         };
         img.onerror = () => {
             resolve(base64Str);
