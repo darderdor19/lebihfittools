@@ -393,20 +393,27 @@ Tugas kamu adalah menganalisis foto makanan yang diunggah (bisa berupa satu foto
   prompt += `
 
 Instruksi:
-1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
-2. Gunakan database referensi gizi standar per 100g berikut untuk menghitung secara proporsional:
+1. VALIDASI GAMBAR: Periksa apakah gambar yang diunggah benar-benar menampilkan makanan atau minuman. Jika gambar sama sekali tidak menampilkan makanan/minuman (misal: hanya pemandangan, wajah orang, teks, atau gambar acak lainnya), kembalikan JSON dengan format error khusus berikut dan hentikan analisis: {"name": "Tidak valid", "portion": "0g", "calculation": "Bukan foto makanan", "cal": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0, "calcium": 0, "iron": 0, "vitC": 0, "vitD": 0, "zinc": 0, "notes": "Foto yang Anda unggah tidak terdeteksi sebagai makanan/minuman. Silakan unggah foto makanan yang jelas."}
+2. IDENTIFIKASI MAKANAN BEBAS & AKURAT (SANGAT PENTING): 
+   - Identifikasi jenis makanan yang ada di foto secara obyektif berdasarkan tampilan visual aslinya.
+   - Jika foto menunjukkan mie, maka identifikasi sebagai mie (misal: Mie Goreng, Mie Rebus). JANGAN mengidentifikasinya sebagai nasi putih atau singkong hanya karena bahan tersebut ada di daftar referensi!
+   - JANGAN PERNAH menambahkan bahan 'Dada Ayam' atau 'Telur Ayam' kecuali bahan tersebut benar-benar terlihat secara visual di dalam foto makanan atau disebutkan secara eksplisit oleh user dalam deskripsi tambahan!
+3. ATURAN REFERENSI GIZI:
+   - Gunakan database referensi gizi standar per 100g berikut HANYA jika bahan tersebut cocok dengan makanan di foto.
+   - Jika makanan di foto adalah makanan lain yang tidak tercantum di bawah ini (misal: Mie, Tempe, Daging Sapi, Pizza, Roti, Kentang, dll.), abaikan daftar ini dan gunakan database gizi standar internal Anda (seperti USDA/DKBM) secara akurat untuk menghitung nilai gizinya.
+   Daftar Referensi Gizi Terbatas (Per 100g):
    - Singkong (mentah/rebus/air-fryer tanpa minyak): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
    - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
    - Dada Ayam Fillet MENTAH (raw): 120 kcal | Karbo: 0g | Protein: 23g | Lemak: 2.5g | Serat: 0g | Gula: 0g | Sodium: 65mg | Kalsium: 10mg | Besi: 0.7mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.8mg
    - Dada Ayam MATANG (rebus/panggang/air-fryer tanpa minyak): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
    - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
    - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
-3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
-5. Lakukan kalkulasi WAJIB: (Nilai gizi per 100g) * (Estimasi Berat Gram / 100). Jika porsi bukan 100g, JANGAN berikan nilai 100g! Wajib kalikan juga SEMUA mikronutrisi!
-6. Jangan biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut. Hitung secara realistis!
-7. Berikan jawaban dalam JSON dengan format berikut:
-{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
+4. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
+5. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan, kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
+6. Lakukan kalkulasi WAJIB: (Nilai gizi per 100g) * (Estimasi Berat Gram / 100). Jika porsi bukan 100g, JANGAN berikan nilai 100g! Wajib kalikan juga SEMUA mikronutrisi!
+7. Jangan biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut. Hitung secara realistis!
+8. Berikan jawaban dalam JSON dengan format berikut:
+{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8,"notes":"ulasan singkat analisis gizi maks 24 kata"}
 Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
 
   const content = [{ type: 'text', text: prompt }];

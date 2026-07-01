@@ -5689,6 +5689,19 @@ Tugas kamu adalah menganalisis foto kondisi fisik tubuh user ini secara visual (
 Bandingkan kondisi visual saat ini dengan data kondisi fisik sebelumnya jika dilampirkan, untuk menganalisis apakah tubuhnya membaik (improve), stagnan, atau memburuk.
 Kembalikan respons HANYA dalam format JSON valid sesuai dengan skema yang diberikan di bawah ini.
 
+== PANDUAN VALIDASI FOTO & DETEKSI VISUAL (SANGAT PENTING) ==
+1. VALIDASI FOTO: Periksa secara saksama apakah foto yang diunggah menunjukkan tubuh manusia yang relevan untuk evaluasi kebugaran (seperti dada, punggung, perut, lengan, kaki, atau seluruh badan).
+2. PENANGANAN FOTO TIDAK VALID: Jika foto yang diunggah sama sekali TIDAK menunjukkan tubuh manusia yang relevan (misal: hanya foto makanan, hewan, pemandangan, benda mati, atau foto wajah saja tanpa badan), Anda WAJIB langsung mengembalikan JSON dengan:
+   - "status": "Tidak Valid" di root level JSON.
+   - "comparisonWithPrevious.status": "Tidak Valid"
+   - "comparisonWithPrevious.explanation": "Tulis penjelasan ramah dan detail bahwa foto yang diunggah tidak terdeteksi sebagai foto fisik tubuh (torso/badan) yang valid untuk dianalisis, dan minta user mengunggah foto tubuh yang jelas."
+   - Isi seluruh skor angka dengan nilai 0, dan array/objek lainnya dikosongkan.
+3. ANTI-HALUSINASI OTOT: JANGAN PERNAH menyimpulkan, menebak, atau menyebutkan perkembangan otot tertentu (seperti "dada terlihat lebih bidang", "otot dada tebal", atau "perut sixpack") jika bagian tubuh tersebut:
+   - Tidak masuk dalam frame foto.
+   - Tertutup oleh pakaian tebal.
+   - Fotonya buram/gelap sehingga tidak bisa dievaluasi secara obyektif.
+   Hanya analisis otot/lemak yang benar-benar terlihat secara visual di foto! Jika tidak terlihat, cukup katakan tidak terlihat di foto.
+
 == PROFIL PENGGUNA ==
 - Tinggi Badan (TB): ${profile.tb || '?'} cm
 - Berat Badan (BB): ${profile.bb || '?'} kg
@@ -5847,11 +5860,27 @@ ${visualComparisonPromptNote}
 function renderPhysicalAnalysisUI(data) {
     if (!data) return '<p style="color:var(--danger)">Gagal memuat analisis fisik.</p>';
 
+    // Check if the AI detected an invalid/non-body photo
+    if (data.status === 'Tidak Valid' || (data.comparisonWithPrevious && data.comparisonWithPrevious.status === 'Tidak Valid')) {
+        const errorMsg = data.explanation || (data.comparisonWithPrevious && data.comparisonWithPrevious.explanation) || 'Gambar yang diunggah tidak menampilkan tubuh manusia yang relevan untuk evaluasi kebugaran. Silakan unggah foto tubuh Anda yang jelas.';
+        return `
+            <div style="background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); padding:20px; border-radius:8px; text-align:center; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                <h4 style="color:var(--danger); font-size:1.15rem; margin-bottom:10px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    ⚠️ Foto Tidak Valid / Bukan Foto Tubuh
+                </h4>
+                <p style="font-size:0.88rem; color:var(--text); line-height:1.6; margin:0;">
+                    ${errorMsg}
+                </p>
+            </div>
+        `;
+    }
+
     // 0. Perbandingan dengan Fisik Sebelumnya
     const comp = data.comparisonWithPrevious || {};
     let comparisonHtml = '';
     if (comp && comp.hasPrevious) {
-        const compColor = comp.status === 'Improve' ? 'var(--success)' : comp.status === 'Memburuk' ? 'var(--danger)' : '#ff9f0a';
+        const isInvalid = comp.status === 'Tidak Valid';
+        const compColor = isInvalid ? 'var(--danger)' : (comp.status === 'Improve' ? 'var(--success)' : comp.status === 'Memburuk' ? 'var(--danger)' : '#ff9f0a');
         const scoreSign = comp.score >= 0 ? '+' : '';
         comparisonHtml = `
             <div style="background:var(--surface); border:1px solid var(--border); padding:16px; position:relative; overflow:hidden;">
