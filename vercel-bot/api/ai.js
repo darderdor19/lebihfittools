@@ -23,6 +23,28 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid messages array' });
     }
 
+    // Check for text food analysis prompt to inject database references
+    const userMsg = messages[messages.length - 1];
+    if (userMsg && typeof userMsg.content === 'string' && userMsg.content.includes('== BAHAN UTAMA & PORSI ==')) {
+      const nameMatch = userMsg.content.match(/Nama Makanan:\s*([^\n]+)/i);
+      if (nameMatch) {
+        const foodName = nameMatch[1].trim();
+        try {
+          const { searchFoodDatabase } = require('../lib/foodSearch');
+          const dbMatches = await searchFoodDatabase(foodName);
+          if (dbMatches && dbMatches.length > 0) {
+            let referenceContext = "\n\n== DATABASE REFERENCE DITEMUKAN (Gunakan angka gizi per 100g ini secara ketat untuk kalkulasi gizi makanan user): ==\n";
+            dbMatches.forEach(item => {
+              referenceContext += `- ${item.name}: cal ${item.cal} kcal | protein ${item.protein}g | carbs ${item.carbs}g | fat ${item.fat}g | fiber ${item.fiber}g | sugar ${item.sugar}g | sodium ${item.sodium}mg | calcium ${item.calcium}mg | iron ${item.iron}mg | vitC ${item.vitC}mg | vitD ${item.vitD}mcg | zinc ${item.zinc}mg\n`;
+            });
+            userMsg.content = userMsg.content.replace('== DATABASE REFERENCE (Per 100g): ==', `== DATABASE REFERENCE (Per 100g): ==${referenceContext}`);
+          }
+        } catch (dbErr) {
+          console.error('[ai] DB search error:', dbErr);
+        }
+      }
+    }
+
     // Google Gemini or NVIDIA API
     const hasImage = messages.some(msg => 
       Array.isArray(msg.content) && msg.content.some(part => part.type === 'image_url')
