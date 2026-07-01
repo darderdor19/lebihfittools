@@ -3,21 +3,25 @@
 // ====================================================
 
 async function callGroq(messages, jsonMode = false, maxTokens = 400) {
-  const GROQ_KEY = process.env.GROQ_API_KEY;
-  if (!GROQ_KEY) throw new Error('GROQ_API_KEY not set');
+  const key = process.env.API_KEY_TEXT || process.env.GROQ_API_KEY;
+  if (!key) throw new Error('API_KEY_TEXT or GROQ_API_KEY not set');
+
+  const isNvidia = key.startsWith('nvapi-');
+  const model = isNvidia ? (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct') : 'llama-3.1-8b-instant';
+  const endpoint = isNvidia ? 'https://integrate.api.nvidia.com/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
 
   const body = {
-    model: 'llama-3.1-8b-instant',
+    model: model,
     messages,
     max_tokens: maxTokens,
     temperature: 0
   };
   if (jsonMode) body.response_format = { type: 'json_object' };
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${GROQ_KEY}`,
+      'Authorization': `Bearer ${key}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(body)
@@ -25,7 +29,7 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400) {
 
   const data = await res.json();
   if (!data.choices || !data.choices[0]) {
-    throw new Error('Groq API error: ' + JSON.stringify(data));
+    throw new Error('Text API error: ' + JSON.stringify(data));
   }
   return data.choices[0].message.content;
 }
