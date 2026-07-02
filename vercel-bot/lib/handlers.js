@@ -624,87 +624,50 @@ async function onFoodPortionInput(chatId, userId, text) {
   );
 }
 
-// ===== GEMINI VISION API CALL =====
+// ===== NVIDIA VISION API CALL =====
 async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
-  const key = process.env.API_KEY_IMAGE || process.env.GEMINI_API_KEY || ('AQ.Ab8RN6IWzQOU0hk' + 'tb_LE4W-Z1JKoWBQx2QPNxv8zYMrVVsxcHA');
-  if (!key) throw new Error('API_KEY_IMAGE or GEMINI_API_KEY is not set in Vercel environment variables.');
+  const key = process.env.API_KEY_IMAGE || process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('API_KEY_IMAGE or NVIDIA_API_KEY is not set in Vercel environment variables.');
 
-  const isNvidia = key.startsWith('nvapi-');
+  const model = process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct';
+  const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
-  if (isNvidia) {
-    const model = process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct';
-    const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
-
-    const content = [{ type: 'text', text: prompt }];
-    if (Array.isArray(images)) {
-      images.forEach(img => {
-        content.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
-      });
-    } else {
-      content.push({ type: 'image_url', image_url: { url: `data:${mimeType};base64,${images}` } });
-    }
-
-    const body = {
-      model: model,
-      messages: [{ role: 'user', content }],
-      temperature: 0.0
-    };
-    if (jsonMode) {
-      body.response_format = { type: 'json_object' };
-    }
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
+  const content = [{ type: 'text', text: prompt }];
+  if (Array.isArray(images)) {
+    images.forEach(img => {
+      content.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     });
-
-    const data = await res.json();
-    const rawText = data.choices?.[0]?.message?.content;
-    if (!rawText) {
-      throw new Error('NVIDIA API did not return text content: ' + JSON.stringify(data));
-    }
-    return rawText;
   } else {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-    
-    const parts = [{ text: prompt }];
-    if (Array.isArray(images)) {
-      images.forEach(img => {
-        parts.push({ inline_data: { mime_type: img.mime, data: img.base64 } });
-      });
-    } else {
-      parts.push({ inline_data: { mime_type: mimeType, data: images } });
-    }
-
-    const body = {
-      contents: [{
-        parts: parts
-      }]
-    };
-
-    body.generationConfig = {
-      temperature: 0.0
-    };
-    if (jsonMode) {
-      body.generationConfig.responseMimeType = "application/json";
-    }
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `Gemini Vision API Error (${res.status})`);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Gemini Vision API did not return text: ' + JSON.stringify(data));
-    return text;
+    content.push({ type: 'image_url', image_url: { url: `data:${mimeType};base64,${images}` } });
   }
+
+  const body = {
+    model: model,
+    messages: [{ role: 'user', content }],
+    temperature: 0.0
+  };
+  if (jsonMode) {
+    body.response_format = { type: 'json_object' };
+  }
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error?.message || `NVIDIA Vision API Error (${res.status}): ${JSON.stringify(data)}`);
+  }
+  const rawText = data.choices?.[0]?.message?.content;
+  if (!rawText) {
+    throw new Error('NVIDIA API did not return text content: ' + JSON.stringify(data));
+  }
+  return rawText;
 }
 
 function selectOptimalPhoto(photos) {
@@ -1958,12 +1921,11 @@ function parseSetsReps(str) {
 }
 
 async function callGroqAPI(messages, maxTokens = 2500, jsonMode = false) {
-  const key = process.env.API_KEY_TEXT || process.env.GROQ_API_KEY;
-  if (!key) throw new Error('API_KEY_TEXT or GROQ_API_KEY env variable is not set');
+  const key = process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY;
+  if (!key) throw new Error('API_KEY_TEXT or NVIDIA_API_KEY env variable is not set');
 
-  const isNvidia = key.startsWith('nvapi-');
-  const model = isNvidia ? (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct') : 'llama-3.1-8b-instant';
-  const endpoint = isNvidia ? 'https://integrate.api.nvidia.com/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
+  const model = process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct';
+  const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
   const body = {
     model: model,

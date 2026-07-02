@@ -277,6 +277,10 @@ async function loginWithGoogle() {
         showToast("Firebase Auth belum siap. Refresh halaman.", "error");
         return;
     }
+    if (window.location.protocol === 'file:') {
+        showToast("⚠️ Google Sign-In tidak didukung jika membuka file HTML langsung (file://). Silakan gunakan Email/Password atau jalankan local server (http://localhost) / Vercel.", "error", 8000);
+        return;
+    }
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         const result = await fbAuth.signInWithPopup(provider);

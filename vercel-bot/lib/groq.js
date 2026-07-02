@@ -3,12 +3,11 @@
 // ====================================================
 
 async function callGroq(messages, jsonMode = false, maxTokens = 400) {
-  const key = process.env.API_KEY_TEXT || process.env.GROQ_API_KEY;
-  if (!key) throw new Error('API_KEY_TEXT or GROQ_API_KEY not set');
+  const key = process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY;
+  if (!key) throw new Error('API_KEY_TEXT or NVIDIA_API_KEY not set');
 
-  const isNvidia = key.startsWith('nvapi-');
-  const model = isNvidia ? (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct') : 'llama-3.1-8b-instant';
-  const endpoint = isNvidia ? 'https://integrate.api.nvidia.com/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
+  const model = process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct';
+  const endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
   const body = {
     model: model,
