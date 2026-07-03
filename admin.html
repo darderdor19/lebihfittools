@@ -631,9 +631,12 @@
         </div>
         <div class="card" style="max-width:500px;">
           <p style="font-size:0.85rem;color:var(--text2);margin-bottom:16px;">Tambahkan admin yang bisa mengelola user. Admin tidak bisa menambah/hapus admin lain.</p>
-          <div style="display:flex;gap:10px;margin-bottom:20px;">
-            <input type="email" id="newAdminEmailInput" placeholder="email@contoh.com" style="flex:1;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text1);font-family:Inter,sans-serif;font-size:0.9rem;outline:none;">
-            <button class="btn-sm btn-primary" style="padding:0 18px;" onclick="addAdmin()"><i data-lucide="plus" style="width:14px;height:14px;"></i> Tambah</button>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+            <div style="display:flex;gap:10px;">
+              <input type="email" id="newAdminEmailInput" placeholder="email@contoh.com" style="flex:1;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text1);font-family:Inter,sans-serif;font-size:0.9rem;outline:none;">
+              <input type="password" id="newAdminPasswordInput" placeholder="Password..." style="flex:1;padding:10px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text1);font-family:Inter,sans-serif;font-size:0.9rem;outline:none;">
+            </div>
+            <button class="btn-sm btn-primary" style="padding:10px;width:100%;justify-content:center;" onclick="addAdmin()"><i data-lucide="plus" style="width:14px;height:14px;margin-right:6px;"></i> Tambah Admin</button>
           </div>
           <div id="adminListContainer">
             <p style="color:var(--text2);font-size:0.85rem;">Memuat daftar admin...</p>
@@ -1076,20 +1079,45 @@ async function loadAdmins() {
 }
 
 async function addAdmin() {
-  const input = document.getElementById('newAdminEmailInput');
-  const email = input.value.trim().toLowerCase();
+  const emailInput = document.getElementById('newAdminEmailInput');
+  const passInput = document.getElementById('newAdminPasswordInput');
+  const email = emailInput.value.trim().toLowerCase();
+  const password = passInput.value;
+
   if (!email.includes('@') || !email.includes('.')) {
     showToast('Email tidak valid!', 'error');
     return;
   }
+  if (!password || password.length < 6) {
+    showToast('Password minimal 6 karakter!', 'error');
+    return;
+  }
+
   const safe = email.replace(/[.#$[\]]/g, '_');
   try {
+    // Buat akun baru di Firebase Auth menggunakan instance tempApp 
+    // agar sesi login superadmin saat ini tidak keluar (sign out)
+    const tempAppName = 'tempApp_' + Math.random().toString(36).substring(2, 9);
+    const tempApp = firebase.initializeApp(firebase.app().options, tempAppName);
+    try {
+      await tempApp.auth().createUserWithEmailAndPassword(email, password);
+    } catch (authErr) {
+      if (authErr.code !== 'auth/email-already-in-use') {
+        throw new Error("Gagal membuat akun di Firebase Auth: " + authErr.message);
+      }
+    } finally {
+      await tempApp.delete();
+    }
+
+    // Tambahkan status admin di database
     await fbDb.ref(`admins/${safe}`).set(true);
-    input.value = '';
+    
+    emailInput.value = '';
+    passInput.value = '';
     showToast(`Admin ${email} berhasil ditambahkan!`, 'success');
     loadAdmins();
   } catch (err) {
-    showToast('Gagal menambah admin: ' + err.message, 'error');
+    showToast(err.message, 'error');
   }
 }
 
