@@ -11,40 +11,34 @@ const FB_URL = (process.env.FIREBASE_DATABASE_URL && process.env.FIREBASE_DATABA
  * Get data from Firebase path
  */
 async function getFirebase(path) {
-  try {
-    const res = await fetch(`${FB_URL}/${path}.json`);
-    const val = await res.json();
-    if (val === null) return null;
-    // Firebase returns error objects on permission denied
-    if (val && typeof val === 'object' && val.error) {
-      console.error('Firebase permission error:', path, val.error);
-      return null;
-    }
-    return val;
-  } catch (e) {
-    console.error('Firebase GET error:', path, e.message);
-    return null;
+  const res = await fetch(`${FB_URL}/${path}.json`);
+  if (!res.ok) {
+    throw new Error(`Firebase GET failed (Status ${res.status}): ${res.statusText}`);
   }
+  const val = await res.json();
+  if (val && typeof val === 'object' && val.error) {
+    throw new Error(`Firebase GET Permission Denied: ${val.error}`);
+  }
+  return val;
 }
 
 /**
  * Set data at Firebase path (null = delete)
  */
 async function setFirebase(path, value) {
-  try {
-    const method = value === null ? 'DELETE' : 'PUT';
-    const options = {
-      method,
-      headers: { 'Content-Type': 'application/json' }
-    };
-    if (value !== null) options.body = JSON.stringify(value);
-    const res = await fetch(`${FB_URL}/${path}.json`, options);
-    const json = await res.json();
-    if (json && json.error) {
-      console.error('Firebase SET permission error:', path, json.error);
-    }
-  } catch (e) {
-    console.error('Firebase SET error:', path, e.message);
+  const method = value === null ? 'DELETE' : 'PUT';
+  const options = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+  if (value !== null) options.body = JSON.stringify(value);
+  const res = await fetch(`${FB_URL}/${path}.json`, options);
+  if (!res.ok) {
+    throw new Error(`Firebase SET failed (Status ${res.status}): ${res.statusText}`);
+  }
+  const json = await res.json();
+  if (json && json.error) {
+    throw new Error(`Firebase SET Permission Denied: ${json.error}`);
   }
 }
 
