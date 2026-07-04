@@ -2300,7 +2300,7 @@
         <a id="btnUpgradeProTrial" href="#lp-pricing-1month" class="btn-primary btn-full" style="padding: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #00ffcc, #7c3aed); border: none; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);">
           <i data-lucide="crown" style="width: 18px; height: 18px;"></i> Lihat Paket Harga & Upgrade Pro
         </a>
-        <button type="button" class="btn-secondary btn-full" onclick="logout()" style="padding: 12px; font-weight: 600;">
+        <button type="button" class="btn-secondary btn-full" onclick="handleTrialExpiredLogout()" style="padding: 12px; font-weight: 600;">
           <i data-lucide="log-out" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Keluar / Ganti Akun
         </button>
       </div>
@@ -2308,6 +2308,43 @@
       <p style="font-size: 0.75rem; color: var(--text3);">
         Butuh bantuan? Hubungi kami di <a href="https://instagram.com/jadilebihfit" target="_blank" style="color: var(--accent); text-decoration: none;">@jadilebihfit</a>
       </p>
+    </div>
+  </div>
+
+  <!-- MODAL: PILIHAN PAKET SUBSCRIPTION (TRIAL EXPIRED HANDLER) -->
+  <div id="pricingSelectionModal" class="modal-overlay hidden" style="z-index: 99999999;">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 28px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius);">
+      <div style="margin-bottom: 20px;">
+        <div class="logo-glow" style="margin: 0 auto 14px auto; background: rgba(239, 68, 68, 0.1); border-color: #ef4444; color: #ef4444; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+          <i data-lucide="clock" style="width: 30px; height: 30px; filter: drop-shadow(0 0 6px #ef4444);"></i>
+        </div>
+        <h3 style="font-size: 1.4rem; font-weight: 800; color: #ef4444; margin-bottom: 8px;">Subscription Berakhir</h3>
+        <p style="font-size: 0.85rem; color: var(--text2); line-height: 1.5;">
+          Subscription di akun kamu sudah berakhir. Silakan berlangganan kembali sesuai dengan paket yang kamu pilih di bawah ini:
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 10px;">
+        <!-- Pro 1 Bulan -->
+        <a href="https://jadilebihfit.myscalev.com/p/lebihfit-tools-1-bulan" target="_blank" class="btn-primary" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #00f0ff, #00a6b8); border: none; box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);">
+          <i data-lucide="crown" style="width: 16px; height: 16px;"></i> Pro Bulanan (Rp 169.000 / bln)
+        </a>
+        <!-- Pro 6 Bulan -->
+        <a href="https://jadilebihfit.myscalev.com/p/lebihfit-tools-3-bulan" target="_blank" class="btn-primary" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #ff6b9d, #ff4d6d); border: none; box-shadow: 0 0 10px rgba(255, 107, 157, 0.2);">
+          <i data-lucide="zap" style="width: 16px; height: 16px;"></i> Pro 6 Bulan (Rp 799.000 / 6 bln)
+        </a>
+        <!-- Pro 1 Tahun -->
+        <a href="https://jadilebihfit.myscalev.com/p/lebihfit-tools-1-tahun" target="_blank" class="btn-primary" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #6c63ff, #a78bfa); border: none; box-shadow: 0 0 10px rgba(108, 99, 255, 0.2);">
+          <i data-lucide="shield" style="width: 16px; height: 16px;"></i> Pro 1 Tahun (Rp 1.499.000 / thn)
+        </a>
+        
+        <div style="border-top: 1px solid var(--border); margin: 10px 0;"></div>
+
+        <!-- Real logout action -->
+        <button type="button" class="btn-secondary" onclick="triggerRealLogout()" style="padding: 10px; font-weight: 600; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Keluar / Ganti Akun
+        </button>
+      </div>
     </div>
   </div>
 

@@ -3973,6 +3973,28 @@ function logout() {
     });
 }
 
+function handleTrialExpiredLogout() {
+    const overlay = document.getElementById('trialExpiredOverlay');
+    if (overlay) overlay.classList.add('hidden');
+    
+    const modal = document.getElementById('pricingSelectionModal');
+    if (modal) modal.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function triggerRealLogout() {
+    const modal = document.getElementById('pricingSelectionModal');
+    if (modal) modal.classList.add('hidden');
+    
+    showCustomConfirm("Yakin ingin log out bro?", () => {
+        clearAuthUser();
+        window.location.reload();
+    }, () => {
+        const overlay = document.getElementById('trialExpiredOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+    });
+}
+
 // ===== CUSTOM POPUPS (MODALS) =====
 
 // --- Custom Select (Bottom Sheet) ---
