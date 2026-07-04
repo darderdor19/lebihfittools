@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Consultant - LebihFit</title>
+  <link rel="icon" type="image/png" href="favicon.png" sizes="any">
   <link rel="stylesheet" href="style.css?v=2.5">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -1743,6 +1744,13 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       const session = sessions[sessionId];
       chatHistory = session.messages || [];
       
+      // Safe guard: Move inputContainer back to footer before clearing chatContainer
+      const inputContainer = document.getElementById('chatInputContainer');
+      const footer = document.querySelector('.chat-footer');
+      if (inputContainer && footer && inputContainer.parentNode !== footer) {
+        footer.appendChild(inputContainer);
+      }
+
       // Clear chat window
       const container = document.getElementById('chatContainer');
       container.innerHTML = '';
@@ -1827,6 +1835,13 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
 
     // Reset UI to welcome screen
     function startNewChatUI() {
+      // Safe guard: Move inputContainer back to footer before clearing chatContainer
+      const inputContainer = document.getElementById('chatInputContainer');
+      const footer = document.querySelector('.chat-footer');
+      if (inputContainer && footer && inputContainer.parentNode !== footer) {
+        footer.appendChild(inputContainer);
+      }
+
       const container = document.getElementById('chatContainer');
       container.innerHTML = '';
       
