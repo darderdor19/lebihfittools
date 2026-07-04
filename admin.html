@@ -474,8 +474,47 @@
   .admin-list-item:last-child { border-bottom: none; }
 
   @media (max-width: 640px) {
-    .admin-sidebar { display: none; }
-    .admin-content { padding: 16px; }
+    .admin-header {
+      padding: 0 16px;
+    }
+    .admin-header-right {
+      gap: 8px;
+    }
+    .admin-user-info {
+      display: none;
+    }
+    .admin-body {
+      flex-direction: column;
+    }
+    .admin-sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      flex-direction: row;
+      overflow-x: auto;
+      padding: 8px 12px;
+      gap: 6px;
+      position: sticky;
+      top: 60px;
+      z-index: 99;
+      background: var(--bg2);
+      -webkit-overflow-scrolling: touch;
+    }
+    .sidebar-item {
+      width: auto;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      border-radius: 8px;
+    }
+    .sidebar-label { display: none; }
+    .sidebar-divider { display: none; }
+    .admin-content {
+      padding: 16px;
+    }
+    .filter-bar input {
+      width: 100%;
+    }
   }
 </style>
 </head>
