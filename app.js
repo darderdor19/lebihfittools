@@ -28,6 +28,19 @@ async function initApp() {
             document.getElementById('authOverlay').classList.add('hidden');
         } else {
             document.getElementById('landingPage').classList.add('hidden');
+            
+            // Check admin status on init
+            if (fbDb && authUser.email) {
+                const safeEmail = authUser.email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
+                fbDb.ref(`admins/${safeEmail}`).once('value').then(adminSnap => {
+                    if (authUser.email === 'jadilebihfit@gmail.com' || adminSnap.val() === true) {
+                        document.getElementById('navAdminBtn').style.display = '';
+                    } else {
+                        document.getElementById('navAdminBtn').style.display = 'none';
+                    }
+                }).catch(console.error);
+            }
+
             // Sync Firebase in the background
             syncFirebaseToLocal().then(async () => {
                 const isTrialExpired = await checkTrialStatus();
