@@ -1051,6 +1051,52 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
+
+    /* Message Context Menu */
+    .message-context-menu {
+      position: fixed;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 140px;
+      animation: fadeIn 0.15s ease;
+    }
+    .message-context-menu button {
+      background: none;
+      border: none;
+      color: var(--text1);
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .message-context-menu button:hover {
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--accent);
+    }
+
+    /* Stop Generating Button */
+    .btn-stop {
+      background: var(--danger) !important;
+      color: #fff !important;
+      box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3) !important;
+    }
+    .btn-stop:hover {
+      box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5) !important;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
@@ -1184,6 +1230,12 @@
     </div>
   </div>
 
+  <!-- MESSAGE CONTEXT MENU -->
+  <div id="messageMenu" class="message-context-menu hidden">
+    <button onclick="handleMenuCopy()"><i data-lucide="copy" style="width: 14px; height: 14px;"></i> Salin Teks</button>
+    <button onclick="handleMenuEdit()"><i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Edit Pesan</button>
+  </div>
+
   <!-- TOAST CONTAINER -->
   <div id="toast" class="toast hidden"></div>
 
@@ -1268,6 +1320,9 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     let sessions = {};
     let chatHistory = [];
     let activeSessionId = null;
+    let activeAbortController = null;
+    let menuTargetMsgIdx = null;
+    let menuTargetMsgContent = '';
     let userEmail = '';
     let userName = 'Bro';
     let safeEmail = '';
@@ -1756,8 +1811,8 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       container.innerHTML = '';
       
       if (chatHistory.length > 0) {
-        chatHistory.forEach(msg => {
-          appendMessageUI(msg.role, msg.content, msg.image, msg.images);
+        chatHistory.forEach((msg, idx) => {
+          appendMessageUI(msg.role, msg.content, msg.image, msg.images, idx);
         });
       } else {
         startNewChatUI();
@@ -2139,7 +2194,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
     }
 
     // Append bubble UI
-    function appendMessageUI(role, content, imageBase64 = null, imagesArray = null) {
+    function appendMessageUI(role, content, imageBase64 = null, imagesArray = null, idx = null) {
       const container = document.getElementById('chatContainer');
       
       const row = document.createElement('div');
@@ -2155,6 +2210,10 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
+      if (role === 'user' && idx !== null) {
+        bubble.style.cursor = 'context-menu';
+        bubble.title = 'Klik kanan atau tahan untuk menyalin/mengedit';
+      }
       
       let html = parseMarkdown(content);
       if (role === 'user') {
@@ -2169,6 +2228,38 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         html = imgsHtml + html;
       }
       bubble.innerHTML = html;
+      
+      // Bind Context Menu and Long Press for user messages
+      if (role === 'user' && idx !== null) {
+        let pressTimer;
+        
+        const startPress = (e) => {
+          if (e.button === 2) return; // Ignore right clicks here (handled by contextmenu)
+          clearTimeout(pressTimer);
+          pressTimer = setTimeout(() => {
+            showContextActions(e, idx, content);
+          }, 600); // 600ms threshold for long press
+        };
+        
+        const cancelPress = () => {
+          clearTimeout(pressTimer);
+        };
+        
+        bubble.addEventListener('mousedown', startPress);
+        bubble.addEventListener('touchstart', (e) => {
+          startPress(e.touches[0]);
+        }, { passive: true });
+        
+        bubble.addEventListener('mouseup', cancelPress);
+        bubble.addEventListener('mouseleave', cancelPress);
+        bubble.addEventListener('touchend', cancelPress);
+        bubble.addEventListener('touchmove', cancelPress);
+        
+        bubble.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          showContextActions(e, idx, content);
+        });
+      }
       
       row.appendChild(avatar);
       row.appendChild(bubble);
@@ -2194,11 +2285,22 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
       const welcome = document.getElementById('welcomeContainer');
       if (welcome) welcome.style.display = 'none';
 
-      // Disable input & send
+      // Setup AbortController
+      activeAbortController = new AbortController();
+
+      // Disable input & configure Stop button
       input.value = '';
       input.style.height = '36px';
       input.disabled = true;
-      document.getElementById('sendBtn').disabled = true;
+
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) {
+        sendBtn.disabled = false; // Enabled for stop
+        sendBtn.classList.add('btn-stop');
+        sendBtn.setAttribute('onclick', 'stopGenerating()');
+        sendBtn.innerHTML = `<i data-lucide="square" style="width: 18px; height: 18px; fill: currentColor; stroke: none;"></i>`;
+        if (window.lucide) lucide.createIcons();
+      }
 
       // Handle New Session Creation if activeSessionId is null
       let isNewSession = false;
@@ -2216,7 +2318,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
 
       // Append user bubble
       const currentAttachedImages = attachedImages.map(img => img.base64);
-      appendMessageUI('user', queryText, null, currentAttachedImages);
+      appendMessageUI('user', queryText, null, currentAttachedImages, chatHistory.length);
       
       const userMsg = { role: 'user', content: queryText };
       if (currentAttachedImages.length > 0) {
@@ -2275,9 +2377,9 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
         // Fetch latest profile, logs, and activities dynamically right before calling the AI API to ensure real-time accuracy
         try {
           const [profileRes, logsRes, activitiesRes] = await Promise.all([
-            fetch(`${FB_URL}/users/${safeEmail}/lf_profile.json`),
-            fetch(`${FB_URL}/users/${safeEmail}/lf_logs.json`),
-            fetch(`${FB_URL}/users/${safeEmail}/lf_activities.json`)
+            fetch(`${FB_URL}/users/${safeEmail}/lf_profile.json`, { signal: activeAbortController.signal }),
+            fetch(`${FB_URL}/users/${safeEmail}/lf_logs.json`, { signal: activeAbortController.signal }),
+            fetch(`${FB_URL}/users/${safeEmail}/lf_activities.json`, { signal: activeAbortController.signal })
           ]);
           userProfile = await profileRes.json() || {};
           userLogs = await logsRes.json() || {};
@@ -2326,7 +2428,8 @@ Aturan Penilaian:
               body: JSON.stringify({
                 model: 'google/gemini-2.5-flash',
                 messages: classifierMessages
-              })
+              }),
+              signal: activeAbortController.signal
             });
 
             if (classResponse.ok) {
@@ -2453,7 +2556,8 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
               body: JSON.stringify({
                 model: model,
                 messages: apiMessages
-              })
+              }),
+              signal: activeAbortController.signal
             });
 
             // If local API is not found (404), fallback to production Vercel
@@ -2523,15 +2627,19 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           appendMessageUI('assistant', maskedMsg);
         }
       } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log("AI generation aborted by user.");
+          const tBubble = document.getElementById('typingBubble');
+          if (tBubble) tBubble.remove();
+          return;
+        }
         console.error('Fetch Error:', err);
         const tBubble = document.getElementById('typingBubble');
         if (tBubble) tBubble.remove();
         const maskedMsg = getMaskedAIError(err.message, 'Terjadi kesalahan koneksi. Silakan periksa jaringan internet Kamu.');
         appendMessageUI('assistant', maskedMsg);
       } finally {
-        input.disabled = false;
-        document.getElementById('sendBtn').disabled = false;
-        input.focus();
+        resetSendButtonState();
         scrollToBottom();
       }
     }
@@ -2723,6 +2831,111 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
       clearTimeout(t._timer);
       t._timer = setTimeout(() => t.classList.add('hidden'), 3500);
     }
+
+    // Stop Generating AI Response
+    function stopGenerating() {
+      if (activeAbortController) {
+        activeAbortController.abort();
+        activeAbortController = null;
+        showToast("AI generation dihentikan.", "info");
+      }
+      resetSendButtonState();
+    }
+
+    // Reset Send Button State to default
+    function resetSendButtonState() {
+      const sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) {
+        sendBtn.classList.remove('btn-stop');
+        sendBtn.setAttribute('onclick', 'sendChatMessage()');
+        sendBtn.innerHTML = `<i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>`;
+        if (window.lucide) lucide.createIcons();
+      }
+      const input = document.getElementById('chatInput');
+      if (input) {
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    // Show custom context menu for user message bubble
+    function showContextActions(e, idx, content) {
+      // Prevent other events
+      if (e.preventDefault) e.preventDefault();
+      
+      menuTargetMsgIdx = idx;
+      menuTargetMsgContent = content;
+      
+      const menu = document.getElementById('messageMenu');
+      if (!menu) return;
+      
+      menu.classList.remove('hidden');
+      
+      // Position menu near click/touch coordinate
+      let x = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 100);
+      let y = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 100);
+      
+      // Boundary check to prevent menu going off-screen
+      const menuWidth = 140;
+      const menuHeight = 80;
+      if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+      if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+      
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      
+      e.stopPropagation && e.stopPropagation();
+    }
+
+    // Handle copying target message text
+    function handleMenuCopy() {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(menuTargetMsgContent);
+        showToast("Pesan disalin!", "success");
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = menuTargetMsgContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast("Pesan disalin!", "success");
+      }
+    }
+
+    // Handle editing target message
+    function handleMenuEdit() {
+      const input = document.getElementById('chatInput');
+      if (!input) return;
+      
+      // Populate input box
+      input.value = menuTargetMsgContent;
+      autoGrowInput(input);
+      
+      // Truncate chatHistory up to target index
+      if (menuTargetMsgIdx !== null && activeSessionId) {
+        chatHistory = chatHistory.slice(0, menuTargetMsgIdx);
+        
+        // Re-render UI up to the truncated history
+        const container = document.getElementById('chatContainer');
+        if (container) {
+          container.innerHTML = '';
+          chatHistory.forEach((msg, idx) => {
+            appendMessageUI(msg.role, msg.content, msg.image, msg.images, idx);
+          });
+        }
+        updateInputBoxPlacement();
+      }
+      
+      input.focus();
+      scrollToBottom();
+    }
+
+    // Click listener to close context menu
+    document.addEventListener('click', () => {
+      const menu = document.getElementById('messageMenu');
+      if (menu) menu.classList.add('hidden');
+    });
   </script>
 </body>
 </html>
