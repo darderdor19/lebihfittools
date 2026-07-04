@@ -3916,7 +3916,10 @@ async function checkTelegramStatus() {
         const snapshot = await fbDb.ref(`users/${safeEmailKey}/telegram_chat_id`).once('value');
         const chatId = snapshot.val();
         if (chatId) {
-            statusDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--success);"><i data-lucide="check-circle" style="width:18px;height:18px;"></i> <span>Telegram sudah terhubung!</span></div>`;
+            const userSnap = await fbDb.ref(`users/${safeEmailKey}/telegram_username`).once('value');
+            const username = userSnap.val();
+            const usernameStr = username ? ` (@${username})` : '';
+            statusDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--success);"><i data-lucide="check-circle" style="width:18px;height:18px;"></i> <span>Telegram sudah terhubung!${usernameStr}</span></div>`;
             document.getElementById('btnConnectTelegram').textContent = 'Hubungkan Ulang';
         } else {
             statusDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text2);"><i data-lucide="circle" style="width:18px;height:18px;"></i> <span>Belum terhubung</span></div>`;

@@ -3,7 +3,9 @@
 // Same approach as the GAS version — simple and reliable
 // ====================================================
 
-const FB_URL = process.env.FIREBASE_DATABASE_URL;
+const FB_URL = (process.env.FIREBASE_DATABASE_URL && process.env.FIREBASE_DATABASE_URL.includes('lebihfittools-default-rtdb'))
+  ? process.env.FIREBASE_DATABASE_URL.replace(/\/$/, '')
+  : 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 /**
  * Get data from Firebase path

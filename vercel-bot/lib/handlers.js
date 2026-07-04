@@ -121,7 +121,7 @@ async function handleMessage(msg) {
     if (parts.length > 1) {
       const payload = parts[1];
       const startEmail = payload.replace(/_at_/g, '@').replace(/_dot_/g, '.');
-      return onEmailInput(chatId, userId, startEmail);
+      return onEmailInput(chatId, userId, startEmail, msg.from?.username);
     }
     return onStart(chatId, userId);
   }
@@ -133,7 +133,7 @@ async function handleMessage(msg) {
     return email ? showProgressMenu(chatId, userId, email) : promptLogin(chatId, userId);
   }
 
-  if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text);
+  if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text, msg.from?.username);
   if (state === 'AWAIT_OTP') return onOtpInput(chatId, userId, text);
 
   // If waiting for a photo
@@ -447,7 +447,7 @@ async function promptLogin(chatId, userId) {
   );
 }
 
-async function onEmailInput(chatId, userId, email) {
+async function onEmailInput(chatId, userId, email, telegramUsername = null) {
   try {
     email = email.trim().toLowerCase();
     
@@ -455,10 +455,14 @@ async function onEmailInput(chatId, userId, email) {
     await setFirebase(`telegram_links/${userId}`, {
       email: email,
       chatId: chatId,
+      username: telegramUsername || '',
       linkedAt: new Date().toISOString()
     });
     
     await setFirebase(`users/${safe(email)}/telegram_chat_id`, chatId.toString());
+    if (telegramUsername) {
+      await setFirebase(`users/${safe(email)}/telegram_username`, telegramUsername);
+    }
     await setState(userId, null);
     
     const profile = await getFirebase(`users/${safe(email)}/lf_profile`);
