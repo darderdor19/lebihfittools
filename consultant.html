@@ -2555,7 +2555,8 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
               },
               body: JSON.stringify({
                 model: model,
-                messages: apiMessages
+                messages: apiMessages,
+                stream: true
               }),
               signal: activeAbortController.signal
             });
@@ -2576,6 +2577,89 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
             throw fetchErr;
           }
 
+          // Handle streaming response if successful and content type matches
+          if (response.ok && response.headers.get('Content-Type')?.includes('text/event-stream')) {
+            // Remove typing bubble
+            const tBubble = document.getElementById('typingBubble');
+            if (tBubble) tBubble.remove();
+
+            // Append empty assistant bubble
+            const assistantMsgIndex = chatHistory.length;
+            appendMessageUI('assistant', '', null, null, assistantMsgIndex);
+
+            const container = document.getElementById('chatContainer');
+            const assistantRows = container.querySelectorAll('.message-row.assistant');
+            const lastRow = assistantRows[assistantRows.length - 1];
+            const lastBubble = lastRow ? lastRow.querySelector('.message-bubble') : null;
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let aiResponse = '';
+            let partialChunk = '';
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                partialChunk += chunk;
+
+                const lines = partialChunk.split('\n');
+                partialChunk = lines.pop() || '';
+
+                for (const line of lines) {
+                  const cleanLine = line.trim();
+                  if (!cleanLine) continue;
+                  if (cleanLine === 'data: [DONE]') continue;
+
+                  if (cleanLine.startsWith('data: ')) {
+                    try {
+                      const parsed = JSON.parse(cleanLine.slice(6));
+                      const content = parsed.choices?.[0]?.delta?.content || '';
+                      if (content) {
+                        aiResponse += content;
+                        if (lastBubble) {
+                          lastBubble.innerHTML = parseMarkdown(aiResponse);
+                        }
+                        scrollToBottom();
+                      }
+                    } catch (e) {
+                      // Incomplete JSON chunk, skip
+                    }
+                  }
+                }
+              }
+
+              // Final leftovers parse
+              if (partialChunk && partialChunk.startsWith('data: ')) {
+                try {
+                  const parsed = JSON.parse(partialChunk.slice(6));
+                  const content = parsed.choices?.[0]?.delta?.content || '';
+                  if (content) {
+                    aiResponse += content;
+                    if (lastBubble) {
+                      lastBubble.innerHTML = parseMarkdown(aiResponse);
+                    }
+                  }
+                } catch (e) {}
+              }
+            } catch (streamErr) {
+              if (streamErr.name === 'AbortError') {
+                console.log("Stream reading aborted by user.");
+                throw streamErr;
+              }
+              console.error("Error reading stream:", streamErr);
+            }
+
+            // Save to history & Firebase
+            chatHistory.push({ role: 'assistant', content: aiResponse });
+            sessions[activeSessionId].messages = chatHistory;
+            await saveSessionToFirebase(activeSessionId);
+            return;
+          }
+
+          // Fallback to standard JSON response if not streaming
           resData = await response.json();
 
           if (!response.ok) {
@@ -2608,6 +2692,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           }
           break;
         }
+
         // Remove typing
         const tBubble = document.getElementById('typingBubble');
         if (tBubble) tBubble.remove();

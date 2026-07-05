@@ -40,12 +40,40 @@ module.exports = async function handler(req, res) {
       ? (process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct') 
       : (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct');
 
+    const { stream } = req.body;
     const body = {
       model: model,
       messages: messages,
       temperature: 0.7,
-      max_tokens: 2048
+      max_tokens: 4096,
+      stream: !!stream
     };
+
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari NVIDIA API` } });
+      }
+
+      // Pipe response stream directly
+      for await (const chunk of response.body) {
+        res.write(chunk);
+      }
+      return res.end();
+    }
 
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
