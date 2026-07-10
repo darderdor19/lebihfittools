@@ -110,10 +110,10 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
     };
 
     // Save transaction log
-    await setFirebase(`admin/token_logs/${logId}`, logEntry);
+    await setFirebase(`admins/token_logs/${logId}`, logEntry);
 
     // Update aggregated stats for user
-    const userStatsPath = `admin/user_token_stats/${safeEmail}`;
+    const userStatsPath = `admins/user_token_stats/${safeEmail}`;
     let userStats = await getFirebase(userStatsPath) || { email: cleanEmail, totalTokens: 0, promptTokens: 0, completionTokens: 0, callCount: 0 };
     userStats.totalTokens = (userStats.totalTokens || 0) + totalTokens;
     userStats.promptTokens = (userStats.promptTokens || 0) + (promptTokens || 0);
@@ -123,7 +123,7 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
     await setFirebase(userStatsPath, userStats);
 
     // Update aggregated stats for feature
-    const featureStatsPath = `admin/feature_token_stats/${feature}`;
+    const featureStatsPath = `admins/feature_token_stats/${feature}`;
     let featureStats = await getFirebase(featureStatsPath) || { feature, totalTokens: 0, callCount: 0 };
     featureStats.totalTokens = (featureStats.totalTokens || 0) + totalTokens;
     featureStats.callCount = (featureStats.callCount || 0) + 1;

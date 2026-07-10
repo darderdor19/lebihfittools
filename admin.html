@@ -1403,15 +1403,15 @@ async function loadTokenMonitor() {
 
   try {
     // 1. Fetch User Stats
-    const userStatsSnap = await fbDb.ref('admin/user_token_stats').once('value');
+    const userStatsSnap = await fbDb.ref('admins/user_token_stats').once('value');
     const userStats = userStatsSnap.val() || {};
     
     // 2. Fetch Feature Stats
-    const featureStatsSnap = await fbDb.ref('admin/feature_token_stats').once('value');
+    const featureStatsSnap = await fbDb.ref('admins/feature_token_stats').once('value');
     const featureStats = featureStatsSnap.val() || {};
     
     // 3. Fetch logs (last 100 entries)
-    const logsSnap = await fbDb.ref('admin/token_logs').limitToLast(100).once('value');
+    const logsSnap = await fbDb.ref('admins/token_logs').limitToLast(100).once('value');
     const rawLogs = logsSnap.val() || {};
     
     // --- Render Stats Cards ---
