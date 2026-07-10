@@ -57,12 +57,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (!apiKey) {
-      return res.status(500).json({ error: { message: "NVIDIA API Key not configured in environment variables (API_KEY_TEXT / API_KEY_IMAGE / NVIDIA_API_KEY)." } });
+      return res.status(500).json({ error: { message: "OpenRouter API Key not configured in environment variables (API_KEY_TEXT / API_KEY_IMAGE / NVIDIA_API_KEY)." } });
     }
 
     const model = isVision 
-      ? (process.env.VISION_MODEL || 'meta/llama-3.2-11b-vision-instruct') 
-      : (process.env.TEXT_MODEL || 'qwen/qwen3-next-80b-a3b-instruct');
+      ? (process.env.VISION_MODEL || 'google/gemini-2.5-flash') 
+      : (process.env.TEXT_MODEL || 'deepseek/deepseek-v4-flash');
 
     const body = {
       model: model,
@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
       body.response_format = { type: "json_object" };
     }
 
-    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -85,13 +85,13 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari NVIDIA API` } });
+      return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari OpenRouter API` } });
     }
 
     const data = await response.json();
     let rawText = data.choices?.[0]?.message?.content;
     if (!rawText) {
-      return res.status(500).json({ error: { message: "NVIDIA API did not return text content." } });
+      return res.status(500).json({ error: { message: "OpenRouter API did not return text content." } });
     }
 
     // Clean up markdown code blocks if the model outputs them in JSON mode
