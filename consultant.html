@@ -2427,7 +2427,8 @@ Aturan Penilaian:
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: 'google/gemini-2.5-flash',
-                messages: classifierMessages
+                messages: classifierMessages,
+                email: (localStorage.getItem('lf_user_email') || 'anonymous').replace(/"/g, '')
               }),
               signal: activeAbortController.signal
             });
@@ -2579,7 +2580,8 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
               body: JSON.stringify({
                 model: model,
                 messages: apiMessages,
-                stream: true
+                stream: true,
+                email: (localStorage.getItem('lf_user_email') || 'anonymous').replace(/"/g, '')
               }),
               signal: activeAbortController.signal
             });

@@ -68,11 +68,42 @@ module.exports = async function handler(req, res) {
         return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari AI API` } });
       }
 
-      // Pipe response stream directly
+      // Pipe response stream directly and track completion text
+      let completeText = '';
       for await (const chunk of response.body) {
         res.write(chunk);
+        try {
+          const text = chunk.toString('utf8');
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6).trim();
+              if (dataStr && dataStr !== '[DONE]') {
+                const parsedObj = JSON.parse(dataStr);
+                const content = parsedObj.choices?.[0]?.delta?.content || '';
+                completeText += content;
+              }
+            }
+          }
+        } catch (e) {
+          // Silent catch to prevent breaking stream
+        }
       }
-      return res.end();
+      res.end();
+
+      // Log token usage after stream ends
+      try {
+        const promptTokens = Math.round(JSON.stringify(messages).length / 3.5);
+        const completionTokens = Math.round(completeText.length / 4.5) || 100; // fallback if parsing failed
+        const userEmail = req.body.email || 'anonymous';
+        const feature = hasImage ? 'ai_assistant_image' : 'ai_assistant_text';
+        
+        const { logTokenUsage } = require('../lib/firebase');
+        logTokenUsage(userEmail, feature, promptTokens, completionTokens, model).catch(console.error);
+      } catch (logErr) {
+        console.error('[consultant] Stream token logging failed:', logErr);
+      }
+      return;
     }
 
     const response = await fetch(apiEndpoint, {
@@ -93,6 +124,20 @@ module.exports = async function handler(req, res) {
     const rawText = data.choices?.[0]?.message?.content;
     if (!rawText) {
       return res.status(500).json({ error: { message: "AI API did not return text content." } });
+    }
+
+    // Log token usage for non-streaming response
+    try {
+      const usage = data.usage || {};
+      const promptTokens = usage.prompt_tokens || Math.round(JSON.stringify(messages).length / 3.5);
+      const completionTokens = usage.completion_tokens || Math.round(rawText.length / 4.5);
+      const userEmail = req.body.email || 'anonymous';
+      const feature = hasImage ? 'ai_assistant_image' : 'ai_assistant_text';
+
+      const { logTokenUsage } = require('../lib/firebase');
+      logTokenUsage(userEmail, feature, promptTokens, completionTokens, model).catch(console.error);
+    } catch (logErr) {
+      console.error('[consultant] Token logging failed:', logErr);
     }
 
     return res.status(200).json({

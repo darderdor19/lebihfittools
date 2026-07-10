@@ -103,6 +103,39 @@ module.exports = async function handler(req, res) {
       rawText = rawText.replace(/```json|```/gi, '').trim();
     }
 
+    // Log token usage for admin tracking
+    try {
+      const usage = data.usage || {};
+      const promptTokens = usage.prompt_tokens || 0;
+      const completionTokens = usage.completion_tokens || 0;
+      const userEmail = req.body.email || 'anonymous';
+      
+      let feature = 'dashboard_weekly';
+      const lastMsg = messages[messages.length - 1];
+      const msgStr = typeof lastMsg?.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg?.content || '');
+      
+      if (isVision) {
+        if (msgStr.includes('Identifikasi nama makanan')) {
+          feature = 'food_scan';
+        } else {
+          feature = 'body_analysis';
+        }
+      } else if (msgStr.includes('== BAHAN UTAMA')) {
+        feature = 'manual_food_ai';
+      } else if (msgStr.includes('Kebutuhan Kalori Target')) {
+        feature = 'calculator_demo';
+      } else if (msgStr.includes('Tinggi: ') && msgStr.includes('Berat: ')) {
+        feature = 'calculator_tdee';
+      } else if (msgStr.includes('Tulis evaluasi dalam HTML')) {
+        feature = 'dashboard_daily';
+      }
+
+      const { logTokenUsage } = require('../lib/firebase');
+      logTokenUsage(userEmail, feature, promptTokens, completionTokens, model).catch(console.error);
+    } catch (logErr) {
+      console.error('[ai] Token logging failed:', logErr);
+    }
+
     return res.status(200).json({
       choices: [
         {

@@ -358,7 +358,8 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
     endpoint = 'https://lebihfittools.vercel.app/api/ai';
   }
 
-  const body = { model, messages, json, isVision };
+  const email = (localStorage.getItem('lf_user_email') || 'anonymous').replace(/"/g, '');
+  const body = { model, messages, json, isVision, email };
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout

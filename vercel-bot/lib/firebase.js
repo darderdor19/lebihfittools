@@ -87,6 +87,53 @@ async function getLinkedEmail(userId) {
   return (data && data.email) ? data.email : null;
 }
 
+/**
+ * Log token usage for admin tracking
+ */
+async function logTokenUsage(email, feature, promptTokens, completionTokens, model) {
+  try {
+    const cleanEmail = email ? email.replace(/"/g, '').trim().toLowerCase() : 'anonymous';
+    const safeEmail = safe(cleanEmail);
+    const totalTokens = (promptTokens || 0) + (completionTokens || 0);
+    const timestamp = new Date().toISOString();
+    const logId = 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+    const logEntry = {
+      id: logId,
+      timestamp,
+      email: cleanEmail,
+      feature,
+      promptTokens: promptTokens || 0,
+      completionTokens: completionTokens || 0,
+      totalTokens,
+      model: model || 'unknown'
+    };
+
+    // Save transaction log
+    await setFirebase(`admin/token_logs/${logId}`, logEntry);
+
+    // Update aggregated stats for user
+    const userStatsPath = `admin/user_token_stats/${safeEmail}`;
+    let userStats = await getFirebase(userStatsPath) || { email: cleanEmail, totalTokens: 0, promptTokens: 0, completionTokens: 0, callCount: 0 };
+    userStats.totalTokens = (userStats.totalTokens || 0) + totalTokens;
+    userStats.promptTokens = (userStats.promptTokens || 0) + (promptTokens || 0);
+    userStats.completionTokens = (userStats.completionTokens || 0) + (completionTokens || 0);
+    userStats.callCount = (userStats.callCount || 0) + 1;
+    userStats.lastActive = timestamp;
+    await setFirebase(userStatsPath, userStats);
+
+    // Update aggregated stats for feature
+    const featureStatsPath = `admin/feature_token_stats/${feature}`;
+    let featureStats = await getFirebase(featureStatsPath) || { feature, totalTokens: 0, callCount: 0 };
+    featureStats.totalTokens = (featureStats.totalTokens || 0) + totalTokens;
+    featureStats.callCount = (featureStats.callCount || 0) + 1;
+    await setFirebase(featureStatsPath, featureStats);
+
+  } catch (err) {
+    console.error('[firebase] Failed to log token usage:', err);
+  }
+}
+
 module.exports = {
   getFirebase,
   setFirebase,
@@ -97,5 +144,6 @@ module.exports = {
   getCache,
   setCache,
   deleteCache,
-  getLinkedEmail
+  getLinkedEmail,
+  logTokenUsage
 };

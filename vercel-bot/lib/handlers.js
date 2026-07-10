@@ -658,7 +658,7 @@ async function onFoodPortionInput(chatId, userId, text) {
 }
 
 // ===== GOOGLE AI STUDIO GEMINI VISION API CALL =====
-async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
+async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false, email = 'telegram_user') {
   const key = process.env.API_KEY_IMAGE || process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY;
   if (!key) throw new Error('API_KEY_IMAGE or NVIDIA_API_KEY is not set in Vercel environment variables.');
 
@@ -700,6 +700,21 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
   if (!rawText) {
     throw new Error('NVIDIA API did not return text content: ' + JSON.stringify(data));
   }
+
+  // Log token usage for visual AI calls
+  try {
+    const usage = data.usage || {};
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const feature = prompt.includes('Identifikasi nama makanan') ? 'food_scan' : 'body_analysis';
+    
+    // Defer the logging call asynchronously
+    const { logTokenUsage } = require('./firebase');
+    logTokenUsage(email, feature, promptTokens, completionTokens, model).catch(console.error);
+  } catch (logErr) {
+    console.error('[handlers.js] Vision token logging failed:', logErr);
+  }
+
   return rawText;
 }
 
@@ -818,7 +833,7 @@ Instruksi:
 5. Kembalikan HANYA JSON ini (tanpa teks lain):
 {"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat","grams":250,"cooking_method":"metode masak"}`;
 
-    const rawIdentify = await callGeminiVisionAPI(images, null, identifyPrompt, true);
+    const rawIdentify = await callGeminiVisionAPI(images, null, identifyPrompt, true, email);
     let identified;
     try {
       const matchId = rawIdentify.trim().match(/\{[\s\S]*\}/);
@@ -839,7 +854,7 @@ Instruksi:
     await sendMessage(chatId, `✅ Teridentifikasi: *${identified.name}* (~${identified.grams}g)\n🧮 *Step 2/2*: Menghitung nutrisi berstandar USDA/TKPI...`);
 
     const foodQuery = `${identified.name}, porsi: ${identified.grams}g, cara masak: ${identified.cooking_method || 'tidak diketahui'}${userDesc ? ', catatan: ' + userDesc : ''}`;
-    const parsed = await analyzeFood(foodQuery);
+    const parsed = await analyzeFood(foodQuery, email);
     // Ensure name and portion from Step 1 are preserved
     parsed.name = parsed.name || identified.name;
     parsed.portion = parsed.portion || identified.portion || `${identified.grams}g`;
@@ -974,7 +989,7 @@ async function onFoodDescInput(chatId, userId, text) {
   await sendMessage(chatId, `Menganalisis: _${escapeMarkdown(query)}_...`, null);
 
   try {
-    const nutrition = await analyzeFood(query);
+    const nutrition = await analyzeFood(query, email);
     await setCache(userId + '_pending', JSON.stringify(nutrition));
 
     let msg = '🤖 *Hasil Analisis AI:*\n\n';
@@ -1835,7 +1850,7 @@ async function onEditDescInput(chatId, userId, text) {
   await sendMessage(chatId, `Menganalisis ulang: _${escapeMarkdown(query)}_...`, null);
 
   try {
-    const nutrition = await analyzeFood(query);
+    const nutrition = await analyzeFood(query, email);
     await setCache(`${userId}_editing_result`, JSON.stringify({
       id: logId,
       name: nutrition.name || newName,
@@ -4021,7 +4036,7 @@ ${visualComparisonPromptNote}
   }
 }`;
 
-    const rawJson = await callGeminiVisionAPI(imagesInput, mime, promptText, true);
+    const rawJson = await callGeminiVisionAPI(imagesInput, mime, promptText, true, email);
     let data = null;
     try {
       let cleanJson = rawJson.trim();
