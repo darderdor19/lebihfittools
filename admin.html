@@ -713,46 +713,25 @@
           </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px;">
-          <!-- Left: User Leaderboard -->
-          <div class="card" style="padding:16px;">
-            <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="award" style="color:var(--accent); width:16px; height:16px;"></i> Pengguna Terboros Token</h3>
-            <div style="overflow-x:auto;">
-              <table class="data-table" style="font-size:0.8rem;">
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Calls</th>
-                    <th>Prompt</th>
-                    <th>Completion</th>
-                    <th>Total Token</th>
-                  </tr>
-                </thead>
-                <tbody id="tokenUserLeaderboardBody">
-                  <tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px;">Memuat leaderboard...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Right: Feature Usage -->
-          <div class="card" style="padding:16px;">
-            <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="pie-chart" style="color:var(--success); width:16px; height:16px;"></i> Penggunaan per Fitur</h3>
-            <div style="overflow-x:auto;">
-              <table class="data-table" style="font-size:0.8rem;">
-                <thead>
-                  <tr>
-                    <th>Nama Fitur</th>
-                    <th>Calls</th>
-                    <th>Total Token</th>
-                    <th>Persentase</th>
-                  </tr>
-                </thead>
-                <tbody id="tokenFeatureStatsBody">
-                  <tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">Memuat statistik fitur...</td></tr>
-                </tbody>
-              </table>
-            </div>
+        <!-- Combined User & Feature Usage -->
+        <div class="card" style="margin-top:20px; padding:16px;">
+          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="award" style="color:var(--accent); width:16px; height:16px;"></i> Penggunaan Token Terbesar per User & Fitur</h3>
+          <div style="overflow-x:auto;">
+            <table class="data-table" style="font-size:0.8rem;">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">Rank</th>
+                  <th>Email Pengguna</th>
+                  <th>Fitur yang Digunakan</th>
+                  <th>Jumlah Calls</th>
+                  <th>Total Token</th>
+                  <th>Terakhir Aktif</th>
+                </tr>
+              </thead>
+              <tbody id="tokenUserFeatureStatsBody">
+                <tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px;">Memuat statistik penggunaan...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1394,12 +1373,10 @@ async function loadTokenMonitor() {
   const tokenTotalCallsEl = document.getElementById('tokenTotalCalls');
   const tokenActiveUsersEl = document.getElementById('tokenActiveUsers');
   
-  const leaderboardBody = document.getElementById('tokenUserLeaderboardBody');
-  const featureStatsBody = document.getElementById('tokenFeatureStatsBody');
+  const userFeatureStatsBody = document.getElementById('tokenUserFeatureStatsBody');
   const logsTableBody = document.getElementById('tokenLogsTableBody');
   
-  leaderboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text2);">Memuat data leaderboard...</td></tr>';
-  featureStatsBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text2);">Memuat data fitur...</td></tr>';
+  userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Memuat data statistik...</td></tr>';
   logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);">Memuat data log transaksi...</td></tr>';
 
   try {
@@ -1407,9 +1384,9 @@ async function loadTokenMonitor() {
     const userStatsSnap = await fbDb.ref('admins/user_token_stats').once('value');
     const userStats = userStatsSnap.val() || {};
     
-    // 2. Fetch Feature Stats
-    const featureStatsSnap = await fbDb.ref('admins/feature_token_stats').once('value');
-    const featureStats = featureStatsSnap.val() || {};
+    // 2. Fetch User + Feature Stats
+    const userFeatureStatsSnap = await fbDb.ref('admins/user_feature_token_stats').once('value');
+    const userFeatureStats = userFeatureStatsSnap.val() || {};
     
     // 3. Fetch logs (last 100 entries)
     const logsSnap = await fbDb.ref('admins/token_logs').limitToLast(100).once('value');
@@ -1433,37 +1410,18 @@ async function loadTokenMonitor() {
     tokenTotalCallsEl.textContent = totalCallsAllTime.toLocaleString('id-ID');
     tokenActiveUsersEl.textContent = activeUsersCount;
 
-    // --- Render User Leaderboard ---
-    const sortedUsers = Object.values(userStats).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-    if (sortedUsers.length === 0) {
-      leaderboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px;">Belum ada riwayat penggunaan token.</td></tr>';
+    // --- Render Combined User + Feature Table ---
+    const sortedUserFeatures = Object.values(userFeatureStats).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+    if (sortedUserFeatures.length === 0) {
+      userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px;">Belum ada riwayat penggunaan token per user & fitur.</td></tr>';
     } else {
-      leaderboardBody.innerHTML = sortedUsers.map((u, index) => {
+      userFeatureStatsBody.innerHTML = sortedUserFeatures.map((uf, index) => {
         let rankBadge = '';
         if (index === 0) rankBadge = '🥇 ';
         else if (index === 1) rankBadge = '🥈 ';
         else if (index === 2) rankBadge = '🥉 ';
-        return `
-          <tr>
-            <td style="font-weight:600;color:var(--text1)">${rankBadge}${escapeHtml(u.email || 'anonymous')}</td>
-            <td>${u.callCount || 0}</td>
-            <td style="color:var(--text2)">${(u.promptTokens || 0).toLocaleString('id-ID')}</td>
-            <td style="color:var(--text2)">${(u.completionTokens || 0).toLocaleString('id-ID')}</td>
-            <td style="font-weight:700;color:var(--accent)">${(u.totalTokens || 0).toLocaleString('id-ID')}</td>
-          </tr>
-        `;
-      }).join('');
-    }
 
-    // --- Render Feature Stats ---
-    const sortedFeatures = Object.values(featureStats).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-    if (sortedFeatures.length === 0) {
-      featureStatsBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">Belum ada riwayat gizi/latihan.</td></tr>';
-    } else {
-      featureStatsBody.innerHTML = sortedFeatures.map(f => {
-        const percent = totalTokensAllTime > 0 ? ((f.totalTokens || 0) / totalTokensAllTime * 100).toFixed(1) : 0;
-        
-        let featureLabel = f.feature || 'unknown';
+        let featureLabel = uf.feature || 'unknown';
         // Pretty labels
         if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan (Visual)';
         else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food (Text)';
@@ -1472,20 +1430,17 @@ async function loadTokenMonitor() {
         else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assistant + Gambar';
         else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Dashboard Eval';
         else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Dashboard Eval';
-        
+
+        const lastActiveStr = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-';
+
         return `
           <tr>
-            <td style="font-weight:600;color:var(--text1)">${escapeHtml(featureLabel)}</td>
-            <td>${f.callCount || 0}</td>
-            <td style="font-weight:700;color:var(--accent)">${(f.totalTokens || 0).toLocaleString('id-ID')}</td>
-            <td>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <div style="flex:1;height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;min-width:60px;">
-                  <div style="width:${percent}%;height:100%;background:var(--success);border-radius:3px;"></div>
-                </div>
-                <span>${percent}%</span>
-              </div>
-            </td>
+            <td style="font-weight:700; text-align:center;">${rankBadge || (index + 1)}</td>
+            <td style="font-weight:600;color:var(--text1)">${escapeHtml(uf.email || 'anonymous')}</td>
+            <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
+            <td>${uf.callCount || 0}</td>
+            <td style="font-weight:700;color:var(--accent)">${(uf.totalTokens || 0).toLocaleString('id-ID')}</td>
+            <td style="font-size:0.75rem;color:var(--text2)">${lastActiveStr}</td>
           </tr>
         `;
       }).join('');

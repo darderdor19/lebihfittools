@@ -129,6 +129,14 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
     featureStats.callCount = (featureStats.callCount || 0) + 1;
     await setFirebase(featureStatsPath, featureStats);
 
+    // Update aggregated stats for user + feature combined
+    const userFeaturePath = `admins/user_feature_token_stats/${safeEmail}_${feature}`;
+    let userFeatureStats = await getFirebase(userFeaturePath) || { email: cleanEmail, feature, totalTokens: 0, callCount: 0 };
+    userFeatureStats.totalTokens = (userFeatureStats.totalTokens || 0) + totalTokens;
+    userFeatureStats.callCount = (userFeatureStats.callCount || 0) + 1;
+    userFeatureStats.lastActive = timestamp;
+    await setFirebase(userFeaturePath, userFeatureStats);
+
   } catch (err) {
     console.error('[firebase] Failed to log token usage:', err);
   }
