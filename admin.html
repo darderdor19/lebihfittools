@@ -1522,7 +1522,7 @@ async function loadTokenMonitor() {
 
   } catch (err) {
     console.error('[loadTokenMonitor] failed:', err);
-    showToast('Gagal memuat monitoring token.', 'error');
+    showToast('Gagal memuat monitoring token: ' + err.message, 'error');
   }
 }
 
