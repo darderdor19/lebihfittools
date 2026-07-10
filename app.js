@@ -2923,6 +2923,13 @@ async function analyzeTextFood() {
     const originalText = btn.innerHTML;
     
     try {
+        // Check daily usage limit for manual food AI
+        const usageCheck = await checkAndIncrementUsage('manual_food_ai');
+        if (!usageCheck.allowed) {
+            showToast(`✍️ Limit Manual Food AI harian tercapai (${usageCheck.limit}x/hari). Reset besok ya!`, 'error');
+            return;
+        }
+
         btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:18px;height:18px;display:inline-block;vertical-align:text-bottom;"></i> Menganalisis...';
         btn.disabled = true;
         if (window.lucide) lucide.createIcons();
@@ -3095,13 +3102,22 @@ async function analyzePhoto() {
     const userDesc = document.getElementById('photoFoodDesc').value.trim();
     
     try {
-        btn.innerHTML = '⏳ Menganalisis...';
+        // Check daily usage limit for food scan
+        const usageCheck = await checkAndIncrementUsage('food_scan');
+        if (!usageCheck.allowed) {
+            showToast(`📷 Limit Food Scan harian tercapai (${usageCheck.limit}x/hari). Reset besok ya!`, 'error');
+            return;
+        }
+
+        btn.innerHTML = '⏳ Mengidentifikasi makanan...';
         btn.disabled = true;
         resultDiv.classList.add('hidden');
         if (loadingDiv) loadingDiv.classList.remove('hidden');
         if (errorDiv) errorDiv.classList.add('hidden');
+
+        const onProgress = (msg) => { btn.innerHTML = `⏳ ${msg}`; };
         
-        const res = await analyzePhotoAI(foodImagesList, null, userDesc);
+        const res = await analyzePhotoAI(foodImagesList, null, userDesc, onProgress);
         
         // Populate photo results form
         document.getElementById('photoResultNotes').innerText = res.notes || 'Berikut perkiraan kandungan gizi makanan Anda dari AI.';
@@ -5840,6 +5856,13 @@ ${visualComparisonPromptNote}
   }
 }`;
                       
+        // Check daily usage limit for body analysis
+        const usageCheck = await checkAndIncrementUsage('body_analysis');
+        if (!usageCheck.allowed) {
+            showToast(`🧍 Limit Body Analysis harian tercapai (${usageCheck.limit}x/hari). Reset besok ya!`, 'error');
+            return;
+        }
+
         const rawJson = await analyzePhysicalPhotoAI(imagesInput, mimeType, promptText, true);
         let data = null;
         try {

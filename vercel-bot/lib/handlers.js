@@ -57,6 +57,35 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
+// ===== BACKEND DAILY AI USAGE LIMIT =====
+const AI_DAILY_LIMITS = {
+  food_scan: 5,        // 📷 Food Scan (gambar)
+  manual_food_ai: 10,  // ✍️ Manual Food AI (teks)
+  body_analysis: 2,    // 🧍 Body Analysis
+  ai_image: 5,         // 🖼️ AI Assistant + gambar
+  ai_text: 10          // 💬 AI Assistant teks
+};
+
+async function checkAndIncrementUsageBackend(email, featureKey) {
+  if (!email) return { allowed: true };
+  const safeEmail = safe(email);
+  const today = todayKey(); // returns YYYY-MM-DD WIB
+  const path = `users/${safeEmail}/lf_usage_${today}`;
+  
+  let usageToday = await getFirebase(path) || {};
+  const limit = AI_DAILY_LIMITS[featureKey];
+  const used = usageToday[featureKey] || 0;
+  
+  if (used >= limit) {
+    return { allowed: false, used, limit };
+  }
+  
+  usageToday[featureKey] = used + 1;
+  await setFirebase(path, usageToday);
+  return { allowed: true, used: used + 1, limit };
+}
+
+
 // ====================================================
 // KEYBOARD DEFINITIONS
 // ====================================================
@@ -749,7 +778,7 @@ async function handlePhotoInput(chatId, userId, photos, caption) {
 
 async function processFoodPhotos(chatId, userId) {
   try {
-    await sendMessage(chatId, '⏳ Menganalisis semua foto makanan lu dengan LebihFit Tools AI. Tunggu bentar ya...');
+    await sendMessage(chatId, '🔍 *Step 1/2*: Mengidentifikasi makanan dari foto...');
     const cacheKey = `${userId}_food_photos_arr`;
     const cachedData = await getCache(cacheKey);
     if (!cachedData || Object.keys(cachedData).length === 0) {
@@ -757,41 +786,64 @@ async function processFoodPhotos(chatId, userId) {
     }
     const images = Object.values(cachedData);
     const userDesc = await getCache(`${userId}_food_photo_desc`) || '';
-    
-    let prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
-Tugas kamu adalah menganalisis foto makanan yang diunggah, mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).`;
+
+    // Check daily limit for food scan
+    const email = await getLinkedEmail(userId);
+    const usageCheck = await checkAndIncrementUsageBackend(email, 'food_scan');
+    if (!usageCheck.allowed) {
+      return sendMessage(chatId, `⚠️ Limit Food Scan harian lu tercapai (${usageCheck.limit}x/hari). Silakan coba lagi besok bro! 💪`, mainMenuKeyboard());
+    }
+
+    // =============================================
+    // STEP 1: Gemini — Identifikasi nama & berat
+    // =============================================
+    let identifyPrompt = `Kamu adalah sistem identifikasi visual makanan yang sangat akurat.
+Analisis gambar makanan ini.`;
 
     if (userDesc) {
-      prompt += `\n\n== DESKRIPSI TAMBAHAN DARI USER (Gunakan detail ini untuk memandu analisis gizi, porsi, dan bahan secara akurat): ==\n"${userDesc}"`;
+      identifyPrompt += `\nDeskripsi tambahan user: "${userDesc}"`;
     }
 
-    prompt += `
+    identifyPrompt += `
+
+TUGAS: Identifikasi nama makanan & estimasi berat (gram) SAJA. JANGAN hitung nutrisi di sini.
 
 Instruksi:
-1. Identifikasi nama makanan dan estimasi berat/porsi makanan secara logis dari gambar.
-2. Gunakan database referensi gizi standar per 100g berikut untuk menghitung secara proporsional:
-   - Singkong (mentah/rebus/air-fryer tanpa minyak): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
-   - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
-   - Dada Ayam Fillet MENTAH (raw): 120 kcal | Karbo: 0g | Protein: 23g | Lemak: 2.5g | Serat: 0g | Gula: 0g | Sodium: 65mg | Kalsium: 10mg | Besi: 0.7mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.8mg
-   - Dada Ayam MATANG (rebus/panggang/air-fryer tanpa minyak): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
-   - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
-   - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
-3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-4. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan (misal: dada ayam dan singkong), kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
-5. Lakukan kalkulasi: (Nilai gizi per 100g) * (Estimasi Berat / 100). JANGAN biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut. Hitung secara realistis!
-6. Berikan jawaban dalam JSON dengan format berikut:
-{"name":"nama makanan","portion":"estimasi porsi/berat","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8,"notes":"ulasan singkat analisis gizi maks 2 kalimat"}
-Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
+1. Jika BUKAN foto makanan, kembalikan: {"is_food":false}
+2. Identifikasi nama makanan secara spesifik dan akurat berdasarkan tampilan visual.
+   - JANGAN tambahkan bahan yang tidak terlihat di foto.
+   - Jika ada beberapa item berbeda, sebutkan semuanya.
+3. Estimasi berat total dalam gram secara logis dari porsi yang terlihat.
+4. Catat metode masak jika terlihat (goreng/rebus/bakar/air-fryer).
+5. Kembalikan HANYA JSON ini (tanpa teks lain):
+{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat","grams":250,"cooking_method":"metode masak"}`;
 
-    const raw = await callGeminiVisionAPI(images, null, prompt, true);
-    let parsed;
+    const rawIdentify = await callGeminiVisionAPI(images, null, identifyPrompt, true);
+    let identified;
     try {
-      parsed = JSON.parse(raw);
+      const matchId = rawIdentify.trim().match(/\{[\s\S]*\}/);
+      identified = matchId ? JSON.parse(matchId[0]) : JSON.parse(rawIdentify.trim());
     } catch(e) {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Format JSON tidak sesuai.');
+      throw new Error('Gagal membaca identifikasi makanan dari AI.');
     }
+
+    if (!identified.is_food) {
+      return sendMessage(chatId, '⚠️ Foto yang diunggah tidak terdeteksi sebagai makanan. Silakan upload foto makanan yang jelas.', {
+        inline_keyboard: [[{ text: '🔄 Ulangi', callback_data: 'log_food_photo' }]]
+      });
+    }
+
+    // =============================================
+    // STEP 2: Qwen — Hitung makro & mikro nutrisi
+    // =============================================
+    await sendMessage(chatId, `✅ Teridentifikasi: *${identified.name}* (~${identified.grams}g)\n🧮 *Step 2/2*: Menghitung nutrisi berstandar USDA/TKPI...`);
+
+    const foodQuery = `${identified.name}, porsi: ${identified.grams}g, cara masak: ${identified.cooking_method || 'tidak diketahui'}${userDesc ? ', catatan: ' + userDesc : ''}`;
+    const parsed = await analyzeFood(foodQuery);
+    // Ensure name and portion from Step 1 are preserved
+    parsed.name = parsed.name || identified.name;
+    parsed.portion = parsed.portion || identified.portion || `${identified.grams}g`;
+
 
     await setCache(`${userId}_food_ai`, JSON.stringify(parsed));
     await setState(userId, 'AWAIT_FOOD_CONFIRM_AI');
@@ -894,6 +946,16 @@ async function onFoodDescInput(chatId, userId, text) {
     await deleteCache(`${userId}_food_name`);
     await deleteCache(`${userId}_food_portion`);
     return sendMessage(chatId, 'Sesi expired. Silakan log ulang.', mainMenuKeyboard());
+  }
+
+  // Check daily limit for manual food AI
+  const email = await getLinkedEmail(userId);
+  const usageCheck = await checkAndIncrementUsageBackend(email, 'manual_food_ai');
+  if (!usageCheck.allowed) {
+    await setState(userId, null);
+    await deleteCache(`${userId}_food_name`);
+    await deleteCache(`${userId}_food_portion`);
+    return sendMessage(chatId, `⚠️ Limit Manual Food AI harian lu tercapai (${usageCheck.limit}x/hari). Silakan coba lagi besok bro! 💪`, mainMenuKeyboard());
   }
 
   const foodDesc = text ? text.trim() : '';
@@ -1754,6 +1816,14 @@ async function onEditDescInput(chatId, userId, text) {
   const newDesc = (text && text.trim() !== '/skip') ? text.trim() : '';
 
   await setState(userId, null);
+
+  // Check daily limit for manual food AI
+  const email = await getLinkedEmail(userId);
+  const usageCheck = await checkAndIncrementUsageBackend(email, 'manual_food_ai');
+  if (!usageCheck.allowed) {
+    await deleteEditCache(userId);
+    return sendMessage(chatId, `⚠️ Limit Manual Food AI harian lu tercapai (${usageCheck.limit}x/hari). Silakan coba lagi besok bro! 💪`, mainMenuKeyboard());
+  }
 
   await sendChatAction(chatId, 'typing');
 
@@ -3659,6 +3729,12 @@ async function onPhysicalDescInput(chatId, userId, text) {
   try {
     const email = await getLinkedEmail(userId);
     if (!email) return promptLogin(chatId, userId);
+
+    // Check daily limit for body analysis
+    const usageCheck = await checkAndIncrementUsageBackend(email, 'body_analysis');
+    if (!usageCheck.allowed) {
+      return sendMessage(chatId, `⚠️ Limit Body Analysis harian lu tercapai (${usageCheck.limit}x/hari). Silakan coba lagi besok bro! 💪`, mainMenuKeyboard());
+    }
 
     const cachedArr = await getCache(`${userId}_phys_photos_arr`);
     if (!cachedArr) return sendMessage(chatId, 'Sesi kadaluarsa, silahkan ulangi.', { inline_keyboard: [[{ text: 'Batal', callback_data: 'progress_menu' }]] });

@@ -25,10 +25,11 @@ module.exports = async function handler(req, res) {
 
     // Check for text food analysis prompt to inject database references
     const userMsg = messages[messages.length - 1];
-    if (userMsg && typeof userMsg.content === 'string' && userMsg.content.includes('== BAHAN UTAMA & PORSI ==')) {
-      const nameMatch = userMsg.content.match(/Nama Makanan:\s*([^\n]+)/i);
+    const msgContent = userMsg && typeof userMsg.content === 'string' ? userMsg.content : '';
+    if (msgContent.includes('== BAHAN UTAMA') && msgContent.includes('PORSI ==')) {
+      const nameMatch = msgContent.match(/Nama Makanan[^\n:]*:\s*([^\n"]+)/i);
       if (nameMatch) {
-        const foodName = nameMatch[1].trim();
+        const foodName = nameMatch[1].replace(/^"/, '').replace(/".*$/, '').trim();
         try {
           const { searchFoodDatabase } = require('../lib/foodSearch');
           const dbMatches = await searchFoodDatabase(foodName);
@@ -37,7 +38,10 @@ module.exports = async function handler(req, res) {
             dbMatches.forEach(item => {
               referenceContext += `- ${item.name}: cal ${item.cal} kcal | protein ${item.protein}g | carbs ${item.carbs}g | fat ${item.fat}g | fiber ${item.fiber}g | sugar ${item.sugar}g | sodium ${item.sodium}mg | calcium ${item.calcium}mg | iron ${item.iron}mg | vitC ${item.vitC}mg | vitD ${item.vitD}mcg | zinc ${item.zinc}mg\n`;
             });
-            userMsg.content = userMsg.content.replace('== DATABASE REFERENCE (Per 100g): ==', `== DATABASE REFERENCE (Per 100g): ==${referenceContext}`);
+            // Inject into both old and new prompt format
+            userMsg.content = userMsg.content
+              .replace('== DATABASE REFERENCE (Per 100g): ==', `== DATABASE REFERENCE (Per 100g): ==${referenceContext}`)
+              .replace('== PRIORITAS DATABASE (Per 100g', `== PRIORITAS DATABASE (Per 100g \u2014 DB MATCH:${referenceContext}\n\nSelebihnya (Per 100g`);
           }
         } catch (dbErr) {
           console.error('[ai] DB search error:', dbErr);
@@ -68,7 +72,7 @@ module.exports = async function handler(req, res) {
       model: model,
       messages: messages,
       temperature: json ? 0.1 : 0.2,
-      max_tokens: json ? 3000 : 2048
+      max_tokens: 4096
     };
     if (json) {
       body.response_format = { type: "json_object" };

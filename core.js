@@ -136,6 +136,51 @@ function invalidateAnalysisCache() {
     DB.del('lf_analysis_cache');
 }
 
+// ===== DAILY AI USAGE LIMIT =====
+const AI_DAILY_LIMITS = {
+  food_scan: 5,        // 📷 Food Scan (gambar)
+  manual_food_ai: 10,  // ✍️ Manual Food AI (teks)
+  body_analysis: 2,    // 🧍 Body Analysis
+  ai_image: 5,         // 🖼️ AI Assistant + gambar
+  ai_text: 10          // 💬 AI Assistant teks
+};
+
+async function checkAndIncrementUsage(featureKey) {
+  const limit = AI_DAILY_LIMITS[featureKey];
+  if (!limit) return { allowed: true, used: 0, limit: 999 };
+
+  const today = todayKey();
+  const storageKey = `lf_usage_${today}`;
+
+  // Read current usage from local storage (synced with Firebase)
+  let usageToday = DB.get(storageKey) || {};
+  const used = usageToday[featureKey] || 0;
+
+  if (used >= limit) {
+    return { allowed: false, used, limit };
+  }
+
+  // Increment and save
+  usageToday[featureKey] = used + 1;
+  DB.set(storageKey, usageToday);
+
+  return { allowed: true, used: used + 1, limit };
+}
+
+function getUsageSummary() {
+  const today = todayKey();
+  const storageKey = `lf_usage_${today}`;
+  const usageToday = DB.get(storageKey) || {};
+  return {
+    food_scan: { used: usageToday.food_scan || 0, limit: AI_DAILY_LIMITS.food_scan },
+    manual_food_ai: { used: usageToday.manual_food_ai || 0, limit: AI_DAILY_LIMITS.manual_food_ai },
+    body_analysis: { used: usageToday.body_analysis || 0, limit: AI_DAILY_LIMITS.body_analysis },
+    ai_image: { used: usageToday.ai_image || 0, limit: AI_DAILY_LIMITS.ai_image },
+    ai_text: { used: usageToday.ai_text || 0, limit: AI_DAILY_LIMITS.ai_text }
+  };
+}
+
+
 function getDayActivitiesArray(actsObj, dateStr) {
   const dayData = actsObj[dateStr];
   if (!dayData) return [];
@@ -382,61 +427,107 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
   }
 }
 
-async function analyzePhotoAI(images, mime = null, userDescription = '') {
-  let prompt = `Kamu adalah ahli gizi dan sistem analisis visual makanan yang sangat akurat dan konsisten.
-Tugas kamu adalah menganalisis foto makanan yang diunggah (bisa berupa satu foto atau beberapa foto yang menampilkan makanan yang sama atau komponen makanan yang berbeda dari hidangan tersebut), mengenali jenis makanannya, memperkirakan porsi/beratnya secara logis, dan menghitung estimasi kandungan nutrisinya berdasarkan database gizi ilmiah standar (seperti USDA).`;
+async function analyzePhotoAI(images, mime = null, userDescription = '', onProgress = null) {
+  // =============================================
+  // STEP 1: Gemini — Identifikasi nama & berat
+  // =============================================
+  if (onProgress) onProgress('🔍 Mengidentifikasi makanan dari foto...');
+
+  let identifyPrompt = `Kamu adalah sistem identifikasi visual makanan yang sangat akurat.
+Analisis gambar ini dan identifikasi makanan yang ada di foto.`;
 
   if (userDescription) {
-    prompt += `\n\n== DESKRIPSI TAMBAHAN DARI USER (Gunakan detail ini untuk memandu analisis gizi, porsi, dan bahan secara akurat): ==\n"${userDescription}"`;
+    identifyPrompt += `\n\nDeskripsi tambahan dari user: "${userDescription}"`;
   }
 
-  prompt += `
+  identifyPrompt += `
+
+TUGAS UTAMA: Identifikasi nama makanan & estimasi berat (gram) saja.
+JANGAN menghitung nilai nutrisi di sini.
 
 Instruksi:
-1. VALIDASI GAMBAR: Periksa apakah gambar yang diunggah benar-benar menampilkan makanan atau minuman. Jika gambar sama sekali tidak menampilkan makanan/minuman (misal: hanya pemandangan, wajah orang, teks, atau gambar acak lainnya), kembalikan JSON dengan format error khusus berikut dan hentikan analisis: {"name": "Tidak valid", "portion": "0g", "calculation": "Bukan foto makanan", "cal": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0, "calcium": 0, "iron": 0, "vitC": 0, "vitD": 0, "zinc": 0, "notes": "Foto yang Anda unggah tidak terdeteksi sebagai makanan/minuman. Silakan unggah foto makanan yang jelas."}
-2. IDENTIFIKASI MAKANAN BEBAS & AKURAT (SANGAT PENTING): 
-   - Identifikasi jenis makanan yang ada di foto secara obyektif berdasarkan tampilan visual aslinya.
-   - Jika foto menunjukkan mie, maka identifikasi sebagai mie (misal: Mie Goreng, Mie Rebus). JANGAN mengidentifikasinya sebagai nasi putih atau singkong hanya karena bahan tersebut ada di daftar referensi!
-   - JANGAN PERNAH menambahkan bahan 'Dada Ayam' atau 'Telur Ayam' kecuali bahan tersebut benar-benar terlihat secara visual di dalam foto makanan atau disebutkan secara eksplisit oleh user dalam deskripsi tambahan!
-3. ATURAN REFERENSI GIZI:
-   - Gunakan database referensi gizi standar per 100g berikut HANYA jika bahan tersebut cocok dengan makanan di foto.
-   - Jika makanan di foto adalah makanan lain yang tidak tercantum di bawah ini (misal: Mie, Tempe, Daging Sapi, Pizza, Roti, Kentang, dll.), abaikan daftar ini dan gunakan database gizi standar internal Anda (seperti USDA/DKBM) secara akurat untuk menghitung nilai gizinya.
-   Daftar Referensi Gizi Terbatas (Per 100g):
-   - Singkong (mentah/rebus/air-fryer tanpa minyak): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
-   - Nasi Putih (matang): 130 kcal | Karbo: 28g | Protein: 2.7g | Lemak: 0.3g | Serat: 0.4g | Gula: 0.1g | Sodium: 1mg | Kalsium: 10mg | Besi: 1.2mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.5mg
-   - Dada Ayam Fillet MENTAH (raw): 120 kcal | Karbo: 0g | Protein: 23g | Lemak: 2.5g | Serat: 0g | Gula: 0g | Sodium: 65mg | Kalsium: 10mg | Besi: 0.7mg | VitC: 0mg | VitD: 0mcg | Zinc: 0.8mg
-   - Dada Ayam MATANG (rebus/panggang/air-fryer tanpa minyak): 165 kcal | Karbo: 0g | Protein: 31g | Lemak: 3.6g | Serat: 0g | Gula: 0g | Sodium: 74mg | Kalsium: 15mg | Besi: 1mg | VitC: 0mg | VitD: 0mcg | Zinc: 1mg
-   - Telur Ayam (rebus, 1 butir = 50g): 78 kcal | Karbo: 0.6g | Protein: 6.3g | Lemak: 5.3g | Serat: 0g | Gula: 0.6g | Sodium: 62mg | Kalsium: 25mg | Besi: 0.9mg | VitC: 0mg | VitD: 1.1mcg | Zinc: 0.6mg
-   - Minyak Goreng / Lemak (per 10g): 88 kcal, Lemak 10g (jika makanan terlihat berminyak/digoreng, wajib tambahkan estimasi minyak).
-4. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK tambahan. JANGAN menambahkan kalori/lemak minyak goreng ke dalamnya.
-5. ATURAN MULTI-BAHAN: Jika di piring terdapat lebih dari 1 jenis makanan, kalkulasikan berat dan kandungan gizi masing-masing bahan secara terpisah terlebih dahulu sebelum menjumlahkan total akhirnya. JANGAN menjumlahkan seluruh berat lalu mengalikan dengan satu jenis gizi saja.
-6. Lakukan kalkulasi WAJIB: (Nilai gizi per 100g) * (Estimasi Berat Gram / 100). Jika porsi bukan 100g, JANGAN berikan nilai 100g! Wajib kalikan juga SEMUA mikronutrisi!
-7. Jangan biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut. Hitung secara realistis!
-8. Berikan jawaban dalam JSON dengan format berikut:
-{"name":"nama makanan","portion":"estimasi porsi/berat","calculation":"tuliskan perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8,"notes":"ulasan singkat analisis gizi maks 24 kata"}
-Kembalikan HANYA JSON valid tanpa teks tambahan atau markdown.`;
+1. Jika BUKAN foto makanan/minuman, kembalikan: {"is_food":false}
+2. Identifikasi nama makanan secara spesifik dan akurat berdasarkan visual.
+   - Jangan tambahkan bahan yang TIDAK terlihat di foto (misal: jangan tambahkan "dada ayam" jika tidak terlihat).
+   - Jika ada beberapa item, sebutkan semuanya.
+3. Estimasi berat total makanan dalam gram secara logis berdasarkan visual porsi.
+4. Catat metode memasak jika terlihat (goreng/rebus/bakar/air-fryer).
+5. Kembalikan HANYA JSON ini (tanpa teks lain):
+{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat","grams":250,"cooking_method":"air-fryer/rebus/goreng/dll","notes":"catatan visual singkat"}`;
 
-  const content = [{ type: 'text', text: prompt }];
+  const identifyContent = [{ type: 'text', text: identifyPrompt }];
   if (Array.isArray(images)) {
     images.forEach(img => {
-      content.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
+      identifyContent.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     });
   } else {
-    content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${images}` } });
+    identifyContent.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${images}` } });
   }
 
-  const messages = [{ role: 'user', content }];
-  
+  let identified;
   try {
-    const raw = await callAI(messages, true, 'google/gemini-2.5-flash', true);
-    if (!raw) throw new Error("AI tidak mengembalikan data. Mungkin foto tidak jelas atau diblokir filter.");
-    let cleanJson = raw.trim();
-    const match = cleanJson.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+    const rawIdentify = await callAI([{ role: 'user', content: identifyContent }], true, 'google/gemini-2.5-flash', true);
+    if (!rawIdentify) throw new Error('Gemini tidak mengembalikan data identifikasi.');
+    const matchId = rawIdentify.trim().match(/\{[\s\S]*\}/);
+    identified = matchId ? JSON.parse(matchId[0]) : JSON.parse(rawIdentify.trim());
+  } catch (err) {
+    throw getMaskedAIError(new Error('Gagal mengidentifikasi makanan dari foto: ' + err.message));
+  }
+
+  if (!identified.is_food) {
+    return {
+      name: 'Tidak valid', portion: '0g', calculation: 'Bukan foto makanan',
+      cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0,
+      sodium: 0, calcium: 0, iron: 0, vitC: 0, vitD: 0, zinc: 0,
+      notes: 'Foto yang Anda unggah tidak terdeteksi sebagai makanan/minuman. Silakan unggah foto makanan yang jelas.'
+    };
+  }
+
+  // =============================================
+  // STEP 2: Qwen — Hitung makro & mikro nutrisi
+  // =============================================
+  if (onProgress) onProgress('🧮 Menghitung nutrisi berstandar USDA/TKPI...');
+
+  const foodName = identified.name || 'makanan';
+  const grams = identified.grams || 100;
+  const cookingMethod = identified.cooking_method || '';
+  const descForCalc = userDescription || identified.notes || '';
+
+  const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia).
+Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+Evaluasi kecukupan vitamin/mineral menggunakan AKG Indonesia (RDA Indonesia).
+
+== MAKANAN YANG DIIDENTIFIKASI DARI FOTO ==
+Nama: ${foodName}
+Berat Estimasi: ${grams}g
+Metode Masak: ${cookingMethod || 'tidak diketahui'}
+Deskripsi Tambahan: ${descForCalc || 'tidak ada'}
+
+== INSTRUKSI KALKULASI KETAT ==
+1. Cari data gizi per 100g untuk "${foodName}" dari USDA FoodData Central atau TKPI Indonesia.
+2. Jika ada beberapa komponen (multi-bahan), hitung tiap bahan TERPISAH lalu JUMLAHKAN.
+3. Air Fryer / Oven tanpa minyak = TANPA penambahan lemak/kalori minyak.
+4. Goreng = TAMBAHKAN estimasi minyak yang diserap (+6-10g lemak per porsi rata-rata).
+5. Perkalian wajib: (Nilai per 100g) × (${grams} / 100) untuk SEMUA makro DAN mikro.
+6. JANGAN biarkan nilai mikro (sodium, calcium, iron, vitC, vitD, zinc) = 0 kecuali memang benar 0.
+7. Bulatkan ke 1 angka desimal.
+8. Jawab HANYA JSON valid tanpa teks/markdown:
+{"name":"${foodName}","portion":"${grams}g","calculation":"ringkasan perkalian makro+mikro","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat analisis max 20 kata"}`;
+
+  try {
+    const rawNutrition = await callAI([{ role: 'user', content: nutritionPrompt }], true, 'llama-3.1-8b-instant', false);
+    if (!rawNutrition) throw new Error('AI tidak mengembalikan data nutrisi.');
+    const matchNu = rawNutrition.trim().match(/\{[\s\S]*\}/);
+    const result = matchNu ? JSON.parse(matchNu[0]) : JSON.parse(rawNutrition.trim());
+    // Ensure name and portion from Step 1 override
+    result.name = result.name || foodName;
+    result.portion = result.portion || identified.portion || `${grams}g`;
+    return result;
   } catch (err) {
     throw getMaskedAIError(err);
   }
 }
+
 
 async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false) {
   const content = [{ type: 'text', text: promptText }];
@@ -458,14 +549,62 @@ async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false
   }
 }
 
+function findHistoricalFoodMatch(name) {
+  if (!name) return null;
+  const cleanName = name.toLowerCase().trim();
+  const logs = getLogs();
+  
+  // Collect unique food items from logs
+  const foodMap = new Map();
+  for (const date in logs) {
+    if (Array.isArray(logs[date])) {
+      logs[date].forEach(item => {
+        if (item && item.name) {
+          const itemKey = item.name.toLowerCase().trim();
+          if (!foodMap.has(itemKey)) {
+            foodMap.set(itemKey, item);
+          }
+        }
+      });
+    }
+  }
+  
+  // Try exact match
+  if (foodMap.has(cleanName)) {
+    return foodMap.get(cleanName);
+  }
+  
+  // Try partial word match
+  const words = cleanName.split(/\s+/).filter(w => w.length > 1);
+  if (words.length > 0) {
+    for (const [key, item] of foodMap.entries()) {
+      const keyWords = key.split(/\s+/);
+      const isMatch = words.every(w => keyWords.some(kw => kw.includes(w) || w.includes(kw)));
+      if (isMatch) {
+        return item;
+      }
+    }
+  }
+  return null;
+}
+
 async function analyzeTextAI(name, portion, desc) {
-  let prompt = `Kamu adalah mesin kalkulator gizi dan database nutrisi makanan yang sangat akurat, konsisten, dan ilmiah.
-Tugas kamu adalah menghitung kandungan nutrisi makro dan mikro secara presisi berdasarkan data standar per 100g.
+  let historicalContext = '';
+  const histMatch = findHistoricalFoodMatch(name);
+  if (histMatch) {
+    historicalContext = `\n\n== REFERENSI HISTORIS MAKANAN USER (Gunakan data gizi ini sebagai basis dan sesuaikan dengan gram/deskripsi baru): ==
+- Nama Makanan: ${histMatch.name} (Porsi lama: ${histMatch.portion || 'tidak ada'})
+- Kandungan Gizi Lama: cal: ${histMatch.cal} kcal | protein: ${histMatch.protein}g | carbs: ${histMatch.carbs}g | fat: ${histMatch.fat}g | fiber: ${histMatch.fiber}g | sugar: ${histMatch.sugar}g | sodium: ${histMatch.sodium}mg | calcium: ${histMatch.calcium}mg | iron: ${histMatch.iron}mg | vitC: ${histMatch.vitC}mg | vitD: ${histMatch.vitD}mcg | zinc: ${histMatch.zinc}mg\n`;
+  }
+
+  let prompt = `Kamu adalah mesin kalkulator gizi dan database nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia).
+Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+Referensi kecukupan vitamin/mineral menggunakan AKG Indonesia (RDA Indonesia).
 
 == BAHAN UTAMA & PORSI ==
 Nama Makanan: ${name}
-Porsi/Berat: ${portion || '1 porsi standar'}
-Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
+Porsi/Berat Baru: ${portion || '1 porsi standar'}
+Deskripsi/Cara Masak Baru: ${desc || 'tidak ada deskripsi tambahan'}${historicalContext}
 
 == DATABASE REFERENCE (Per 100g): ==
 - Singkong (mentah/rebus/air-fryer tanpa minyak): 160 kcal | Karbo: 38g | Protein: 1.3g | Lemak: 0.3g | Serat: 1.8g | Gula: 1.7g | Sodium: 14mg | Kalsium: 16mg | Besi: 0.3mg | VitC: 20mg | VitD: 0mcg | Zinc: 0.3mg
@@ -476,29 +615,18 @@ Deskripsi/Cara Masak: ${desc || 'tidak ada deskripsi tambahan'}
 - Minyak Goreng / Margarin (per 10g / 1 sdm): 88 kcal | Karbo: 0g | Protein: 0g | Lemak: 10g | Serat: 0g | Gula: 0g | Sodium: 0mg | Kalsium: 0mg | Besi: 0mg | VitC: 0mg | VitD: 0mcg | Zinc: 0mg
 
 == INSTRUKSI KALKULASI SECARA KETAT ==
-1. Ekstrak berat masing-masing bahan dalam gram (misal: Bahan A 545g, Bahan B 500g).
-2. Bedakan Berat Mentah vs Matang secara logis:
-   - Jika deskripsi mengandung kata "fillet", "mentah", "raw", gunakan data "MENTAH".
-   - Jika tidak disebutkan secara spesifik, asumsikan berat yang diinput adalah berat mentah sebelum dimasak kecuali konteksnya jelas-jelas matang.
-3. Metode masak "Air Fryer" atau "Air Fry" wajib dihitung sebagai TANPA MINYAK (0g lemak tambahan). Jangan menambah kalori/lemak minyak goreng ke dalamnya.
-4. ATURAN MULTI-BAHAN (SANGAT PENTING):
-   - Jika terdapat lebih dari 1 bahan makanan (misal: "Bahan A 545g dan Bahan B 500g"):
-     - Hitung kandungan nutrisi masing-masing bahan secara terpisah terlebih dahulu.
-     - JANGAN PERNAH menjumlahkan total berat (545g + 500g = 1045g) lalu mengalikan seluruh berat tersebut dengan gizi satu bahan. Ini salah!
-     - Jumlahkan hasil akhir nutrisi dari masing-masing bahan di akhir.
-5. ATURAN MAKANAN BERTULANG & FAST FOOD (SANGAT KRITIKAL):
-   - Jika input berupa ayam goreng fast food (KFC/McD/dll) atau ayam bertulang:
-     - 1 potong dada/paha atas (berat kotor ~100-150g) BUKAN daging murni. Terdapat TULANG (20-30% berat) dan TEPUNG/MINYAK.
-     - Kandungan protein asli dari 1 potong ayam fast food HANYA di kisaran 15-25 gram (maksimal 30g untuk ukuran jumbo). Jangan pernah mengalikan 1 potong = 150g daging murni (protein tidak boleh menembus 40g+ per potong, apalagi 130g untuk 3 potong, ini FATAL!).
-     - Jika user membuang kulit/tepung "semaksimal mungkin", TETAP asumsikan ada sisa coating/tepung menempel (wajib tambahkan karbohidrat sisa 5-15g dan lemak sisa).
-6. ATURAN SAUS/KONDIMEN:
-   - Jika ada saus sachet (tomat, sambal), kecap, atau mayo, WAJIB dihitung.
-   - 1 sachet saus sambal/tomat (~10g) mengandung sekitar 2-4g Karbohidrat (gula). Jangan berikan nilai Karbo 0g jika ada saus.
-7. Jika terdapat minyak goreng atau margarin sungguhan dalam deskripsi cara masak, tambahkan kalori dan lemak secara proporsional (+88 kcal dan +10g lemak per 1 sdm/10g minyak).
-8. WAJIB KALIKAN SEMUA GIZI PER 100g (TERMASUK MIKRONUTRISI: sodium, kalsium, besi, vitC, dll) DENGAN FAKTOR PENGALI DAGING/MAKANAN BERSIH YANG LOGIS. Jawab dengan nilai realistis. JANGAN biarkan nilai-nilai nutrisi bernilai 0 di hasil akhir (seperti cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc) kecuali makanan tersebut benar-benar bebas dari zat gizi tersebut.
-9. Jawab HANYA dengan JSON valid dengan format berikut, tanpa penjelasan teks di luar JSON, tanpa markdown:
-{"calculation":"tuliskan langkah perkalian makro DAN MIKRO disini (misal: kalori 165*6=990, sodium 74*6=444, kalsium 15*6=90)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8}
-All nutritional values should be estimated realistically. Semua nilai numerik dibulatkan ke 1 angka di belakang koma.`;
+1. Ekstrak berat porsi baru dalam gram. Jika tidak disebutkan, gunakan estimasi porsi standar.
+2. Jika ada REFERENSI HISTORIS MAKANAN USER di atas, gunakan data nutrisi tersebut sebagai basis. Lakukan penskalaan proporsional sesuai perbandingan berat porsi baru vs porsi lama, dan sesuaikan jika ada bumbu atau bahan tambahan/kurangan baru.
+3. Jika tidak ada REFERENSI HISTORIS, cari nilai gizi per 100g di database global (USDA FoodData Central / TKPI Indonesia).
+4. Mentah vs Matang: kata "fillet/mentah/raw" = mentah, selain itu asumsikan matang.
+5. Air Fryer / Oven tanpa minyak = TANPA lemak/kalori minyak goreng.
+6. Goreng = TAMBAHKAN minyak (+88 kcal & +10g lemak per 10g minyak yang terserap).
+7. MULTI-BAHAN: kalkulasikan tiap bahan TERPISAH lalu JUMLAHKAN. Jangan kalikan berat total dengan gizi satu bahan saja.
+8. MIKRONUTRISI: hitung secara realistis untuk sodium, kalsium, besi, vitC, vitD, zinc. JANGAN biarkan bernilai 0 kecuali memang bebas gizi tersebut.
+9. Jawab HANYA JSON valid tanpa teks/markdown:
+{"calculation":"tuliskan langkah perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8}
+Bulatkan 1 angka di belakang koma.`;
+
   const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.1-8b-instant');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");

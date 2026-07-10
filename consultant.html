@@ -2513,6 +2513,29 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
 
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
         // Case 1: Gym/diet/workout related -> proceed with in-depth response using selected model
+
+        // Check daily usage limit for AI Assistant
+        const hasImageInMsg = attachedImages && attachedImages.length > 0;
+        const usageFeatureKey = hasImageInMsg ? 'ai_image' : 'ai_text';
+        const featureLabel = hasImageInMsg ? '🖼️ AI Assistant + Gambar' : '💬 AI Assistant Teks';
+        const usageLimitMap = { ai_image: 5, ai_text: 10 };
+        const featureLimit = usageLimitMap[usageFeatureKey];
+
+        if (typeof checkAndIncrementUsage === 'function') {
+          const usageCheck = await checkAndIncrementUsage(usageFeatureKey);
+          if (!usageCheck.allowed) {
+            if (tBubble) tBubble.remove();
+            const limitReply = `⛔ Limit harian ${featureLabel} kamu sudah tercapai (${featureLimit}x/hari). Limit akan reset otomatis besok pagi ya bro! 💪`;
+            appendMessageUI('assistant', limitReply);
+            chatHistory.push({ role: 'assistant', content: limitReply });
+            input.disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+            scrollToBottom();
+            return;
+          }
+        }
+
         const model = localStorage.getItem(MODEL_NAME) || 'llama-3.1-8b-instant';
         
         // Build payload messages with system context and multimodal support
