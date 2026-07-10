@@ -6,8 +6,8 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400) {
   const key = process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY;
   if (!key) throw new Error('API_KEY_TEXT or NVIDIA_API_KEY not set');
 
-  const model = process.env.TEXT_MODEL || 'deepseek/deepseek-v4-flash';
-  const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  const model = process.env.TEXT_MODEL || 'deepseek-v4-flash';
+  const endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
   const body = {
     model: model,

@@ -51,18 +51,18 @@ module.exports = async function handler(req, res) {
     );
     const isVision = req.body.isVision || hasImage;
 
-    let apiKey = isVision ? (process.env.API_KEY_IMAGE || process.env.NVIDIA_API_KEY) : (process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY);
+    const apiKey = isVision ? process.env.API_KEY_IMAGE : process.env.API_KEY_TEXT;
     if (!apiKey) {
-      apiKey = process.env.API_KEY_TEXT || process.env.API_KEY_IMAGE || process.env.NVIDIA_API_KEY;
-    }
-
-    if (!apiKey) {
-      return res.status(500).json({ error: { message: "OpenRouter API Key not configured in environment variables (API_KEY_TEXT / API_KEY_IMAGE / NVIDIA_API_KEY)." } });
+      return res.status(500).json({ error: { message: `API Key not configured in environment variables (${isVision ? 'API_KEY_IMAGE' : 'API_KEY_TEXT'}).` } });
     }
 
     const model = isVision 
-      ? (process.env.VISION_MODEL || 'google/gemini-2.5-flash') 
-      : (process.env.TEXT_MODEL || 'deepseek/deepseek-v4-flash');
+      ? (process.env.VISION_MODEL || 'gemini-2.5-flash') 
+      : (process.env.TEXT_MODEL || 'deepseek-v4-flash');
+
+    const apiEndpoint = isVision
+      ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+      : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
     const body = {
       model: model,
@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
       body.response_format = { type: "json_object" };
     }
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari OpenRouter API` } });
+      return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari AI API` } });
     }
 
     const data = await response.json();

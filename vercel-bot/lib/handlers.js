@@ -628,13 +628,13 @@ async function onFoodPortionInput(chatId, userId, text) {
   );
 }
 
-// ===== OPENROUTER VISION API CALL =====
+// ===== GOOGLE AI STUDIO GEMINI VISION API CALL =====
 async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false) {
   const key = process.env.API_KEY_IMAGE || process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY;
   if (!key) throw new Error('API_KEY_IMAGE or NVIDIA_API_KEY is not set in Vercel environment variables.');
 
-  const model = process.env.VISION_MODEL || 'google/gemini-2.5-flash';
-  const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  const model = process.env.VISION_MODEL || 'gemini-2.5-flash';
+  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
   const content = [{ type: 'text', text: prompt }];
   if (Array.isArray(images)) {
@@ -1928,8 +1928,8 @@ async function callGroqAPI(messages, maxTokens = 2500, jsonMode = false) {
   const key = process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY;
   if (!key) throw new Error('API_KEY_TEXT or NVIDIA_API_KEY env variable is not set');
 
-  const model = process.env.TEXT_MODEL || 'deepseek/deepseek-v4-flash';
-  const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  const model = process.env.TEXT_MODEL || 'deepseek-v4-flash';
+  const endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
   const body = {
     model: model,
