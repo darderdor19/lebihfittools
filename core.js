@@ -321,19 +321,54 @@ function sumNutrients(items) {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ===== AI API =====
-function getMaskedAIError(originalError) {
+
+// Cache admin list so we don't hit Firebase on every error
+let _adminEmailsCache = null;
+let _adminEmailsFetchedAt = 0;
+const ADMIN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function isCurrentUserAdmin() {
   try {
-    const email = localStorage.getItem('lf_user_email');
-    const cleanEmail = email ? email.replace(/\"/g, '').trim().toLowerCase() : '';
-    if (cleanEmail.includes('jokonurhadi.works')) {
+    const rawEmail = localStorage.getItem('lf_user_email');
+    if (!rawEmail) return false;
+    const cleanEmail = rawEmail.replace(/"/g, '').trim().toLowerCase();
+    if (!cleanEmail) return false;
+
+    // Refresh cache if stale
+    const now = Date.now();
+    if (!_adminEmailsCache || (now - _adminEmailsFetchedAt) > ADMIN_CACHE_TTL) {
+      if (fbDb) {
+        const snap = await fbDb.ref('admins').once('value');
+        const val = snap.val() || {};
+        _adminEmailsCache = Object.keys(val).map(k =>
+          k.replace(/_dot_/g, '.').replace(/_at_/g, '@').toLowerCase()
+        );
+        _adminEmailsFetchedAt = now;
+      } else {
+        // fbDb not available, fallback: treat nobody as admin
+        _adminEmailsCache = [];
+      }
+    }
+
+    return _adminEmailsCache.includes(cleanEmail);
+  } catch (e) {
+    console.warn('[getMaskedAIError] Admin check failed:', e);
+    return false;
+  }
+}
+
+function getMaskedAIError(originalError) {
+  // Check synchronously from cache first (fast path)
+  try {
+    const rawEmail = localStorage.getItem('lf_user_email');
+    const cleanEmail = rawEmail ? rawEmail.replace(/"/g, '').trim().toLowerCase() : '';
+    if (_adminEmailsCache && cleanEmail && _adminEmailsCache.includes(cleanEmail)) {
       return originalError;
     }
-  } catch (e) {
-    console.error("Error checking user email for error masking:", e);
-  }
+  } catch (e) { /* silent */ }
 
   const errMsg = String(originalError?.message || originalError || '').toLowerCase();
-  const isRateLimit = 
+  const isRateLimit =
     errMsg.includes('429') ||
     errMsg.includes('rate limit') ||
     errMsg.includes('quota') ||
@@ -346,10 +381,17 @@ function getMaskedAIError(originalError) {
     errMsg.includes('tokens');
 
   if (isRateLimit) {
-    return new Error('LebihFit Tools sedang banyak permintaan');
+    return new Error('LebihFit Tools sedang banyak permintaan. Coba lagi sebentar.');
   } else {
-    return new Error('LebihFit Tools AI sedang maintenance');
+    return new Error('Fitur AI sedang tidak tersedia. Silakan coba beberapa saat lagi.');
   }
+}
+
+// Pre-warm admin cache on page load (non-blocking)
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    isCurrentUserAdmin().catch(() => {});
+  });
 }
 
 async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', isVision = false, isGroqVision = false, retries = 1, fallbackAttempted = false) {

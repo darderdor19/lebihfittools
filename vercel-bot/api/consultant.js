@@ -29,7 +29,8 @@ module.exports = async function handler(req, res) {
     );
     const apiKey = hasImage ? process.env.API_KEY_IMAGE : process.env.API_KEY_TEXT;
     if (!apiKey) {
-      return res.status(500).json({ error: { message: `API Key not configured in environment variables (${hasImage ? 'API_KEY_IMAGE' : 'API_KEY_TEXT'}).` } });
+      console.error('[consultant] API Key missing:', hasImage ? 'API_KEY_IMAGE' : 'API_KEY_TEXT');
+      return res.status(500).json({ error: { message: 'Layanan AI sedang tidak tersedia. Silakan coba beberapa saat lagi.' } });
     }
 
     const model = hasImage 
@@ -65,7 +66,12 @@ module.exports = async function handler(req, res) {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari AI API` } });
+        const rawMsg = err.error?.message || '';
+        console.error('[consultant/stream] Upstream API error:', response.status, rawMsg);
+        if (response.status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
+          return res.status(429).json({ error: { message: 'Sistem AI sedang banyak permintaan. Coba lagi sebentar.' } });
+        }
+        return res.status(502).json({ error: { message: 'Layanan AI tidak merespons. Silakan coba lagi.' } });
       }
 
       // Pipe response stream directly and track completion text
@@ -117,13 +123,19 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari AI API` } });
+      const rawMsg = err.error?.message || '';
+      console.error('[consultant] Upstream API error:', response.status, rawMsg);
+      if (response.status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
+        return res.status(429).json({ error: { message: 'Sistem AI sedang banyak permintaan. Coba lagi sebentar.' } });
+      }
+      return res.status(502).json({ error: { message: 'Layanan AI tidak merespons. Silakan coba lagi.' } });
     }
 
     const data = await response.json();
     const rawText = data.choices?.[0]?.message?.content;
     if (!rawText) {
-      return res.status(500).json({ error: { message: "AI API did not return text content." } });
+      console.error('[consultant] Empty content from upstream API');
+      return res.status(500).json({ error: { message: 'AI tidak memberikan respons. Silakan coba lagi.' } });
     }
 
     // Log token usage for non-streaming response
@@ -153,6 +165,6 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     console.error('[consultant] Error:', err);
-    return res.status(500).json({ error: 'Internal Server Error: ' + err.message });
+    return res.status(500).json({ error: { message: 'Terjadi kesalahan pada server. Silakan coba lagi.' } });
   }
 };

@@ -57,7 +57,8 @@ module.exports = async function handler(req, res) {
 
     const apiKey = isVision ? process.env.API_KEY_IMAGE : process.env.API_KEY_TEXT;
     if (!apiKey) {
-      return res.status(500).json({ error: { message: `API Key not configured in environment variables (${isVision ? 'API_KEY_IMAGE' : 'API_KEY_TEXT'}).` } });
+      console.error('[ai] API Key missing:', isVision ? 'API_KEY_IMAGE' : 'API_KEY_TEXT');
+      return res.status(500).json({ error: { message: 'Layanan AI sedang tidak tersedia. Silakan coba beberapa saat lagi.' } });
     }
 
     const model = isVision 
@@ -89,13 +90,20 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: { message: err.error?.message || `HTTP ${response.status} dari AI API` } });
+      const rawMsg = err.error?.message || '';
+      console.error('[ai] Upstream API error:', response.status, rawMsg);
+      // Rate limit: expose safely
+      if (response.status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
+        return res.status(429).json({ error: { message: 'Sistem AI sedang banyak permintaan. Coba lagi sebentar.' } });
+      }
+      return res.status(502).json({ error: { message: 'Layanan AI tidak merespons. Silakan coba lagi.' } });
     }
 
     const data = await response.json();
     let rawText = data.choices?.[0]?.message?.content;
     if (!rawText) {
-      return res.status(500).json({ error: { message: "OpenRouter API did not return text content." } });
+      console.error('[ai] Empty content from upstream API');
+      return res.status(500).json({ error: { message: 'AI tidak memberikan respons. Silakan coba lagi.' } });
     }
 
     // Clean up markdown code blocks if the model outputs them in JSON mode
@@ -149,6 +157,6 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     console.error('[ai] Error:', err);
-    return res.status(500).json({ error: 'Internal Server Error: ' + err.message });
+    return res.status(500).json({ error: { message: 'Terjadi kesalahan pada server. Silakan coba lagi.' } });
   }
 };
