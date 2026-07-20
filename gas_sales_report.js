@@ -235,7 +235,58 @@ function setupTriggers() {
     .everyMinutes(1)
     .create();
 
+  // Buat sheet Laporan Harian langsung
+  initSheets();
+
   Logger.log('Triggers setup complete! syncUsersToSpreadsheet → setiap 1 menit');
+}
+
+// ====================================================
+// INIT SHEETS — Buat sheet Laporan Harian jika belum ada
+// Jalankan ini sekali, atau otomatis saat setupTriggers()
+// ====================================================
+function initSheets() {
+  var ss = getSpreadsheet();
+  if (!ss) { Logger.log('initSheets: Spreadsheet tidak ditemukan'); return; }
+
+  // Buat sheet "Laporan Harian" jika belum ada
+  var sheetReport = ss.getSheetByName('Laporan Harian');
+  if (!sheetReport) {
+    sheetReport = ss.insertSheet('Laporan Harian');
+    Logger.log('Sheet "Laporan Harian" dibuat');
+  }
+
+  // Buat header jika sheet masih kosong
+  if (sheetReport.getLastRow() === 0) {
+    var headers = [
+      'Tanggal', 'Platform', 'Ad Spend (Rp)', 'CPR (Rp)',
+      'New Users', 'Revenue (Rp)', 'ROAS', 'Konversi (%)', 'Catatan', 'Updated At'
+    ];
+    sheetReport.appendRow(headers);
+
+    var hr = sheetReport.getRange(1, 1, 1, headers.length);
+    hr.setBackground('#060b11');
+    hr.setFontColor('#00f0ff');
+    hr.setFontWeight('bold');
+    hr.setHorizontalAlignment('center');
+    sheetReport.setFrozenRows(1);
+
+    // Set lebar kolom
+    sheetReport.setColumnWidth(1, 110);  // Tanggal
+    sheetReport.setColumnWidth(2, 90);   // Platform
+    sheetReport.setColumnWidth(3, 120);  // Ad Spend
+    sheetReport.setColumnWidth(4, 100);  // CPR
+    sheetReport.setColumnWidth(5, 90);   // New Users
+    sheetReport.setColumnWidth(6, 120);  // Revenue
+    sheetReport.setColumnWidth(7, 70);   // ROAS
+    sheetReport.setColumnWidth(8, 90);   // Konversi
+    sheetReport.setColumnWidth(9, 200);  // Catatan
+    sheetReport.setColumnWidth(10, 160); // Updated At
+
+    Logger.log('Header sheet "Laporan Harian" berhasil dibuat');
+  }
+
+  Logger.log('initSheets selesai');
 }
 
 // ====================================================
