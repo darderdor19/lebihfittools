@@ -476,13 +476,33 @@
 
   @media (max-width: 640px) {
     .admin-header {
-      padding: 0 16px;
+      padding: 0 12px;
+      height: 56px;
+    }
+    .admin-header-left {
+      gap: 6px;
+    }
+    .admin-header-logo {
+      font-size: 1rem;
+    }
+    .admin-badge {
+      font-size: 0.6rem;
+      padding: 2px 6px;
     }
     .admin-header-right {
-      gap: 8px;
+      gap: 6px;
     }
     .admin-user-info {
       display: none;
+    }
+    /* Hide Ganti Password from top header on mobile because it's already in the menu */
+    .admin-header-right .btn-ghost {
+      display: none;
+    }
+    .admin-header-right .btn-danger {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      border-radius: 8px;
     }
     .admin-body {
       flex-direction: column;
@@ -493,26 +513,80 @@
       border-bottom: 1px solid var(--border);
       flex-direction: row;
       overflow-x: auto;
-      padding: 8px 12px;
-      gap: 6px;
+      padding: 10px 12px;
+      gap: 8px;
       position: sticky;
-      top: 60px;
+      top: 56px;
       z-index: 99;
-      background: var(--bg2);
+      background: rgba(11, 18, 28, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .admin-sidebar::-webkit-scrollbar {
+      display: none;
     }
     .sidebar-item {
       width: auto;
-      padding: 8px 12px;
-      font-size: 0.82rem;
+      padding: 7px 14px;
+      font-size: 0.78rem;
+      font-weight: 500;
       white-space: nowrap;
-      border-radius: 8px;
+      border-radius: 20px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .sidebar-item i {
+      width: 14px;
+      height: 14px;
+    }
+    .sidebar-item.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.16), rgba(0, 166, 184, 0.08));
+      border-color: rgba(0, 240, 255, 0.4);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.12);
     }
     .sidebar-label { display: none; }
     .sidebar-divider { display: none; }
+    
     .admin-content {
-      padding: 16px;
+      padding: 14px 12px;
     }
+    
+    /* Responsive Section Header & Action Buttons */
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-header h2 {
+      font-size: 1.15rem;
+      width: 100%;
+    }
+    .section-header > div {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+    }
+    .section-header .btn-sm {
+      flex: 1;
+      justify-content: center;
+      padding: 9px 12px;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      height: 38px;
+      align-items: center;
+    }
+    
     .filter-bar input {
       width: 100%;
     }
