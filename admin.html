@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -538,6 +539,39 @@
       font-size: 0.88rem;
     }
   }
+
+  /* ===== REPORT SALES STYLES ===== */
+  .report-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 0;
+  }
+  .report-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .report-form-grid .full-width {
+    grid-column: 1 / -1;
+  }
+  .roas-display {
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--success);
+    font-weight: 700;
+  }
+  @media (max-width: 640px) {
+    .report-charts-grid {
+      grid-template-columns: 1fr;
+    }
+    .report-form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 </head>
 <body>
@@ -614,6 +648,9 @@
       </button>
       <button class="sidebar-item" id="nav-tokens" onclick="switchTab('tokens')">
         <i data-lucide="activity"></i> Monitoring Token
+      </button>
+      <button class="sidebar-item" id="nav-report" onclick="switchTab('report')">
+        <i data-lucide="bar-chart-2"></i> Report Penjualan
       </button>
       <div class="sidebar-divider"></div>
       <span class="sidebar-label">Akun</span>
@@ -781,7 +818,197 @@
         </div>
       </section>
 
+      <!-- ===== TAB: REPORT PENJUALAN ===== -->
+      <section id="tab-report" class="content-section">
+        <div class="section-header">
+          <h2><i data-lucide="bar-chart-2" style="width:20px;height:20px;"></i> Report Penjualan</h2>
+          <div style="display:flex;gap:8px;">
+            <a href="https://docs.google.com/spreadsheets/d/1umebUrlWkpzPGO4LLDEmPTHZgCbjeDgOjDDHqD2OQ08/edit?hl=id&gid=0#gid=0" target="_blank" class="btn-sm btn-ghost" style="text-decoration:none;display:flex;align-items:center;gap:6px;">
+              <i data-lucide="table-2" style="width:13px;height:13px;"></i> Buka Spreadsheet
+            </a>
+            <button class="btn-sm btn-primary" onclick="openAddReport()">
+              <i data-lucide="plus" style="width:13px;height:13px;"></i> Input Laporan
+            </button>
+          </div>
+        </div>
+
+        <!-- Stat Cards Bulan Ini -->
+        <div class="stats-grid" style="margin-bottom:20px;">
+          <div class="stat-card">
+            <div class="stat-label">💸 Total Ad Spend (Bulan Ini)</div>
+            <div class="stat-value" style="color:var(--danger)" id="rpt-total-spend">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">💰 Total Revenue (Bulan Ini)</div>
+            <div class="stat-value" style="color:var(--success)" id="rpt-total-revenue">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">👥 Total New Users</div>
+            <div class="stat-value" style="color:var(--accent)" id="rpt-total-users">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">📊 Avg CPR</div>
+            <div class="stat-value" style="color:var(--warning)" id="rpt-avg-cpr">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">📈 Avg ROAS</div>
+            <div class="stat-value" style="color:var(--success)" id="rpt-avg-roas">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">🎯 Avg Konversi</div>
+            <div class="stat-value" style="color:var(--accent)" id="rpt-avg-conv">-</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="report-charts-grid">
+          <!-- Line Chart -->
+          <div class="card" style="padding:16px;">
+            <h3 style="margin-bottom:12px;font-size:0.9rem;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="trending-up" style="width:15px;height:15px;color:var(--accent);"></i>
+              Tren 30 Hari: Ad Spend vs New Users
+            </h3>
+            <div style="position:relative;height:220px;">
+              <canvas id="rptLineChart"></canvas>
+            </div>
+          </div>
+          <!-- Bar Chart -->
+          <div class="card" style="padding:16px;">
+            <h3 style="margin-bottom:12px;font-size:0.9rem;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="bar-chart" style="width:15px;height:15px;color:var(--success);"></i>
+              Revenue per Minggu (8 Minggu Terakhir)
+            </h3>
+            <div style="position:relative;height:220px;">
+              <canvas id="rptBarChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Riwayat -->
+        <div class="card" style="margin-top:20px;padding:16px;">
+          <h3 style="margin-bottom:12px;font-size:0.9rem;display:flex;align-items:center;gap:8px;">
+            <i data-lucide="table" style="width:15px;height:15px;color:var(--warning);"></i>
+            Riwayat Laporan Harian (30 Terakhir)
+          </h3>
+          <div style="overflow-x:auto;">
+            <table class="data-table" style="font-size:0.8rem;">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Platform</th>
+                  <th>Ad Spend</th>
+                  <th>CPR</th>
+                  <th>New Users</th>
+                  <th>Revenue</th>
+                  <th>ROAS</th>
+                  <th>Konversi</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="rptTableBody">
+                <tr><td colspan="9" style="text-align:center;color:var(--text2);padding:24px;">Memuat data laporan...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </main>
+  </div>
+</div>
+
+<!-- ===== MODAL: INPUT LAPORAN HARIAN ===== -->
+<div class="modal-overlay hidden" id="reportModal">
+  <div class="modal-card" style="max-width:540px;">
+    <div class="modal-header">
+      <h3><i data-lucide="bar-chart-2" style="width:16px;height:16px;color:var(--accent);"></i> <span id="reportModalTitle">Input Laporan Harian</span></h3>
+      <button class="modal-close" onclick="closeReportModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <input type="hidden" id="rptModalEditDate">
+    <div class="report-form-grid" style="margin-top:4px;">
+      <div class="modal-form-group">
+        <label>Tanggal *</label>
+        <input type="date" id="rptDate">
+      </div>
+      <div class="modal-form-group">
+        <label>Platform Iklan *</label>
+        <select id="rptPlatform">
+          <option value="Meta">Meta (FB/IG)</option>
+          <option value="TikTok">TikTok Ads</option>
+          <option value="Google">Google Ads</option>
+          <option value="Organic">Organic</option>
+          <option value="Lainnya">Lainnya</option>
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label>Ad Spend (Rp) *</label>
+        <input type="number" id="rptAdSpend" placeholder="150000" min="0" oninput="calcROAS()">
+      </div>
+      <div class="modal-form-group">
+        <label>CPR — Cost Per Result (Rp)</label>
+        <input type="number" id="rptCPR" placeholder="7500" min="0">
+      </div>
+      <div class="modal-form-group">
+        <label>New Users / Registrasi *</label>
+        <input type="number" id="rptNewUsers" placeholder="20" min="0">
+      </div>
+      <div class="modal-form-group">
+        <label>Konversi / Closing Rate (%)</label>
+        <input type="number" id="rptConvRate" placeholder="15" min="0" max="100" step="0.1">
+      </div>
+      <div class="modal-form-group">
+        <label>Revenue / Pemasukan (Rp) *</label>
+        <input type="number" id="rptRevenue" placeholder="1200000" min="0" oninput="calcROAS()">
+      </div>
+      <div class="modal-form-group">
+        <label>ROAS (Auto-hitung)</label>
+        <div class="roas-display" id="rptROASDisplay">— (isi Ad Spend & Revenue)</div>
+      </div>
+      <div class="modal-form-group full-width">
+        <label>Catatan (opsional)</label>
+        <input type="text" id="rptNotes" placeholder="Contoh: Performa iklan bagus, CPC rendah">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn-sm btn-ghost" onclick="closeReportModal()">Batal</button>
+      <button class="btn-sm btn-primary" onclick="saveReport()" id="rptSaveBtn">
+        <i data-lucide="save" style="width:13px;height:13px;"></i> Simpan & Sync ke Spreadsheet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: PENGATURAN GOOGLE SPREADSHEET ===== -->
+<div class="modal-overlay hidden" id="gasModal">
+  <div class="modal-card" style="max-width:500px;">
+    <div class="modal-header">
+      <h3><i data-lucide="settings" style="width:16px;height:16px;color:var(--accent);"></i> Pengaturan Sync Google Spreadsheet</h3>
+      <button class="modal-close" onclick="closeGASModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div style="margin:16px 0;padding:14px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);font-size:0.82rem;color:var(--text2);line-height:1.7;">
+      <b style="color:var(--accent);">📋 Cara Pasang GAS Script:</b><br>
+      1. Buka spreadsheet lu → <b>Extensions → Apps Script</b><br>
+      2. Paste isi file <code>gas_sales_report.js</code> (ada di folder project)<br>
+      3. Klik <b>Deploy → New Deployment → Web App</b><br>
+      4. Set "Execute as: <b>Me</b>", "Who has access: <b>Anyone</b>"<br>
+      5. Copy URL deployment-nya → paste di bawah
+    </div>
+    <div class="modal-form-group">
+      <label>GAS Web App URL</label>
+      <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/...">
+    </div>
+    <div id="gasTestResult" style="margin-top:8px;font-size:0.82rem;display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+      <button class="btn-sm btn-ghost" onclick="testGASConnection()">
+        <i data-lucide="zap" style="width:13px;height:13px;"></i> Test Koneksi
+      </button>
+      <button class="btn-sm btn-primary" onclick="saveGASUrl()">
+        <i data-lucide="save" style="width:13px;height:13px;"></i> Simpan URL
+      </button>
+    </div>
+    <div style="margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);font-size:0.8rem;color:var(--text2);">
+      <b>Status koneksi:</b> <span id="gasStatusBadge" style="color:var(--text2);">Belum dikonfigurasi</span>
+    </div>
   </div>
 </div>
 
@@ -998,11 +1225,14 @@ function switchTab(tab) {
   document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
-  document.getElementById(`nav-${tab}`).classList.add('active');
+  document.getElementById(`nav-${tab}`) && document.getElementById(`nav-${tab}`).classList.add('active');
   lucide.createIcons();
   
   if (tab === 'tokens') {
     loadTokenMonitor();
+  }
+  if (tab === 'report') {
+    loadSalesReport();
   }
 }
 
@@ -1508,6 +1738,448 @@ function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// ============================================================
+// ===== SALES REPORT — MAIN LOGIC ===========================
+// ============================================================
+
+let rptLineChart = null;
+let rptBarChart = null;
+
+function formatRp(val) {
+  const n = Number(val) || 0;
+  return 'Rp ' + n.toLocaleString('id-ID');
+}
+
+async function loadSalesReport() {
+  try {
+    const snap = await fbDb.ref('sales_reports').orderByKey().limitToLast(90).once('value');
+    const raw = snap.val() || {};
+    const entries = Object.entries(raw)
+      .map(([k, v]) => ({ ...v, date: k }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    updateSalesStatCards(entries);
+    renderLineChart(entries);
+    renderBarChart(entries);
+    renderReportTable(entries.slice(0, 30));
+  } catch (err) {
+    console.error('[loadSalesReport]', err);
+    document.getElementById('rptTableBody').innerHTML =
+      `<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:24px;">Gagal memuat data: ${err.message}</td></tr>`;
+  }
+}
+
+function updateSalesStatCards(entries) {
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthly = entries.filter(e => e.date && e.date.startsWith(thisMonth));
+
+  const totalSpend = monthly.reduce((s, e) => s + (Number(e.ad_spend) || 0), 0);
+  const totalRevenue = monthly.reduce((s, e) => s + (Number(e.revenue) || 0), 0);
+  const totalUsers = monthly.reduce((s, e) => s + (Number(e.new_users) || 0), 0);
+  const avgCPR = monthly.length > 0 ? monthly.reduce((s, e) => s + (Number(e.cpr) || 0), 0) / monthly.length : 0;
+  const avgROAS = totalSpend > 0 ? totalRevenue / totalSpend : 0;
+  const avgConv = monthly.length > 0 ? monthly.reduce((s, e) => s + (Number(e.conversion_rate) || 0), 0) / monthly.length : 0;
+
+  document.getElementById('rpt-total-spend').textContent = formatRp(totalSpend);
+  document.getElementById('rpt-total-revenue').textContent = formatRp(totalRevenue);
+  document.getElementById('rpt-total-users').textContent = totalUsers + ' user';
+  document.getElementById('rpt-avg-cpr').textContent = formatRp(Math.round(avgCPR));
+  document.getElementById('rpt-avg-roas').textContent = avgROAS.toFixed(2) + 'x';
+  document.getElementById('rpt-avg-conv').textContent = avgConv.toFixed(1) + '%';
+}
+
+function renderLineChart(entries) {
+  const last30 = [...entries].sort((a, b) => a.date.localeCompare(b.date)).slice(-30);
+  const labels = last30.map(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    return `${d.getDate()}/${d.getMonth()+1}`;
+  });
+  const spendData = last30.map(e => Number(e.ad_spend) || 0);
+  const usersData = last30.map(e => Number(e.new_users) || 0);
+
+  const ctx = document.getElementById('rptLineChart').getContext('2d');
+  if (rptLineChart) rptLineChart.destroy();
+
+  rptLineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Ad Spend (Rp)',
+          data: spendData,
+          borderColor: '#ff3366',
+          backgroundColor: 'rgba(255,51,102,0.1)',
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'ySpend',
+          pointBackgroundColor: '#ff3366',
+          pointRadius: 4,
+        },
+        {
+          label: 'New Users',
+          data: usersData,
+          borderColor: '#00f0ff',
+          backgroundColor: 'rgba(0,240,255,0.08)',
+          tension: 0.4,
+          fill: false,
+          yAxisID: 'yUsers',
+          pointBackgroundColor: '#00f0ff',
+          pointRadius: 4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#8caebf', font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: '#0b121c',
+          borderColor: '#1a2d42',
+          borderWidth: 1,
+          titleColor: '#e0f7fa',
+          bodyColor: '#8caebf',
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.yAxisID === 'ySpend') return ' Spend: ' + formatRp(ctx.raw);
+              return ' New Users: ' + ctx.raw;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#8caebf', font: { size: 10 } }, grid: { color: '#1a2d42' } },
+        ySpend: {
+          position: 'left',
+          ticks: {
+            color: '#ff3366', font: { size: 10 },
+            callback: v => 'Rp' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
+          },
+          grid: { color: '#1a2d42' }
+        },
+        yUsers: {
+          position: 'right',
+          ticks: { color: '#00f0ff', font: { size: 10 } },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+}
+
+function renderBarChart(entries) {
+  // Kelompokkan per minggu — 8 minggu terakhir
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const weekMap = {};
+  sorted.forEach(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    const dayOfWeek = d.getDay(); // 0=Minggu
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((dayOfWeek + 6) % 7));
+    const wk = monday.toISOString().substring(0, 10);
+    if (!weekMap[wk]) weekMap[wk] = { revenue: 0, spend: 0 };
+    weekMap[wk].revenue += Number(e.revenue) || 0;
+    weekMap[wk].spend += Number(e.ad_spend) || 0;
+  });
+
+  const weeks = Object.entries(weekMap)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-8);
+
+  const labels = weeks.map(([wk]) => {
+    const d = new Date(wk + 'T00:00:00');
+    return `W ${d.getDate()}/${d.getMonth()+1}`;
+  });
+  const revenueData = weeks.map(([, v]) => v.revenue);
+  const spendData2 = weeks.map(([, v]) => v.spend);
+
+  const ctx2 = document.getElementById('rptBarChart').getContext('2d');
+  if (rptBarChart) rptBarChart.destroy();
+
+  rptBarChart = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Revenue (Rp)',
+          data: revenueData,
+          backgroundColor: 'rgba(0,255,204,0.7)',
+          borderColor: '#00ffcc',
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'Ad Spend (Rp)',
+          data: spendData2,
+          backgroundColor: 'rgba(255,51,102,0.5)',
+          borderColor: '#ff3366',
+          borderWidth: 1,
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8caebf', font: { size: 11 } } },
+        tooltip: {
+          backgroundColor: '#0b121c',
+          borderColor: '#1a2d42',
+          borderWidth: 1,
+          titleColor: '#e0f7fa',
+          bodyColor: '#8caebf',
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatRp(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#8caebf', font: { size: 10 } }, grid: { color: '#1a2d42' } },
+        y: {
+          ticks: {
+            color: '#8caebf', font: { size: 10 },
+            callback: v => 'Rp' + (v >= 1000000 ? (v/1000000).toFixed(1)+'jt' : v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
+          },
+          grid: { color: '#1a2d42' }
+        }
+      }
+    }
+  });
+}
+
+function renderReportTable(entries) {
+  const tbody = document.getElementById('rptTableBody');
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:24px;">Belum ada data laporan. Klik "+ Input Laporan" untuk mulai.</td></tr>';
+    return;
+  }
+
+  const platformBadge = p => {
+    const c = { Meta: '#1877f2', TikTok: '#ff0050', Google: '#4285f4', Organic: '#00ffcc', Lainnya: '#8caebf' };
+    return `<span style="background:${c[p]||'#8caebf'}22;color:${c[p]||'#8caebf'};border:1px solid ${c[p]||'#8caebf'}44;padding:2px 8px;border-radius:6px;font-size:0.78rem;">${escapeHtml(p||'—')}</span>`;
+  };
+
+  tbody.innerHTML = entries.map(e => {
+    const roas = e.ad_spend > 0 ? (e.revenue / e.ad_spend).toFixed(2) : '—';
+    const roasColor = roas >= 3 ? 'var(--success)' : roas >= 1 ? 'var(--warning)' : 'var(--danger)';
+    return `<tr>
+      <td style="white-space:nowrap;">${escapeHtml(e.date)}</td>
+      <td>${platformBadge(e.platform)}</td>
+      <td style="color:var(--danger);">${formatRp(e.ad_spend)}</td>
+      <td>${formatRp(e.cpr)}</td>
+      <td style="color:var(--accent);font-weight:600;">${Number(e.new_users)||0}</td>
+      <td style="color:var(--success);">${formatRp(e.revenue)}</td>
+      <td style="color:${roasColor};font-weight:600;">${roas}x</td>
+      <td>${Number(e.conversion_rate)||0}%</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-sm btn-ghost" style="padding:3px 8px;" onclick="editReport('${escapeHtml(e.date)}')">✏️</button>
+        <button class="btn-sm btn-danger" style="padding:3px 8px;" onclick="deleteReport('${escapeHtml(e.date)}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== FORM: INPUT / EDIT LAPORAN =====
+function openAddReport() {
+  document.getElementById('reportModalTitle').textContent = 'Input Laporan Harian';
+  document.getElementById('rptModalEditDate').value = '';
+  const today = new Date().toISOString().substring(0, 10);
+  document.getElementById('rptDate').value = today;
+  document.getElementById('rptPlatform').value = 'Meta';
+  document.getElementById('rptAdSpend').value = '';
+  document.getElementById('rptCPR').value = '';
+  document.getElementById('rptNewUsers').value = '';
+  document.getElementById('rptConvRate').value = '';
+  document.getElementById('rptRevenue').value = '';
+  document.getElementById('rptNotes').value = '';
+  document.getElementById('rptROASDisplay').textContent = '— (isi Ad Spend & Revenue)';
+  document.getElementById('reportModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+async function editReport(date) {
+  try {
+    const snap = await fbDb.ref(`sales_reports/${date}`).once('value');
+    const e = snap.val();
+    if (!e) { showToast('Data tidak ditemukan', 'error'); return; }
+    document.getElementById('reportModalTitle').textContent = 'Edit Laporan: ' + date;
+    document.getElementById('rptModalEditDate').value = date;
+    document.getElementById('rptDate').value = e.date || date;
+    document.getElementById('rptPlatform').value = e.platform || 'Meta';
+    document.getElementById('rptAdSpend').value = e.ad_spend || '';
+    document.getElementById('rptCPR').value = e.cpr || '';
+    document.getElementById('rptNewUsers').value = e.new_users || '';
+    document.getElementById('rptConvRate').value = e.conversion_rate || '';
+    document.getElementById('rptRevenue').value = e.revenue || '';
+    document.getElementById('rptNotes').value = e.notes || '';
+    calcROAS();
+    document.getElementById('reportModal').classList.remove('hidden');
+    lucide.createIcons();
+  } catch (err) {
+    showToast('Gagal membuka data: ' + err.message, 'error');
+  }
+}
+
+function closeReportModal() {
+  document.getElementById('reportModal').classList.add('hidden');
+}
+
+function calcROAS() {
+  const spend = Number(document.getElementById('rptAdSpend').value) || 0;
+  const rev = Number(document.getElementById('rptRevenue').value) || 0;
+  const el = document.getElementById('rptROASDisplay');
+  if (spend > 0 && rev > 0) {
+    const r = (rev / spend).toFixed(2);
+    const color = r >= 3 ? 'var(--success)' : r >= 1 ? 'var(--warning)' : 'var(--danger)';
+    el.style.color = color;
+    el.textContent = `${r}x ${r >= 3 ? '🔥 Bagus!' : r >= 1 ? '⚠️ Break even' : '❌ Rugi'}`;
+  } else {
+    el.style.color = 'var(--text2)';
+    el.textContent = '— (isi Ad Spend & Revenue)';
+  }
+}
+
+async function saveReport() {
+  const date = document.getElementById('rptDate').value;
+  const adSpend = Number(document.getElementById('rptAdSpend').value) || 0;
+  const newUsers = Number(document.getElementById('rptNewUsers').value) || 0;
+  const revenue = Number(document.getElementById('rptRevenue').value) || 0;
+
+  if (!date) { showToast('Tanggal wajib diisi!', 'error'); return; }
+  if (!adSpend && !newUsers && !revenue) { showToast('Minimal isi Ad Spend, New Users, atau Revenue!', 'error'); return; }
+
+  const payload = {
+    date,
+    platform: document.getElementById('rptPlatform').value,
+    ad_spend: adSpend,
+    cpr: Number(document.getElementById('rptCPR').value) || 0,
+    new_users: newUsers,
+    conversion_rate: Number(document.getElementById('rptConvRate').value) || 0,
+    revenue,
+    notes: document.getElementById('rptNotes').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  const btn = document.getElementById('rptSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  try {
+    // Simpan ke Firebase
+    await fbDb.ref(`sales_reports/${date}`).set(payload);
+
+    // Sync ke Google Spreadsheet jika URL sudah dikonfigurasi
+    const gasUrl = localStorage.getItem('lf_gas_url');
+    if (gasUrl) {
+      try {
+        const resp = await fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await resp.json();
+        if (result.success) {
+          showToast('✅ Data tersimpan & tersync ke Spreadsheet!', 'success');
+        } else {
+          showToast('⚠️ Tersimpan di Firebase, gagal sync Spreadsheet: ' + (result.error || 'unknown'), 'warning');
+        }
+      } catch (syncErr) {
+        showToast('⚠️ Tersimpan di Firebase, gagal sync Spreadsheet: ' + syncErr.message, 'warning');
+      }
+    } else {
+      showToast('✅ Data tersimpan di Firebase! (Belum ada GAS URL)', 'success');
+    }
+
+    closeReportModal();
+    loadSalesReport();
+  } catch (err) {
+    showToast('Gagal menyimpan: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="save" style="width:13px;height:13px;"></i> Simpan & Sync ke Spreadsheet';
+    lucide.createIcons();
+  }
+}
+
+async function deleteReport(date) {
+  if (!confirm(`Hapus laporan tanggal ${date}? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try {
+    await fbDb.ref(`sales_reports/${date}`).remove();
+    showToast('Laporan dihapus', 'success');
+    loadSalesReport();
+  } catch (err) {
+    showToast('Gagal menghapus: ' + err.message, 'error');
+  }
+}
+
+// ===== GAS SETTINGS =====
+function openGASSettings() {
+  const saved = localStorage.getItem('lf_gas_url') || '';
+  document.getElementById('gasUrlInput').value = saved;
+  document.getElementById('gasTestResult').style.display = 'none';
+  updateGASStatusBadge();
+  document.getElementById('gasModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeGASModal() {
+  document.getElementById('gasModal').classList.add('hidden');
+}
+
+function saveGASUrl() {
+  const url = document.getElementById('gasUrlInput').value.trim();
+  if (url && !url.startsWith('https://script.google.com')) {
+    showToast('URL tidak valid. Harus diawali dengan https://script.google.com', 'error');
+    return;
+  }
+  localStorage.setItem('lf_gas_url', url);
+  updateGASStatusBadge();
+  showToast(url ? '✅ GAS URL tersimpan!' : '🗑️ GAS URL dihapus', url ? 'success' : 'info');
+}
+
+async function testGASConnection() {
+  const url = document.getElementById('gasUrlInput').value.trim();
+  const resultEl = document.getElementById('gasTestResult');
+  if (!url) { showToast('Masukkan URL terlebih dahulu!', 'error'); return; }
+
+  resultEl.style.display = 'block';
+  resultEl.style.color = 'var(--text2)';
+  resultEl.textContent = '⏳ Mengetes koneksi...';
+
+  try {
+    const resp = await fetch(url, { method: 'GET' });
+    const data = await resp.json();
+    if (data.success) {
+      resultEl.style.color = 'var(--success)';
+      resultEl.textContent = '✅ Koneksi berhasil! GAS script aktif dan siap menerima data.';
+    } else {
+      resultEl.style.color = 'var(--warning)';
+      resultEl.textContent = '⚠️ Terhubung tapi response tidak sesuai.';
+    }
+  } catch (err) {
+    resultEl.style.color = 'var(--danger)';
+    resultEl.textContent = '❌ Koneksi gagal: ' + err.message + ' (pastikan GAS di-deploy dengan "Anyone can access")';
+  }
+}
+
+function updateGASStatusBadge() {
+  const url = localStorage.getItem('lf_gas_url');
+  const badge = document.getElementById('gasStatusBadge');
+  if (badge) {
+    if (url) {
+      badge.style.color = 'var(--success)';
+      badge.textContent = '✅ Terkonfigurasi — ' + url.substring(0, 60) + '...';
+    } else {
+      badge.style.color = 'var(--text2)';
+      badge.textContent = 'Belum dikonfigurasi';
+    }
+  }
+}
+
 </script>
 </body>
 </html>
