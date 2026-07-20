@@ -9,7 +9,7 @@ async function callGroq(messages, jsonMode = false, maxTokens = 800, email = 'te
     throw new Error('Layanan AI sedang tidak tersedia. Coba lagi nanti.');
   }
 
-  const model = process.env.TEXT_MODEL || 'deepseek-v4-flash';
+  const model = process.env.TEXT_MODEL || 'qwen3.5-flash';
   const endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
   const body = {

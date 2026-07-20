@@ -34,8 +34,8 @@ module.exports = async function handler(req, res) {
     }
 
     const model = hasImage 
-      ? (process.env.VISION_MODEL || 'gemini-2.5-flash') 
-      : (process.env.TEXT_MODEL || 'deepseek-v4-flash');
+      ? (process.env.VISION_MODEL || 'gemini-2.5-flash-lite') 
+      : (process.env.TEXT_MODEL || 'qwen3.5-flash');
 
     const apiEndpoint = hasImage
       ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'

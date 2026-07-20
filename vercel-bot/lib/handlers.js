@@ -665,7 +665,7 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false, e
     throw new Error('Layanan analisis gambar sedang tidak tersedia. Coba lagi nanti.');
   }
 
-  const model = process.env.VISION_MODEL || 'gemini-2.5-flash';
+  const model = process.env.VISION_MODEL || 'gemini-2.5-flash-lite';
   const endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
   const content = [{ type: 'text', text: prompt }];
@@ -2029,7 +2029,7 @@ async function callGroqAPI(messages, maxTokens = 2500, jsonMode = false) {
   const key = process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY;
   if (!key) throw new Error('API_KEY_TEXT or NVIDIA_API_KEY env variable is not set');
 
-  const model = process.env.TEXT_MODEL || 'deepseek-v4-flash';
+  const model = process.env.TEXT_MODEL || 'qwen3.5-flash';
   const endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
   const body = {
