@@ -749,6 +749,57 @@
     .rpt-range-label { display: none; }
   }
 
+  /* Investor & P&L */
+  .rpt-investor-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .rpt-investor-grid { grid-template-columns: 1fr; }
+  }
+  .pnl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+  .pnl-label {
+    font-size: 0.82rem;
+    color: var(--text2);
+    font-weight: 500;
+  }
+  .pnl-value {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text1);
+  }
+  .pnl-value.pnl-minus { color: #a0b4c0; }
+  .pnl-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+  .pnl-row.pnl-total .pnl-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text1);
+  }
+  .pnl-row.pnl-total .pnl-value {
+    font-size: 1rem;
+    font-weight: 800;
+  }
+  .pnl-total-pct {
+    margin-left: auto;
+    margin-right: 8px;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+
   /* Table Card */
   .rpt-table-card {
     background: var(--bg2);
@@ -1213,6 +1264,85 @@
             </table>
           </div>
         </div>
+
+        <!-- ===== INVESTOR & P&L SECTION ===== -->
+        <div class="rpt-investor-grid" style="margin-top:20px;">
+
+          <!-- P&L Summary -->
+          <div class="rpt-table-card">
+            <div class="rpt-table-header">
+              <div class="rpt-chart-icon" style="background:var(--bg3);border:1px solid var(--border);">
+                <i data-lucide="landmark" style="width:14px;height:14px;color:var(--text2);"></i>
+              </div>
+              <span class="rpt-table-title">Laporan Laba Rugi (P&L)</span>
+              <button class="btn-sm btn-ghost" style="margin-left:auto;font-size:0.75rem;" onclick="openCostModal()">
+                <i data-lucide="plus" style="width:12px;height:12px;"></i> Cost Lainnya
+              </button>
+            </div>
+            <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+              <div class="pnl-row">
+                <span class="pnl-label">Total Revenue</span>
+                <span class="pnl-value" id="pnl-revenue">—</span>
+              </div>
+              <div class="pnl-row">
+                <span class="pnl-label">Total Ad Spend</span>
+                <span class="pnl-value pnl-minus" id="pnl-spend">—</span>
+              </div>
+              <div class="pnl-row">
+                <span class="pnl-label">Total Cost Lainnya</span>
+                <span class="pnl-value pnl-minus" id="pnl-cost">—</span>
+              </div>
+              <div class="pnl-divider"></div>
+              <div class="pnl-row pnl-total">
+                <span class="pnl-label">Net Profit</span>
+                <span class="pnl-value" id="pnl-net">—</span>
+              </div>
+              <div class="pnl-row" style="margin-top:2px;">
+                <span class="pnl-label" style="font-size:0.72rem;color:var(--text2);">Profit Margin</span>
+                <span style="font-size:0.8rem;color:var(--text2);font-weight:600;" id="pnl-margin">—</span>
+              </div>
+              <div class="pnl-row" style="margin-top:2px;background:var(--bg3);padding:8px 10px;border-radius:8px;border:1px solid var(--border);">
+                <span class="pnl-label" style="font-size:0.75rem;color:var(--text2);">Target User Bulanan</span>
+                <span style="font-size:0.8rem;color:var(--accent);font-weight:700;" id="pnl-target-user">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pembagian Investor -->
+          <div class="rpt-table-card">
+            <div class="rpt-table-header">
+              <div class="rpt-chart-icon" style="background:var(--bg3);border:1px solid var(--border);">
+                <i data-lucide="users" style="width:14px;height:14px;color:var(--text2);"></i>
+              </div>
+              <span class="rpt-table-title">Pembagian Investor</span>
+              <span class="pnl-total-pct" id="investorTotalPct">0% Dialokasikan</span>
+              <button class="btn-sm btn-ghost" style="font-size:0.75rem;" onclick="openInvestorModal()">
+                <i data-lucide="settings" style="width:12px;height:12px;"></i> Kelola Investor
+              </button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="data-table" style="font-size:0.82rem;">
+                <thead>
+                  <tr>
+                    <th>Investor</th>
+                    <th>Porsi (%)</th>
+                    <th>Bagian (Rp)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="investorTableBody">
+                  <tr><td colspan="4" style="padding:0;"><div class="rpt-empty-state" style="padding:24px;"><div class="rpt-empty-icon" style="width:36px;height:36px;font-size:1rem;">👤</div><p style="font-size:0.8rem;">Belum ada investor. Klik "Kelola Investor" untuk tambah.</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;color:var(--text2);background:var(--bg3);">
+              <span>Sisa Profit (Pemilik / Founder):</span>
+              <span style="font-weight:700;color:var(--text1);font-size:0.88rem;" id="pnl-owner">—</span>
+            </div>
+          </div>
+
+        </div>
+
       </section>
 
     </main>
@@ -1310,6 +1440,90 @@
     </div>
     <div style="margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);font-size:0.8rem;color:var(--text2);">
       <b>Status koneksi:</b> <span id="gasStatusBadge" style="color:var(--text2);">Belum dikonfigurasi</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: COST LAINNYA & TARGET USER ===== -->
+<div class="modal-overlay hidden" id="costModal">
+  <div class="modal-card" style="max-width:520px;">
+    <div class="modal-header">
+      <h3><i data-lucide="calculator" style="width:16px;height:16px;color:var(--accent);"></i> Kelola Cost Lainnya & Target User</h3>
+      <button class="modal-close" onclick="closeCostModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="modal-form-group">
+          <label>Pilih Bulan *</label>
+          <input type="month" id="costMonth" onchange="loadMonthCostData()">
+        </div>
+        <div class="modal-form-group">
+          <label>Target User (Bulanan)</label>
+          <input type="number" id="costTargetUser" placeholder="Contoh: 500" min="0">
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <label style="font-size:0.8rem;font-weight:600;color:var(--text1);">Rincian Cost Lainnya (Gaji, Server, Tools, dll)</label>
+          <button class="btn-sm btn-ghost" style="padding:2px 8px;font-size:0.75rem;" onclick="addCostRow()">+ Tambah Item</button>
+        </div>
+        <div id="costRowsContainer" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;padding-right:4px;">
+          <!-- Dynamic cost rows -->
+        </div>
+      </div>
+      <div style="padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;">
+        <span>Total Cost Bulan Ini:</span>
+        <span style="font-weight:700;color:var(--text1);" id="costTotalDisplay">Rp 0</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn-sm btn-ghost" onclick="closeCostModal()">Batal</button>
+      <button class="btn-sm btn-primary" onclick="saveCostData()" id="costSaveBtn">
+        <i data-lucide="save" style="width:13px;height:13px;"></i> Simpan Cost
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: KELOLA INVESTOR ===== -->
+<div class="modal-overlay hidden" id="investorModal">
+  <div class="modal-card" style="max-width:540px;">
+    <div class="modal-header">
+      <h3><i data-lucide="users" style="width:16px;height:16px;color:var(--accent);"></i> Kelola Investor & Pembagian Profit</h3>
+      <button class="modal-close" onclick="closeInvestorModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:14px;">
+      <div style="padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);font-size:0.78rem;color:var(--text2);line-height:1.5;">
+        💡 Investor akan mendapatkan bagian sebesar <b>% x Net Profit</b> (Revenue - Spend - Cost Lainnya). Persentase dihitung secara murni (tanpa AI API).
+      </div>
+      
+      <!-- List Investor -->
+      <div>
+        <label style="font-size:0.8rem;font-weight:600;color:var(--text1);margin-bottom:8px;display:block;">Daftar Investor</label>
+        <div id="investorListContainer" style="display:flex;flex-direction:column;gap:8px;max-height:180px;overflow-y:auto;">
+          <!-- Render investor items -->
+        </div>
+      </div>
+
+      <!-- Form Tambah/Edit Investor -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <label style="font-size:0.8rem;font-weight:600;color:var(--text1);margin-bottom:8px;display:block;">+ Tambah Investor Baru</label>
+        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin-bottom:8px;">
+          <input type="text" id="invNewName" placeholder="Nama Investor (mis. Pak Budi)" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:0.82rem;outline:none;">
+          <input type="number" id="invNewPct" placeholder="Porsi (%)" min="0" max="100" step="0.5" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:0.82rem;outline:none;">
+        </div>
+        <input type="text" id="invNewNotes" placeholder="Catatan / No Rekening (Opsional)" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:0.82rem;outline:none;">
+        <button class="btn-sm btn-ghost" style="margin-top:8px;width:100%;justify-content:center;font-size:0.8rem;" onclick="addInvestorItem()">
+          <i data-lucide="plus" style="width:13px;height:13px;"></i> Tambah Investor Ke Daftar
+        </button>
+      </div>
+
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn-sm btn-ghost" onclick="closeInvestorModal()">Batal</button>
+      <button class="btn-sm btn-primary" onclick="saveInvestorData()" id="invSaveBtn">
+        <i data-lucide="save" style="width:13px;height:13px;"></i> Simpan Pembagian Investor
+      </button>
     </div>
   </div>
 </div>
@@ -2126,6 +2340,7 @@ async function loadSalesReport() {
     renderLineChart(entries);
     renderBarChart(entries);
     renderReportTable(entries);
+    await updatePNLAndInvestors(entries);
   } catch (err) {
     console.error('[loadSalesReport]', err);
     document.getElementById('rptTableBody').innerHTML =
@@ -2539,6 +2754,298 @@ function updateGASStatusBadge() {
       badge.textContent = 'Belum dikonfigurasi';
     }
   }
+// ============================================================
+// ===== P&L & PEMBAGIAN INVESTOR LOGIC (PURE JS) ===========
+// ============================================================
+
+async function updatePNLAndInvestors(entries) {
+  const totalRev   = entries.reduce((s, e) => s + (Number(e.revenue) || 0), 0);
+  const totalSpend = entries.reduce((s, e) => s + (Number(e.ad_spend) || 0), 0);
+
+  // Ambil bulan aktif untuk Cost Lainnya & Target User (default bulan ini)
+  const todayMonth = new Date().toISOString().substring(0, 7);
+  let targetMonth = todayMonth;
+
+  // Jika filter custom atau range 1M dipilih, pakai bulan pertama dari data atau todayMonth
+  if (entries.length > 0 && entries[0].date) {
+    targetMonth = entries[0].date.substring(0, 7);
+  }
+
+  // Fetch monthly cost data
+  let monthlyCostTotal = 0;
+  let targetUsers = 0;
+
+  try {
+    const costSnap = await fbDb.ref(`admins/monthly_costs/${targetMonth}`).once('value');
+    const costVal  = costSnap.val() || {};
+    targetUsers    = Number(costVal.target_users) || 0;
+    const items    = costVal.items || [];
+    monthlyCostTotal = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  } catch (err) {
+    console.error('[updatePNLAndInvestors] cost fetch error:', err);
+  }
+
+  const netProfit = totalRev - totalSpend - monthlyCostTotal;
+  const marginPct = totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : '0.0';
+
+  // Render P&L DOM
+  const elRev    = document.getElementById('pnl-revenue');
+  const elSpend  = document.getElementById('pnl-spend');
+  const elCost   = document.getElementById('pnl-cost');
+  const elNet    = document.getElementById('pnl-net');
+  const elMargin = document.getElementById('pnl-margin');
+  const elTarget = document.getElementById('pnl-target-user');
+
+  if (elRev)    elRev.textContent    = formatRp(totalRev);
+  if (elSpend)  elSpend.textContent  = '-' + formatRp(totalSpend);
+  if (elCost)   elCost.textContent   = '-' + formatRp(monthlyCostTotal);
+  if (elMargin) elMargin.textContent = marginPct + '%';
+  if (elTarget) elTarget.textContent = targetUsers > 0 ? targetUsers.toLocaleString('id-ID') + ' user' : 'Belum diset';
+
+  if (elNet) {
+    elNet.textContent = formatRp(netProfit);
+    elNet.style.color = netProfit > 0 ? 'var(--success)' : netProfit < 0 ? 'var(--danger)' : 'var(--text1)';
+  }
+
+  // Fetch Investors data
+  let investors = [];
+  try {
+    const invSnap = await fbDb.ref('admins/investors').once('value');
+    const invVal  = invSnap.val() || {};
+    investors     = Object.entries(invVal).map(([k, v]) => ({ id: k, ...v }));
+  } catch (err) {
+    console.error('[updatePNLAndInvestors] investor fetch error:', err);
+  }
+
+  renderInvestorTable(investors, netProfit);
+}
+
+function renderInvestorTable(investors, netProfit) {
+  const tbody    = document.getElementById('investorTableBody');
+  const totalBadge = document.getElementById('investorTotalPct');
+  const ownerEl  = document.getElementById('pnl-owner');
+
+  if (!tbody) return;
+
+  if (investors.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:0;"><div class="rpt-empty-state" style="padding:24px;"><div class="rpt-empty-icon" style="width:36px;height:36px;font-size:1rem;">👤</div><p style="font-size:0.8rem;">Belum ada investor. Klik "Kelola Investor" untuk tambah.</p></div></td></tr>`;
+    if (totalBadge) totalBadge.textContent = '0% Dialokasikan';
+    if (ownerEl) ownerEl.textContent = formatRp(netProfit);
+    return;
+  }
+
+  let sumPct = 0;
+  let totalInvestorPayout = 0;
+
+  const html = investors.map(inv => {
+    const pct = Number(inv.percentage) || 0;
+    sumPct += pct;
+    const payout = netProfit > 0 ? Math.round(netProfit * (pct / 100)) : 0;
+    totalInvestorPayout += payout;
+
+    return `<tr>
+      <td style="font-weight:600;color:var(--text1);">${escapeHtml(inv.name)} ${inv.notes ? `<span style="font-size:0.72rem;color:var(--text2);display:block;font-weight:400;">${escapeHtml(inv.notes)}</span>` : ''}</td>
+      <td style="color:var(--accent);font-weight:700;">${pct}%</td>
+      <td style="color:var(--success);font-weight:600;">${formatRp(payout)}</td>
+      <td><span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:var(--bg3);color:${netProfit > 0 ? 'var(--success)' : 'var(--text2)'};border:1px solid var(--border);">${netProfit > 0 ? 'Siap Cair' : 'Profit Rp 0'}</span></td>
+    </tr>`;
+  }).join('');
+
+  tbody.innerHTML = html;
+
+  if (totalBadge) {
+    totalBadge.textContent = `${sumPct}% Dialokasikan`;
+    totalBadge.style.borderColor = sumPct > 100 ? 'var(--danger)' : 'var(--border)';
+    totalBadge.style.color       = sumPct > 100 ? 'var(--danger)' : 'var(--text2)';
+  }
+
+  const ownerProfit = netProfit - totalInvestorPayout;
+  if (ownerEl) {
+    ownerEl.textContent = formatRp(ownerProfit);
+    ownerEl.style.color = ownerProfit >= 0 ? 'var(--text1)' : 'var(--danger)';
+  }
+}
+
+// ===== COST LAINNYA MODAL =====
+function openCostModal() {
+  const todayMonth = new Date().toISOString().substring(0, 7);
+  document.getElementById('costMonth').value = todayMonth;
+  loadMonthCostData();
+  document.getElementById('costModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeCostModal() {
+  document.getElementById('costModal').classList.add('hidden');
+}
+
+async function loadMonthCostData() {
+  const month = document.getElementById('costMonth').value || new Date().toISOString().substring(0, 7);
+  const container = document.getElementById('costRowsContainer');
+  const targetUserEl = document.getElementById('costTargetUser');
+  container.innerHTML = '';
+
+  try {
+    const snap = await fbDb.ref(`admins/monthly_costs/${month}`).once('value');
+    const val  = snap.val() || {};
+    targetUserEl.value = val.target_users || '';
+
+    const items = val.items || [];
+    if (items.length === 0) {
+      addCostRow('Gaji Tim', '');
+      addCostRow('Server & Tools', '');
+    } else {
+      items.forEach(i => addCostRow(i.name, i.amount));
+    }
+  } catch (err) {
+    console.error('[loadMonthCostData]', err);
+    addCostRow('', '');
+  }
+  calcCostTotal();
+}
+
+function addCostRow(name = '', amount = '') {
+  const container = document.getElementById('costRowsContainer');
+  const div = document.createElement('div');
+  div.className = 'cost-row-item';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 120px 32px;gap:8px;align-items:center;';
+  div.innerHTML = `
+    <input type="text" class="cost-name-input" value="${escapeHtml(name)}" placeholder="Nama cost (mis. Gaji, Hosting)..." style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:0.8rem;outline:none;">
+    <input type="number" class="cost-amount-input" value="${amount}" placeholder="Rp" min="0" oninput="calcCostTotal()" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:0.8rem;outline:none;">
+    <button class="btn-sm btn-ghost" style="padding:4px;color:var(--danger);" onclick="this.parentElement.remove();calcCostTotal();">🗑️</button>
+  `;
+  container.appendChild(div);
+  calcCostTotal();
+}
+
+function calcCostTotal() {
+  let total = 0;
+  document.querySelectorAll('.cost-amount-input').forEach(inp => {
+    total += Number(inp.value) || 0;
+  });
+  const el = document.getElementById('costTotalDisplay');
+  if (el) el.textContent = formatRp(total);
+}
+
+async function saveCostData() {
+  const month = document.getElementById('costMonth').value;
+  if (!month) { showToast('Pilih bulan terlebih dahulu!', 'error'); return; }
+
+  const targetUsers = Number(document.getElementById('costTargetUser').value) || 0;
+  const items = [];
+
+  document.querySelectorAll('#costRowsContainer .cost-row-item').forEach(row => {
+    const nameInp = row.querySelector('.cost-name-input');
+    const amtInp  = row.querySelector('.cost-amount-input');
+    const name   = nameInp ? nameInp.value.trim() : '';
+    const amount = amtInp ? (Number(amtInp.value) || 0) : 0;
+    if (name || amount > 0) {
+      items.push({ name: name || 'Cost Lainnya', amount });
+    }
+  });
+
+  const btn = document.getElementById('costSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  try {
+    await fbDb.ref(`admins/monthly_costs/${month}`).set({
+      target_users: targetUsers,
+      items: items,
+      updated_at: new Date().toISOString()
+    });
+    showToast('✅ Cost & Target User bulan ini disimpan!', 'success');
+    closeCostModal();
+    loadSalesReport();
+  } catch (err) {
+    showToast('Gagal menyimpan cost: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="save" style="width:13px;height:13px;"></i> Simpan Cost';
+    lucide.createIcons();
+  }
+}
+
+// ===== INVESTOR MODAL =====
+function openInvestorModal() {
+  renderInvestorModalList();
+  document.getElementById('investorModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeInvestorModal() {
+  document.getElementById('investorModal').classList.add('hidden');
+}
+
+async function renderInvestorModalList() {
+  const container = document.getElementById('investorListContainer');
+  if (!container) return;
+  container.innerHTML = '<div style="font-size:0.8rem;color:var(--text2);">Memuat investor...</div>';
+
+  try {
+    const snap = await fbDb.ref('admins/investors').once('value');
+    const val  = snap.val() || {};
+    const list = Object.entries(val).map(([k, v]) => ({ id: k, ...v }));
+
+    if (list.length === 0) {
+      container.innerHTML = '<div style="font-size:0.8rem;color:var(--text2);padding:10px 0;">Belum ada investor terdaftar. Tambahkan di bawah.</div>';
+      return;
+    }
+
+    container.innerHTML = list.map(inv => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:0.82rem;">
+        <div>
+          <span style="font-weight:600;color:var(--text1);">${escapeHtml(inv.name)}</span>
+          <span style="color:var(--accent);font-weight:700;margin-left:8px;">${inv.percentage}%</span>
+          ${inv.notes ? `<span style="font-size:0.72rem;color:var(--text2);display:block;">${escapeHtml(inv.notes)}</span>` : ''}
+        </div>
+        <button class="btn-sm btn-danger" style="padding:3px 8px;font-size:0.75rem;" onclick="removeInvestorItem('${inv.id}')">🗑️ Hapus</button>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<div style="font-size:0.8rem;color:var(--danger);">Gagal memuat: ${err.message}</div>`;
+  }
+}
+
+async function addInvestorItem() {
+  const nameInp  = document.getElementById('invNewName');
+  const pctInp   = document.getElementById('invNewPct');
+  const notesInp = document.getElementById('invNewNotes');
+
+  const name  = nameInp ? nameInp.value.trim() : '';
+  const pct   = pctInp ? Number(pctInp.value) : 0;
+  const notes = notesInp ? notesInp.value.trim() : '';
+
+  if (!name) { showToast('Masukkan nama investor!', 'error'); return; }
+  if (pct <= 0 || pct > 100) { showToast('Persentase harus antara 0.1% sampai 100%!', 'error'); return; }
+
+  try {
+    const newRef = fbDb.ref('admins/investors').push();
+    await newRef.set({ name, percentage: pct, notes, created_at: new Date().toISOString() });
+    showToast(`✅ Investor ${name} (${pct}%) ditambahkan!`, 'success');
+    nameInp.value  = '';
+    pctInp.value   = '';
+    notesInp.value = '';
+    renderInvestorModalList();
+  } catch (err) {
+    showToast('Gagal menambah investor: ' + err.message, 'error');
+  }
+}
+
+async function removeInvestorItem(id) {
+  if (!confirm('Hapus investor ini?')) return;
+  try {
+    await fbDb.ref(`admins/investors/${id}`).remove();
+    showToast('Investor dihapus', 'success');
+    renderInvestorModalList();
+  } catch (err) {
+    showToast('Gagal menghapus: ' + err.message, 'error');
+  }
+}
+
+function saveInvestorData() {
+  closeInvestorModal();
+  loadSalesReport();
 }
 
 </script>
