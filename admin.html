@@ -973,9 +973,14 @@
       <section id="tab-users" class="content-section active">
         <div class="section-header">
           <h2><i data-lucide="users" style="width:20px;height:20px;"></i> Manajemen User</h2>
-          <button class="btn-sm btn-primary" onclick="loadAllUsers()">
-            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-sm btn-primary" onclick="openAddUserModal()" style="display:flex;align-items:center;gap:6px;">
+              <i data-lucide="user-plus" style="width:13px;height:13px;"></i> + Tambah User
+            </button>
+            <button class="btn-sm btn-ghost" onclick="loadAllUsers()" style="display:flex;align-items:center;gap:6px;">
+              <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh
+            </button>
+          </div>
         </div>
 
         <!-- Stats -->
@@ -1528,6 +1533,58 @@
   </div>
 </div>
 
+<!-- ===== MODAL: TAMBAH USER BARU ===== -->
+<div class="modal-overlay hidden" id="addUserModal">
+  <div class="modal-card" style="max-width:500px;">
+    <div class="modal-header">
+      <h3><i data-lucide="user-plus" style="width:16px;height:16px;color:var(--accent);"></i> Tambah User Baru</h3>
+      <button class="modal-close" onclick="closeAddUserModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px;">
+      <div class="modal-form-group">
+        <label>Email User *</label>
+        <input type="email" id="addUserEmail" placeholder="user@contoh.com">
+      </div>
+      <div class="modal-form-group">
+        <label>Password *</label>
+        <div class="input-wrapper">
+          <input type="password" id="addUserPass" placeholder="Min. 6 karakter...">
+          <button class="toggle-pass" onclick="togglePass('addUserPass', this)">
+            <i data-lucide="eye" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="modal-form-group">
+          <label>Nama Lengkap (Opsional)</label>
+          <input type="text" id="addUserName" placeholder="Nama user...">
+        </div>
+        <div class="modal-form-group">
+          <label>No HP / WA (Opsional)</label>
+          <input type="text" id="addUserPhone" placeholder="08123456789">
+        </div>
+      </div>
+      <div class="modal-form-group">
+        <label>Paket Langganan Awal *</label>
+        <select id="addUserPlan">
+          <option value="trial">🔄 Free Trial (3 Hari)</option>
+          <option value="month1">📅 1 Bulan (30 Hari)</option>
+          <option value="month3">📅 3 Bulan (90 Hari)</option>
+          <option value="month6">📅 6 Bulan (180 Hari)</option>
+          <option value="year">🗓️ 1 Tahun (365 Hari)</option>
+          <option value="lifetime" selected>♾️ Lifetime (Selamanya)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn-sm btn-ghost" onclick="closeAddUserModal()">Batal</button>
+      <button class="btn-sm btn-primary" onclick="doCreateUser()" id="addUserSaveBtn">
+        <i data-lucide="user-plus" style="width:13px;height:13px;"></i> + Buat Akun User
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: EDIT SUBSCRIPTION ===== -->
 <div class="modal-overlay hidden" id="subModal">
   <div class="modal-card">
@@ -1869,6 +1926,121 @@ function renderUserTable(users) {
 
 function filterUsers() {
   renderUserTable(allUsersData);
+}
+
+// ===== ADD USER MODAL =====
+function openAddUserModal() {
+  document.getElementById('addUserEmail').value = '';
+  document.getElementById('addUserPass').value  = '';
+  document.getElementById('addUserName').value  = '';
+  document.getElementById('addUserPhone').value = '';
+  document.getElementById('addUserPlan').value  = 'lifetime';
+  document.getElementById('addUserModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeAddUserModal() {
+  document.getElementById('addUserModal').classList.add('hidden');
+}
+
+async function doCreateUser() {
+  const email = document.getElementById('addUserEmail').value.trim();
+  const pass  = document.getElementById('addUserPass').value;
+  const name  = document.getElementById('addUserName').value.trim();
+  const phone = document.getElementById('addUserPhone').value.trim();
+  const plan  = document.getElementById('addUserPlan').value;
+
+  if (!email || !pass) {
+    showToast('Email dan Password wajib diisi!', 'error');
+    return;
+  }
+  if (pass.length < 6) {
+    showToast('Password minimal 6 karakter!', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('addUserSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+
+  try {
+    // 1. Create user in Firebase Auth via secondary app instance so admin session remains logged in
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.app('secondaryApp');
+    } catch (e) {
+      secondaryApp = firebase.initializeApp(firebaseConfig, 'secondaryApp');
+    }
+    const secondaryAuth = secondaryApp.auth();
+
+    try {
+      await secondaryAuth.createUserWithEmailAndPassword(email, pass);
+      await secondaryAuth.signOut();
+    } catch (authErr) {
+      console.warn('[doCreateUser] Secondary Auth Warning:', authErr.message);
+      if (authErr.code === 'auth/email-already-in-use') {
+        showToast('Info: Email sudah terdaftar di Auth, memperbarui database...', 'warning');
+      }
+    }
+
+    // 2. Compute subscription status
+    const now = new Date();
+    let expireDate = null;
+    let isLifetime = false;
+
+    if (plan === 'lifetime') {
+      isLifetime = true;
+    } else if (plan === 'trial') {
+      expireDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (plan === 'month1') {
+      expireDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (plan === 'month3') {
+      expireDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (plan === 'month6') {
+      expireDate = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (plan === 'year') {
+      expireDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    const safeEmail = email.toLowerCase().replace(/\./g, '_dot_').replace(/@/g, '_at_');
+
+    // Fetch existing user record if any to preserve existing fields
+    const snap = await fbDb.ref(`users/${safeEmail}`).once('value');
+    const existing = snap.val() || {};
+
+    const userData = {
+      ...existing,
+      lf_user_email: email,
+      lf_user_name: name || existing.lf_user_name || '',
+      lf_user_phone: phone || existing.lf_user_phone || '',
+      lf_profile: {
+        ...(existing.lf_profile || {}),
+        name: name || (existing.lf_profile && existing.lf_profile.name) || '',
+        phone: phone || (existing.lf_profile && existing.lf_profile.phone) || '',
+        createdAt: (existing.lf_profile && existing.lf_profile.createdAt) || now.toISOString(),
+        subscription: {
+          plan: plan,
+          status: 'active',
+          isLifetime: isLifetime,
+          expireDate: expireDate,
+          updatedAt: now.toISOString(),
+          updatedBy: fbAuth.currentUser ? fbAuth.currentUser.email : 'admin'
+        }
+      }
+    };
+
+    await fbDb.ref(`users/${safeEmail}`).set(userData);
+
+    showToast(`✅ Akun user ${email} berhasil dibuat!`, 'success');
+    closeAddUserModal();
+    loadAllUsers();
+  } catch (err) {
+    showToast('Gagal membuat user: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="user-plus" style="width:13px;height:13px;"></i> + Buat Akun User';
+    lucide.createIcons();
+  }
 }
 
 // ===== SUBSCRIPTION MODAL =====
