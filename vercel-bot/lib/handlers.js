@@ -660,7 +660,10 @@ async function onFoodPortionInput(chatId, userId, text) {
 // ===== GOOGLE AI STUDIO GEMINI VISION API CALL =====
 async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false, email = 'telegram_user') {
   const key = process.env.API_KEY_IMAGE || process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('API_KEY_IMAGE or NVIDIA_API_KEY is not set in Vercel environment variables.');
+  if (!key) {
+    console.error('[vision] API_KEY_IMAGE not configured');
+    throw new Error('Layanan analisis gambar sedang tidak tersedia. Coba lagi nanti.');
+  }
 
   const model = process.env.VISION_MODEL || 'gemini-2.5-flash';
   const endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
@@ -677,7 +680,8 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false, e
   const body = {
     model: model,
     messages: [{ role: 'user', content }],
-    temperature: 0.0
+    temperature: 0.0,
+    max_tokens: 4096
   };
   if (jsonMode) {
     body.response_format = { type: 'json_object' };
@@ -694,11 +698,23 @@ async function callGeminiVisionAPI(images, mimeType, prompt, jsonMode = false, e
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error?.message || `NVIDIA Vision API Error (${res.status}): ${JSON.stringify(data)}`);
+    const rawMsg = data.error?.message || '';
+    console.error('[vision] API error:', res.status, rawMsg);
+    if (res.status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
+      throw new Error('Sistem AI sedang banyak permintaan. Coba lagi sebentar.');
+    }
+    throw new Error('Layanan analisis gambar tidak merespons. Silakan coba lagi.');
   }
   const rawText = data.choices?.[0]?.message?.content;
   if (!rawText) {
-    throw new Error('NVIDIA API did not return text content: ' + JSON.stringify(data));
+    console.error('[vision] Empty content from API:', JSON.stringify(data).slice(0, 200));
+    throw new Error('AI tidak memberikan hasil analisis. Silakan coba lagi.');
+  }
+
+  // Warn if truncated
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === 'length') {
+    console.warn('[vision] TRUNCATED response! finish_reason=length');
   }
 
   // Log token usage for visual AI calls

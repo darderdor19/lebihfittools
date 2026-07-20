@@ -2,9 +2,12 @@
 // GROQ AI HELPER
 // ====================================================
 
-async function callGroq(messages, jsonMode = false, maxTokens = 400, email = 'telegram_user') {
+async function callGroq(messages, jsonMode = false, maxTokens = 800, email = 'telegram_user') {
   const key = process.env.API_KEY_TEXT || process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY;
-  if (!key) throw new Error('API_KEY_TEXT or NVIDIA_API_KEY not set');
+  if (!key) {
+    console.error('[groq.js] API_KEY_TEXT not set');
+    throw new Error('Layanan AI sedang tidak tersedia. Coba lagi nanti.');
+  }
 
   const model = process.env.TEXT_MODEL || 'deepseek-v4-flash';
   const endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
@@ -28,7 +31,18 @@ async function callGroq(messages, jsonMode = false, maxTokens = 400, email = 'te
 
   const data = await res.json();
   if (!data.choices || !data.choices[0]) {
-    throw new Error('Text API error: ' + JSON.stringify(data));
+    console.error('[groq.js] API error response:', data?.error?.message || 'empty choices');
+    const rawMsg = data?.error?.message || '';
+    if (rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate') || res.status === 429) {
+      throw new Error('Sistem AI sedang banyak permintaan. Coba lagi sebentar.');
+    }
+    throw new Error('AI tidak memberikan respons. Silakan coba lagi.');
+  }
+
+  // Warn if response was cut off (truncated)
+  const finishReason = data.choices[0]?.finish_reason;
+  if (finishReason === 'length') {
+    console.warn('[groq.js] TRUNCATED response! finish_reason=length, maxTokens was:', maxTokens);
   }
 
   // Log token usage
@@ -112,7 +126,7 @@ async function generateDailyAnalysis(logs, profile, email = 'telegram_user') {
   prompt += `Total Gizi Mikro: Serat ${total.fiber.toFixed(1)}g, Gula ${total.sugar.toFixed(1)}g, Sodium ${total.sodium.toFixed(1)}mg, Kalsium ${total.calcium.toFixed(1)}mg, Zat Besi ${total.iron.toFixed(1)}mg, Vit C ${total.vitC.toFixed(1)}mg, Vit D ${total.vitD.toFixed(1)}mcg, Zinc ${total.zinc.toFixed(1)}mg.\n\n`;
   prompt += `Berikan evaluasi mengenai konsumsi makro dan mikro nutrisi hari ini, serta berikan saran praktis/konkrit makro dan mikro nutrisi apa yang sebaiknya dilakukan besok untuk mencapai target kebugaran mereka. Jawab dalam bahasa Indonesia, maksimal 4 kalimat. Format jawaban langsung teks analisis saja, tanpa kata pengantar atau penutup.`;
 
-  return await callGroq([{ role: 'user', content: prompt }], false, 300, email);
+  return await callGroq([{ role: 'user', content: prompt }], false, 800, email);
 }
 
 /**
