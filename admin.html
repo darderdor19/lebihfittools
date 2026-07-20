@@ -673,6 +673,82 @@
     height: 230px;
   }
 
+  /* Time Range Filter */
+  .rpt-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 10px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    flex-wrap: wrap;
+  }
+  .rpt-range-btns {
+    display: flex;
+    gap: 4px;
+    background: var(--bg3);
+    border-radius: 9px;
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+  .rpt-range-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: Inter, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .rpt-range-btn:hover {
+    color: var(--text1);
+    background: var(--bg);
+  }
+  .rpt-range-btn.active {
+    background: var(--bg);
+    color: var(--text1);
+    font-weight: 600;
+  }
+  .rpt-custom-range {
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .rpt-custom-range.show {
+    display: flex;
+  }
+  .rpt-custom-range input[type="date"] {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text1);
+    font-family: Inter, sans-serif;
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    outline: none;
+    cursor: pointer;
+  }
+  .rpt-custom-range input[type="date"]:focus {
+    border-color: #2a4a5e;
+  }
+  .rpt-range-label {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .rpt-filter-bar { gap: 8px; }
+    .rpt-range-btn { padding: 4px 8px; font-size: 0.72rem; }
+    .rpt-range-label { display: none; }
+  }
+
   /* Table Card */
   .rpt-table-card {
     background: var(--bg2);
@@ -1020,6 +1096,25 @@
               <i data-lucide="plus" style="width:13px;height:13px;"></i> Input Laporan
             </button>
           </div>
+        </div>
+
+        <!-- Time Range Filter -->
+        <div class="rpt-filter-bar">
+          <div class="rpt-range-btns">
+            <button class="rpt-range-btn active" onclick="setReportRange('1M', this)">1 Bln</button>
+            <button class="rpt-range-btn" onclick="setReportRange('3M', this)">3 Bln</button>
+            <button class="rpt-range-btn" onclick="setReportRange('1Y', this)">1 Thn</button>
+            <button class="rpt-range-btn" onclick="setReportRange('2Y', this)">2 Thn</button>
+            <button class="rpt-range-btn" onclick="setReportRange('3Y', this)">3 Thn</button>
+            <button class="rpt-range-btn" onclick="setReportRange('5Y', this)">5 Thn</button>
+            <button class="rpt-range-btn" onclick="setReportRange('custom', this)" id="rptRangeCustomBtn">Custom</button>
+          </div>
+          <div class="rpt-custom-range" id="rptCustomRange">
+            <input type="date" id="rptCustomFrom" onchange="applyCustomRange()">
+            <span style="color:var(--text2);font-size:0.8rem;">—</span>
+            <input type="date" id="rptCustomTo" onchange="applyCustomRange()">
+          </div>
+          <div class="rpt-range-label" id="rptRangeLabel">Bulan ini</div>
         </div>
 
         <!-- Stat Cards -->
@@ -1958,18 +2053,79 @@ function formatRp(val) {
   return 'Rp ' + n.toLocaleString('id-ID');
 }
 
+// ===== TIME RANGE =====
+let rptActiveRange = '1M';
+let rptCustomFrom = null;
+let rptCustomTo = null;
+
+function setReportRange(range, btn) {
+  rptActiveRange = range;
+  document.querySelectorAll('.rpt-range-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const customEl = document.getElementById('rptCustomRange');
+  const labelEl  = document.getElementById('rptRangeLabel');
+  const labels   = { '1M':'1 Bulan Terakhir','3M':'3 Bulan Terakhir','1Y':'1 Tahun Terakhir','2Y':'2 Tahun Terakhir','3Y':'3 Tahun Terakhir','5Y':'5 Tahun Terakhir' };
+
+  if (range === 'custom') {
+    customEl.classList.add('show');
+    if (labelEl) labelEl.textContent = 'Rentang Custom';
+    // Isi default: dari awal bulan ini sampai hari ini
+    const today = new Date().toISOString().substring(0, 10);
+    const firstDay = today.substring(0, 7) + '-01';
+    if (!document.getElementById('rptCustomFrom').value) document.getElementById('rptCustomFrom').value = firstDay;
+    if (!document.getElementById('rptCustomTo').value) document.getElementById('rptCustomTo').value = today;
+    applyCustomRange();
+    return;
+  } else {
+    customEl.classList.remove('show');
+    if (labelEl) labelEl.textContent = labels[range] || '';
+  }
+  loadSalesReport();
+}
+
+function applyCustomRange() {
+  const from = document.getElementById('rptCustomFrom').value;
+  const to   = document.getElementById('rptCustomTo').value;
+  if (!from || !to) return;
+  rptCustomFrom = from;
+  rptCustomTo   = to;
+  const label = document.getElementById('rptRangeLabel');
+  if (label) label.textContent = from + ' → ' + to;
+  loadSalesReport();
+}
+
+function getRangeStartDate() {
+  const today = new Date();
+  if (rptActiveRange === 'custom' && rptCustomFrom) return rptCustomFrom;
+  const map = { '1M': 30, '3M': 90, '1Y': 365, '2Y': 730, '3Y': 1095, '5Y': 1825 };
+  const days = map[rptActiveRange] || 30;
+  const start = new Date(today);
+  start.setDate(start.getDate() - days);
+  return start.toISOString().substring(0, 10);
+}
+
+function getRangeEndDate() {
+  if (rptActiveRange === 'custom' && rptCustomTo) return rptCustomTo;
+  return new Date().toISOString().substring(0, 10);
+}
+
 async function loadSalesReport() {
   try {
-    const snap = await fbDb.ref('sales_reports').orderByKey().limitToLast(90).once('value');
+    const snap = await fbDb.ref('sales_reports').orderByKey().once('value');
     const raw = snap.val() || {};
+    const startDate = getRangeStartDate();
+    const endDate   = getRangeEndDate();
+
     const entries = Object.entries(raw)
       .map(([k, v]) => ({ ...v, date: k }))
+      .filter(e => e.date >= startDate && e.date <= endDate)
       .sort((a, b) => b.date.localeCompare(a.date));
 
     updateSalesStatCards(entries);
     renderLineChart(entries);
     renderBarChart(entries);
-    renderReportTable(entries.slice(0, 30));
+    renderReportTable(entries);
   } catch (err) {
     console.error('[loadSalesReport]', err);
     document.getElementById('rptTableBody').innerHTML =
@@ -1978,23 +2134,19 @@ async function loadSalesReport() {
 }
 
 function updateSalesStatCards(entries) {
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const monthly = entries.filter(e => e.date && e.date.startsWith(thisMonth));
-
-  const totalSpend = monthly.reduce((s, e) => s + (Number(e.ad_spend) || 0), 0);
-  const totalRevenue = monthly.reduce((s, e) => s + (Number(e.revenue) || 0), 0);
-  const totalUsers = monthly.reduce((s, e) => s + (Number(e.new_users) || 0), 0);
-  const avgCPR = monthly.length > 0 ? monthly.reduce((s, e) => s + (Number(e.cpr) || 0), 0) / monthly.length : 0;
+  const totalSpend   = entries.reduce((s, e) => s + (Number(e.ad_spend) || 0), 0);
+  const totalRevenue = entries.reduce((s, e) => s + (Number(e.revenue) || 0), 0);
+  const totalUsers   = entries.reduce((s, e) => s + (Number(e.new_users) || 0), 0);
+  const avgCPR  = entries.length > 0 ? entries.reduce((s, e) => s + (Number(e.cpr) || 0), 0) / entries.length : 0;
   const avgROAS = totalSpend > 0 ? totalRevenue / totalSpend : 0;
-  const avgConv = monthly.length > 0 ? monthly.reduce((s, e) => s + (Number(e.conversion_rate) || 0), 0) / monthly.length : 0;
+  const avgConv = entries.length > 0 ? entries.reduce((s, e) => s + (Number(e.conversion_rate) || 0), 0) / entries.length : 0;
 
-  document.getElementById('rpt-total-spend').textContent = formatRp(totalSpend);
+  document.getElementById('rpt-total-spend').textContent   = formatRp(totalSpend);
   document.getElementById('rpt-total-revenue').textContent = formatRp(totalRevenue);
-  document.getElementById('rpt-total-users').textContent = totalUsers + ' user';
-  document.getElementById('rpt-avg-cpr').textContent = formatRp(Math.round(avgCPR));
-  document.getElementById('rpt-avg-roas').textContent = avgROAS.toFixed(2) + 'x';
-  document.getElementById('rpt-avg-conv').textContent = avgConv.toFixed(1) + '%';
+  document.getElementById('rpt-total-users').textContent   = totalUsers.toLocaleString('id-ID') + ' user';
+  document.getElementById('rpt-avg-cpr').textContent       = formatRp(Math.round(avgCPR));
+  document.getElementById('rpt-avg-roas').textContent      = avgROAS.toFixed(2) + 'x';
+  document.getElementById('rpt-avg-conv').textContent      = avgConv.toFixed(1) + '%';
 }
 
 function renderLineChart(entries) {
