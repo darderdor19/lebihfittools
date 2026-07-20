@@ -555,29 +555,26 @@
     gap: 12px;
   }
   .report-page-title h2 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #e0f7fa 0%, #00f0ff 60%, #00a6b8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text1);
     margin: 0;
   }
   .report-page-title .title-icon-wrap {
-    width: 38px; height: 38px;
-    background: linear-gradient(135deg, #00f0ff22, #00a6b811);
-    border: 1px solid #00f0ff33;
+    width: 36px; height: 36px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
     border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
   }
   .report-subtitle {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--text2);
     margin-top: 2px;
   }
   .report-actions { display: flex; gap: 10px; align-items: center; }
 
-  /* Stat Cards Premium */
+  /* Stat Cards — Monochromatic */
   .rpt-stats-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -586,62 +583,49 @@
   }
   .rpt-stat-card {
     background: var(--bg2);
-    border-radius: 14px;
+    border-radius: 12px;
     padding: 16px 14px;
     border: 1px solid var(--border);
     position: relative;
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    transition: transform 0.18s, border-color 0.18s;
     cursor: default;
   }
   .rpt-stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+    border-color: #2a3f52;
   }
   .rpt-stat-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 2px;
-    border-radius: 14px 14px 0 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #2a4a5e, transparent);
   }
-  .rpt-stat-card.red::before   { background: linear-gradient(90deg, #ff336600, #ff3366, #ff336600); }
-  .rpt-stat-card.red:hover     { border-color: #ff336655; box-shadow: 0 8px 30px #ff336620; }
-  .rpt-stat-card.green::before { background: linear-gradient(90deg, #00ffcc00, #00ffcc, #00ffcc00); }
-  .rpt-stat-card.green:hover   { border-color: #00ffcc55; box-shadow: 0 8px 30px #00ffcc20; }
-  .rpt-stat-card.cyan::before  { background: linear-gradient(90deg, #00f0ff00, #00f0ff, #00f0ff00); }
-  .rpt-stat-card.cyan:hover    { border-color: #00f0ff55; box-shadow: 0 8px 30px #00f0ff20; }
-  .rpt-stat-card.yellow::before{ background: linear-gradient(90deg, #ffd70000, #ffd700, #ffd70000); }
-  .rpt-stat-card.yellow:hover  { border-color: #ffd70055; box-shadow: 0 8px 30px #ffd70020; }
   .rpt-stat-card-icon {
-    width: 32px; height: 32px;
-    border-radius: 9px;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--bg3);
     display: flex; align-items: center; justify-content: center;
-    font-size: 1rem;
+    font-size: 0.9rem;
     margin-bottom: 12px;
+    border: 1px solid var(--border);
   }
-  .rpt-stat-card.red .rpt-stat-card-icon    { background: #ff336618; }
-  .rpt-stat-card.green .rpt-stat-card-icon  { background: #00ffcc18; }
-  .rpt-stat-card.cyan .rpt-stat-card-icon   { background: #00f0ff18; }
-  .rpt-stat-card.yellow .rpt-stat-card-icon { background: #ffd70018; }
   .rpt-stat-label {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: var(--text2);
     font-weight: 500;
-    letter-spacing: 0.3px;
-    margin-bottom: 5px;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
     text-transform: uppercase;
   }
   .rpt-stat-value {
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-size: 1.15rem;
+    font-weight: 700;
     line-height: 1.1;
-    letter-spacing: -0.5px;
+    color: var(--text1);
+    letter-spacing: -0.3px;
   }
-  .rpt-stat-card.red .rpt-stat-value    { color: #ff6688; }
-  .rpt-stat-card.green .rpt-stat-value  { color: #00ffcc; }
-  .rpt-stat-card.cyan .rpt-stat-value   { color: #00f0ff; }
-  .rpt-stat-card.yellow .rpt-stat-value { color: #ffd700; }
 
   /* Charts Grid */
   .report-charts-grid {
@@ -1040,32 +1024,32 @@
 
         <!-- Stat Cards -->
         <div class="rpt-stats-grid">
-          <div class="rpt-stat-card red">
+          <div class="rpt-stat-card">
             <div class="rpt-stat-card-icon">💸</div>
             <div class="rpt-stat-label">Total Ad Spend</div>
             <div class="rpt-stat-value" id="rpt-total-spend">—</div>
           </div>
-          <div class="rpt-stat-card green">
+          <div class="rpt-stat-card">
             <div class="rpt-stat-card-icon">💰</div>
             <div class="rpt-stat-label">Total Revenue</div>
             <div class="rpt-stat-value" id="rpt-total-revenue">—</div>
           </div>
-          <div class="rpt-stat-card cyan">
+          <div class="rpt-stat-card">
             <div class="rpt-stat-card-icon">👥</div>
             <div class="rpt-stat-label">New Users</div>
             <div class="rpt-stat-value" id="rpt-total-users">—</div>
           </div>
-          <div class="rpt-stat-card yellow">
+          <div class="rpt-stat-card">
             <div class="rpt-stat-card-icon">📊</div>
             <div class="rpt-stat-label">Avg CPR</div>
             <div class="rpt-stat-value" id="rpt-avg-cpr">—</div>
           </div>
-          <div class="rpt-stat-card green">
+          <div class="rpt-stat-card">
             <div class="rpt-stat-card-icon">📈</div>
             <div class="rpt-stat-label">Avg ROAS</div>
             <div class="rpt-stat-value" id="rpt-avg-roas">—</div>
           </div>
-          <div class="rpt-stat-card cyan">
+          <div class="rpt-stat-card">
             <div class="rpt-stat-card-icon">🎯</div>
             <div class="rpt-stat-label">Avg Konversi</div>
             <div class="rpt-stat-value" id="rpt-avg-conv">—</div>
@@ -1076,8 +1060,8 @@
         <div class="report-charts-grid">
           <div class="rpt-chart-card">
             <div class="rpt-chart-header">
-              <div class="rpt-chart-icon" style="background:#00f0ff15;">
-                <i data-lucide="trending-up" style="width:14px;height:14px;color:#00f0ff;"></i>
+              <div class="rpt-chart-icon" style="background:var(--bg3);border:1px solid var(--border);">
+                <i data-lucide="trending-up" style="width:14px;height:14px;color:var(--text2);"></i>
               </div>
               <div>
                 <div class="rpt-chart-title">Tren 30 Hari</div>
@@ -1090,8 +1074,8 @@
           </div>
           <div class="rpt-chart-card">
             <div class="rpt-chart-header">
-              <div class="rpt-chart-icon" style="background:#00ffcc15;">
-                <i data-lucide="bar-chart-2" style="width:14px;height:14px;color:#00ffcc;"></i>
+              <div class="rpt-chart-icon" style="background:var(--bg3);border:1px solid var(--border);">
+                <i data-lucide="bar-chart-2" style="width:14px;height:14px;color:var(--text2);"></i>
               </div>
               <div>
                 <div class="rpt-chart-title">Revenue per Minggu</div>
@@ -1107,8 +1091,8 @@
         <!-- Tabel Riwayat -->
         <div class="rpt-table-card">
           <div class="rpt-table-header">
-            <div class="rpt-chart-icon" style="background:#ffd70015;">
-              <i data-lucide="list" style="width:14px;height:14px;color:#ffd700;"></i>
+            <div class="rpt-chart-icon" style="background:var(--bg3);border:1px solid var(--border);">
+              <i data-lucide="list" style="width:14px;height:14px;color:var(--text2);"></i>
             </div>
             <span class="rpt-table-title">Riwayat Laporan Harian</span>
             <span class="rpt-table-count" id="rptTableCount">30 Terakhir</span>
