@@ -161,6 +161,10 @@ async function handleMessage(msg) {
     const email = await getLinkedEmail(userId);
     return email ? showProgressMenu(chatId, userId, email) : promptLogin(chatId, userId);
   }
+  if (text === '/jejak' || text === '/history') {
+    const email = await getLinkedEmail(userId);
+    return email ? showJejakMenu(chatId, email) : promptLogin(chatId, userId);
+  }
 
   if (state === 'AWAIT_EMAIL') return onEmailInput(chatId, userId, text, msg.from?.username);
   if (state === 'AWAIT_OTP') return onOtpInput(chatId, userId, text);
@@ -318,6 +322,12 @@ async function handleCallback(cb) {
   if (data === 'hist_panel_food') return showHistoryPanelOptions(chatId, 'food');
   if (data === 'hist_panel_act') return showHistoryPanelOptions(chatId, 'activity');
   if (data === 'hist_panel_ai') return showHistoryPanelOptions(chatId, 'ai');
+  if (data === 'hist_jejak') return email ? showJejakMenu(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'hist_jejak_harian') return email ? showJejakHarianList(chatId, email) : promptLogin(chatId, userId);
+  if (data === 'hist_jejak_fisik') return email ? showJejakFisikList(chatId, email) : promptLogin(chatId, userId);
+  
+  if (data.startsWith('show_jejak_h_')) return email ? showJejakHarianDetail(chatId, email, parseInt(data.replace('show_jejak_h_', ''))) : promptLogin(chatId, userId);
+  if (data.startsWith('show_jejak_f_')) return email ? showJejakFisikDetail(chatId, email, parseInt(data.replace('show_jejak_f_', ''))) : promptLogin(chatId, userId);
   
   if (data.startsWith('hist_food_')) return showFoodHistoryDays(chatId, email, parseInt(data.replace('hist_food_', '')));
   if (data.startsWith('hist_activity_')) return showActivityHistoryDays(chatId, email, parseInt(data.replace('hist_activity_', '')));
@@ -1148,10 +1158,196 @@ async function showHistory(chatId, email) {
         { text: '🤖 Analisis AI Komprehensif', callback_data: 'hist_panel_ai' }
       ],
       [
+        { text: '📍 Jejak Analisis AI', callback_data: 'hist_jejak' }
+      ],
+      [
         { text: '🏠 Menu Utama', callback_data: 'menu' }
       ]
     ]
   });
+}
+
+// ====================================================
+// JEJAK ANALISIS (TELEGRAM COMPATIBILITY)
+// ====================================================
+
+async function showJejakMenu(chatId, email) {
+  return sendMessage(chatId, '📍 *Jejak Analisis AI LebihFit*\n\nPilih kategori jejak analisis yang ingin lu lihat:', {
+    inline_keyboard: [
+      [
+        { text: '📊 Progres Harian', callback_data: 'hist_jejak_harian' },
+        { text: '🧍 Evaluasi Fisik', callback_data: 'hist_jejak_fisik' }
+      ],
+      [
+        { text: '🔙 Kembali', callback_data: 'history' }
+      ]
+    ]
+  });
+}
+
+async function showJejakHarianList(chatId, email) {
+  await sendChatAction(chatId, 'typing');
+  const safeEmail = safe(email);
+  const history = await getFirebase(`users/${safeEmail}/lf_analysis_history`);
+  
+  if (!history || !Array.isArray(history) || history.length === 0) {
+    return sendMessage(chatId, '📊 *Jejak Progres Harian*\n\nBelum ada jejak analisis progres harian tercatat.\n\nSilakan lakukan *Analisis Progress AI* terlebih dahulu di menu *Analisis Progress* (Web App).', {
+      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'hist_jejak' }]]
+    });
+  }
+
+  // Show last 10 entries as inline buttons
+  const buttons = history.slice(0, 10).map((entry, idx) => {
+    const score = entry.overallScore ? ` [Skor: ${entry.overallScore}]` : '';
+    const dateRangeLabel = entry.dateRange || 'Periode';
+    return [{
+      text: `📅 ${entry.dateLabel || entry.timestamp?.substring(0, 10)} - ${dateRangeLabel}${score}`,
+      callback_data: `show_jejak_h_${idx}`
+    }];
+  });
+
+  buttons.push([{ text: '🔙 Kembali', callback_data: 'hist_jejak' }]);
+
+  return sendMessage(chatId, '📊 *Jejak Progres Harian*\n\nPilih riwayat analisis progres harian di bawah ini untuk melihat detailnya:', {
+    inline_keyboard: buttons
+  });
+}
+
+async function showJejakFisikList(chatId, email) {
+  await sendChatAction(chatId, 'typing');
+  const safeEmail = safe(email);
+  const historyData = await getFirebase(`users/${safeEmail}/lf_physical_analyses`);
+  
+  let history = [];
+  if (historyData) {
+    history = Object.values(historyData).sort((a,b) => b.timestamp.localeCompare(a.timestamp)); // Newest first
+  }
+
+  if (history.length === 0) {
+    return sendMessage(chatId, '🧍 *Jejak Evaluasi Fisik*\n\nBelum ada jejak evaluasi fisik tercatat.\n\nSilakan lakukan *Evaluasi Fisik AI* terlebih dahulu di menu *Analisis Progress -> Evaluasi Fisik* (Web App/Bot).', {
+      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'hist_jejak' }]]
+    });
+  }
+
+  // Show last 10 entries as inline buttons
+  const buttons = history.slice(0, 10).map((entry, idx) => {
+    const statusText = entry.data?.comparisonWithPrevious?.status || 'Selesai';
+    return [{
+      text: `📅 ${entry.date || '-'} [Status: ${statusText}]`,
+      callback_data: `show_jejak_f_${idx}`
+    }];
+  });
+
+  buttons.push([{ text: '🔙 Kembali', callback_data: 'hist_jejak' }]);
+
+  return sendMessage(chatId, '🧍 *Jejak Evaluasi Fisik*\n\nPilih riwayat evaluasi fisik di bawah ini untuk melihat detailnya:', {
+    inline_keyboard: buttons
+  });
+}
+
+async function showJejakHarianDetail(chatId, email, index) {
+  await sendChatAction(chatId, 'typing');
+  const safeEmail = safe(email);
+  const history = await getFirebase(`users/${safeEmail}/lf_analysis_history`);
+  
+  if (!history || !history[index]) {
+    return sendMessage(chatId, '⚠️ Riwayat tidak ditemukan.', {
+      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'hist_jejak_harian' }]]
+    });
+  }
+
+  const entry = history[index];
+  const markdownText = formatProgressAnalysisHtmlToTelegram(entry.html);
+  
+  let messageText = `📊 *Detail Analisis Progres Harian*\n`;
+  messageText += `Tanggal: *${entry.dateLabel || '-'}*\n`;
+  messageText += `Periode: *${entry.dateRange || '-'}*\n`;
+  messageText += `Status: *${entry.status || '-'}*\n\n`;
+  messageText += markdownText;
+
+  if (messageText.length > 4000) {
+    messageText = messageText.substring(0, 3990) + '...\n\n_(Beberapa konten dipotong karena batas karakter Telegram)_';
+  }
+
+  return sendMessage(chatId, messageText, {
+    inline_keyboard: [[{ text: '🔙 Kembali ke Daftar', callback_data: 'hist_jejak_harian' }]]
+  });
+}
+
+async function showJejakFisikDetail(chatId, email, index) {
+  await sendChatAction(chatId, 'typing');
+  const safeEmail = safe(email);
+  const historyData = await getFirebase(`users/${safeEmail}/lf_physical_analyses`);
+  
+  let history = [];
+  if (historyData) {
+    history = Object.values(historyData).sort((a,b) => b.timestamp.localeCompare(a.timestamp)); // Newest first
+  }
+
+  if (history.length === 0 || !history[index]) {
+    return sendMessage(chatId, '⚠️ Riwayat tidak ditemukan.', {
+      inline_keyboard: [[{ text: '🔙 Kembali', callback_data: 'hist_jejak_fisik' }]]
+    });
+  }
+
+  const entry = history[index];
+  const d = entry.data || {};
+  
+  let msg = `🧍 *Detail Evaluasi Fisik AI*\n`;
+  msg += `Tanggal: *${entry.date || '-'}*\n\n`;
+
+  if (d.ringkasanSederhana) {
+    const rs = d.ringkasanSederhana;
+    msg += `✅ *Kelebihan:*\n`;
+    (rs.pros || []).forEach(p => msg += `• ${p}\n`);
+    msg += `\n⚠️ *Yang Perlu Diperbaiki:*\n`;
+    (rs.cons || []).forEach(c => msg += `• ${c}\n`);
+    msg += `\n🎯 *Fokus Utama:* ${rs.focus || '-'}\n\n`;
+  }
+
+  if (d.recoveryScore) {
+    const rc = d.recoveryScore;
+    msg += `😴 *Recovery Score:* *${rc.total || 0}/100*\n`;
+    msg += `- Tidur: *${rc.sleep || 0}*\n`;
+    msg += `- Protein: *${rc.protein || 0}*\n`;
+    msg += `- Kalori: *${rc.calorie || 0}*\n`;
+    msg += `- Latihan: *${rc.training || 0}*\n\n`;
+  }
+
+  if (d.comparisonWithPrevious) {
+    const comp = d.comparisonWithPrevious;
+    msg += `📈 *Perkembangan:* *${comp.status || '-'}*\n`;
+    msg += `${comp.explanation || '-'}\n\n`;
+  }
+
+  if (d.perkiraanGoal) {
+    const pg = d.perkiraanGoal;
+    msg += `🏁 *Perkiraan Goal:* *${pg.weeks || '-'}*\n`;
+    msg += `${pg.desc || '-'}\n\n`;
+  }
+
+  return sendMessage(chatId, msg, {
+    inline_keyboard: [[{ text: '🔙 Kembali ke Daftar', callback_data: 'hist_jejak_fisik' }]]
+  });
+}
+
+function formatProgressAnalysisHtmlToTelegram(html) {
+  if (!html) return '';
+  let str = html;
+  
+  str = str.replace(/<div style="font-size:0\.75rem;[^>]*>([^<]+)<\/div>\s*<div style="font-size:1\.4rem;[^>]*>([^<]+)<\/div>/g, '*$1*: $2/100\n');
+  str = str.replace(/<span style="color:var\(--text2\);">([^<]+)<\/span>\s*<span style="font-weight:700; color:var\(--accent\);">([^<]+)<\/span>/g, '• $1: *$2*');
+  str = str.replace(/<\/?span[^>]*>/gi, '');
+  str = str.replace(/<br\s*\/?>/gi, '\n');
+  str = str.replace(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi, '\n\n*$1*\n');
+  str = str.replace(/<li[^>]*>([^<]+)<\/li>/gi, '• $1\n');
+  str = str.replace(/<strong[^>]*>([^<]+)<\/strong>/gi, '*$1*');
+  str = str.replace(/<b[^>]*>([^<]+)<\/b>/gi, '*$1*');
+  str = str.replace(/<div[^>]*>/gi, '\n');
+  str = str.replace(/<\/div>/gi, '\n');
+  str = str.replace(/<[^>]+>/g, '');
+  str = str.replace(/\n{3,}/g, '\n\n');
+  return str.trim();
 }
 
 async function showFoodHistoryDays(chatId, email, days) {
