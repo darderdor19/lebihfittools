@@ -3935,4 +3935,298 @@ a{color:var(--accent);text-decoration:none}
     height: 38px;
     font-size: 0.65rem;
   }
+}
+
+/* ===== JEJAK ANALISIS PAGE ===== */
+.jejak-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+}
+.jejak-tab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  letter-spacing: 0.5px;
+}
+.jejak-tab-btn.active {
+  background: linear-gradient(135deg, var(--accent3), rgba(0,166,184,0.3));
+  color: var(--accent);
+  border: 1px solid var(--accent3);
+  box-shadow: 0 0 10px rgba(0,240,255,0.1);
+}
+.jejak-tab-btn:hover:not(.active) {
+  background: var(--surface2);
+  color: var(--text);
+}
+.jejak-entry-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.jejak-entry-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.jejak-entry-card:hover {
+  border-color: var(--accent3);
+  box-shadow: 0 0 12px rgba(0,240,255,0.08);
+}
+.jejak-entry-card.fisik::before {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+.jejak-entry-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.jejak-entry-date {
+  font-size: 0.78rem;
+  color: var(--text3);
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+.jejak-entry-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.jejak-entry-badge.green { background: rgba(0,255,204,0.12); color: var(--success); border: 1px solid rgba(0,255,204,0.3); }
+.jejak-entry-badge.yellow { background: rgba(255,159,10,0.12); color: #ff9f0a; border: 1px solid rgba(255,159,10,0.3); }
+.jejak-entry-badge.red { background: rgba(255,51,102,0.12); color: var(--danger); border: 1px solid rgba(255,51,102,0.3); }
+.jejak-entry-badge.blue { background: rgba(0,212,255,0.12); color: var(--warning); border: 1px solid rgba(0,212,255,0.3); }
+.jejak-entry-summary {
+  font-size: 0.87rem;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.jejak-entry-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.jejak-btn-detail {
+  flex: 1;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent3);
+  background: rgba(0,240,255,0.05);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font);
+}
+.jejak-btn-detail:hover {
+  background: rgba(0,240,255,0.12);
+  box-shadow: 0 0 10px rgba(0,240,255,0.15);
+}
+.jejak-btn-delete {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,51,102,0.3);
+  background: rgba(255,51,102,0.05);
+  color: var(--danger);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+}
+.jejak-btn-delete:hover { background: rgba(255,51,102,0.15); }
+.jejak-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+}
+.jejak-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+.jejak-empty h4 { color: var(--text2); margin-bottom: 8px; font-size: 1rem; }
+.jejak-empty p { font-size: 0.85rem; line-height: 1.6; }
+.jejak-shortcut-btn {
+  font-size: 0.85rem;
+  padding: 10px 16px !important;
+  text-transform: none !important;
+  letter-spacing: 0.3px !important;
+}
+
+/* ===== JEJAK DETAIL MODAL ===== */
+.jejak-detail-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(6,11,17,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+.jejak-detail-modal {
+  background: var(--surface);
+  border: 1px solid var(--accent3);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 760px;
+  margin: auto;
+  box-shadow: 0 0 40px rgba(0,240,255,0.08);
+  position: relative;
+  overflow: hidden;
+}
+.jejak-detail-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent3), var(--accent), var(--accent3));
+  box-shadow: 0 0 10px var(--accent);
+}
+.jejak-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.jejak-detail-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.jejak-detail-body {
+  padding: 24px;
+  max-height: 80vh;
+  overflow-y: auto;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+/* ===== FRIDAY REMINDER MODAL ===== */
+.friday-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(6,11,17,0.8);
+  backdrop-filter: blur(10px);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+.friday-modal {
+  background: var(--surface);
+  border: 1px solid var(--accent3);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0,240,255,0.12);
+  animation: slideUp 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.friday-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 12px var(--accent);
+}
+.friday-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.friday-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+}
+.friday-desc {
+  font-size: 0.9rem;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.friday-desc strong { color: var(--text); }
+.friday-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.friday-btn-update {
+  width: 100%;
+  padding: 14px !important;
+  font-size: 0.95rem !important;
+}
+.friday-btn-skip {
+  width: 100%;
+  padding: 11px !important;
+  font-size: 0.85rem !important;
+  opacity: 0.7;
+  text-transform: none !important;
+  letter-spacing: 0.3px !important;
+}
+.friday-btn-skip:hover { opacity: 1; }
+@media (max-width: 480px) {
+  .jejak-detail-body { padding: 16px; }
+  .friday-modal { padding: 28px 20px; }
 }

@@ -865,6 +865,9 @@
         <button class="nav-btn" data-page="history" onclick="showPage('history')">
           <span class="nav-icon"><i data-lucide="line-chart"></i></span><span class="nav-label">History</span>
         </button>
+        <button class="nav-btn" data-page="jejak-analisis" onclick="showPage('jejak-analisis')">
+          <span class="nav-icon"><i data-lucide="footprints"></i></span><span class="nav-label">Jejak Analisis</span>
+        </button>
         <button class="nav-btn" data-page="progress" onclick="showPage('progress')">
           <span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Analisis Progress</span>
         </button>
@@ -1579,6 +1582,9 @@
           <div class="chart-container" style="position: relative; height: 300px; width: 100%; margin-top: 15px;">
             <canvas id="progressAnalysisChart"></canvas>
           </div>
+          <button class="btn-secondary jejak-shortcut-btn" onclick="showPage('jejak-analisis')" style="width:100%;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;">
+            <i data-lucide="footprints" style="width:16px;height:16px;"></i> Lihat Jejak Analisis Saya
+          </button>
         </div>
       </div> <!-- End of #progress-data-content -->
 
@@ -1627,6 +1633,9 @@
           <div class="section-card" id="physicalResultCard" style="display:none;margin-top:20px;">
             <h3 class="section-title"><i data-lucide="bot" style="display:inline-block;vertical-align:text-bottom;color:var(--accent);"></i> Hasil Evaluasi Fisik AI</h3>
             <div id="physicalAiResultText" style="line-height:1.6;font-size:0.92rem;color:var(--text);"></div>
+            <button class="btn-secondary jejak-shortcut-btn" onclick="showPage('jejak-analisis');switchJejakTab('fisik')" style="width:100%;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;">
+              <i data-lucide="footprints" style="width:16px;height:16px;"></i> Lihat Jejak Evaluasi Fisik
+            </button>
           </div>
         </div>
       </div>
@@ -2368,6 +2377,39 @@
         <button class="btn-secondary" onclick="closeCustomConfirm()">Batal</button>
         <button class="btn-primary" id="customConfirmBtn">Ya, Lanjutkan</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE: JEJAK ANALISIS ===== -->
+  <!-- inserted via JS into .main-content at runtime, see showPage('jejak-analisis') -->
+
+  <!-- ===== FRIDAY REMINDER MODAL ===== -->
+  <div id="fridayReminderOverlay" class="friday-overlay" style="display:none;" onclick="closeFridayReminder()">
+    <div class="friday-modal" onclick="event.stopPropagation()">
+      <div class="friday-icon">🔔</div>
+      <h3 class="friday-title">Update Kalkulator Kamu!</h3>
+      <p class="friday-desc">Hari ini hari <strong>Jumat</strong> — waktunya update data berat badan & target di Kalkulator biar analisis AI makin akurat dan sesuai kondisi terkini kamu.</p>
+      <div class="friday-actions">
+        <button class="btn-primary friday-btn-update" onclick="onFridayUpdate()">
+          <i data-lucide="calculator" style="width:16px;height:16px;display:inline-block;vertical-align:text-bottom;margin-right:6px;"></i> Update Sekarang
+        </button>
+        <button class="btn-secondary friday-btn-skip" onclick="closeFridayReminder()">
+          Nanti Dulu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== JEJAK ANALISIS DETAIL MODAL ===== -->
+  <div id="jejakDetailOverlay" class="jejak-detail-overlay" style="display:none;" onclick="closeJejakDetail()">
+    <div class="jejak-detail-modal" onclick="event.stopPropagation()">
+      <div class="jejak-detail-header">
+        <h3 id="jejakDetailTitle">Detail Analisis</h3>
+        <button class="btn-icon" onclick="closeJejakDetail()" style="color:var(--text2);background:none;border:none;cursor:pointer;padding:8px;">
+          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+      <div id="jejakDetailBody" class="jejak-detail-body"></div>
     </div>
   </div>
 

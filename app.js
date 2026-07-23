@@ -89,7 +89,7 @@ async function initApp() {
                     const fromParam = urlParams.get('from');
                     const toParam = urlParams.get('to');
                     
-                    const validPages = ['dashboard', 'log', 'activity', 'history', 'progress', 'calculator', 'settings'];
+                    const validPages = ['dashboard', 'log', 'activity', 'history', 'jejak-analisis', 'progress', 'calculator', 'settings'];
                     if (pageParam && validPages.includes(pageParam)) {
                         if (pageParam === 'history') {
                             showPage('history');
@@ -111,6 +111,8 @@ async function initApp() {
                     } else {
                         showPage('dashboard');
                     }
+                    // Check Friday reminder setelah app dimuat
+                    checkFridayReminder();
                 }
             }
         }
@@ -647,7 +649,25 @@ function renderMembershipStatus() {
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
+
+    // Jejak Analisis uses a dynamically injected page
+    if (pageId === 'jejak-analisis') {
+        let jaPage = document.getElementById('page-jejak-analisis');
+        if (!jaPage) {
+            jaPage = document.createElement('div');
+            jaPage.id = 'page-jejak-analisis';
+            jaPage.className = 'page';
+            document.querySelector('.main-content').appendChild(jaPage);
+        }
+        jaPage.classList.add('active');
+        const navBtn = document.querySelector(`.nav-btn[data-page="jejak-analisis"]`);
+        if (navBtn) navBtn.classList.add('active');
+        if (window.innerWidth <= 768) closeSidebar();
+        showJejakAnalisis();
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
     document.getElementById(`page-${pageId}`).classList.add('active');
     const navBtn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
     if (navBtn) navBtn.classList.add('active');
@@ -676,6 +696,7 @@ function showPage(pageId) {
         prefillRecalcForm();
     }
 }
+
 
 // ============================================================
 // KEGIATAN HARIAN — Activity & Sleep Logging
@@ -4877,7 +4898,29 @@ Kembalikan respons dalam JSON dengan format persis seperti ini:
                     params: cacheParams,
                     html: finalHtml
                 });
+
+                // === SIMPAN KE JEJAK ANALISIS HISTORY ===
+                const sh = data.skorHarian || {};
+                const historyEntry = {
+                    id: 'ah_' + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    dateLabel: new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+                    dateRange: (cacheParams && cacheParams.from && cacheParams.to) ? `${cacheParams.from} s/d ${cacheParams.to}` : 'Periode terpilih',
+                    overallScore: sh.overallScore || null,
+                    status: sh.status || 'Analisis Selesai',
+                    statusColor: sh.statusColor || 'blue',
+                    summary: sh.status ? `Skor Overall: ${sh.overallScore || '-'} — ${sh.status}` : 'Analisis progress harian selesai.',
+                    html: finalHtml
+                };
+                let analysisHistory = DB.get('lf_analysis_history') || [];
+                analysisHistory.unshift(historyEntry); // newest first
+                if (analysisHistory.length > 20) analysisHistory = analysisHistory.slice(0, 20);
+                DB.set('lf_analysis_history', analysisHistory);
+                // Show shortcut button
+                const shortcutBtn = document.querySelector('#progressResultCard .jejak-shortcut-btn');
+                if (shortcutBtn) shortcutBtn.style.display = 'flex';
             }
+
             
             const dateSeries = [];
             const tempDate = new Date(fromDate);
@@ -6420,3 +6463,243 @@ Gunakan bahasa Indonesia santai bersahabat (kamu/lu).`;
     }
 }
 
+// ============================================================
+// JEJAK ANALISIS — Rekam Jejak Analisis Progress & Fisik
+// ============================================================
+
+let _currentJejakTab = 'harian';
+
+function showJejakAnalisis(defaultTab) {
+    const tab = defaultTab || _currentJejakTab || 'harian';
+    const container = document.getElementById('page-jejak-analisis');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="page-header">
+        <div>
+          <h2><i data-lucide="footprints" style="display:inline-block;vertical-align:text-bottom;"></i> Jejak Analisis</h2>
+          <p class="page-subtitle">Rekam jejak seluruh analisis progres &amp; evaluasi fisik kamu</p>
+        </div>
+      </div>
+      <div class="jejak-tabs">
+        <button class="jejak-tab-btn ${tab==='harian'?'active':''}" id="jejakTabHarian" onclick="switchJejakTab('harian')">
+          <i data-lucide="trending-up" style="width:15px;height:15px;"></i> Progres Harian
+        </button>
+        <button class="jejak-tab-btn ${tab==='fisik'?'active':''}" id="jejakTabFisik" onclick="switchJejakTab('fisik')">
+          <i data-lucide="camera" style="width:15px;height:15px;"></i> Evaluasi Fisik
+        </button>
+      </div>
+      <div id="jejakPanelHarian" ${tab!=='harian'?'style="display:none"':''}></div>
+      <div id="jejakPanelFisik" ${tab!=='fisik'?'style="display:none"':''}></div>
+    `;
+    renderJejakHarian();
+    renderJejakFisik();
+}
+
+function switchJejakTab(tab) {
+    _currentJejakTab = tab;
+    const btnH = document.getElementById('jejakTabHarian');
+    const btnF = document.getElementById('jejakTabFisik');
+    if (btnH) btnH.classList.toggle('active', tab === 'harian');
+    if (btnF) btnF.classList.toggle('active', tab === 'fisik');
+    const panelH = document.getElementById('jejakPanelHarian');
+    const panelF = document.getElementById('jejakPanelFisik');
+    if (panelH) panelH.style.display = tab === 'harian' ? '' : 'none';
+    if (panelF) panelF.style.display = tab === 'fisik' ? '' : 'none';
+}
+
+function renderJejakHarian() {
+    const panel = document.getElementById('jejakPanelHarian');
+    if (!panel) return;
+    const history = (typeof DB !== 'undefined' ? DB.get('lf_analysis_history') : null) || [];
+    if (history.length === 0) {
+        panel.innerHTML = `
+          <div class="jejak-empty">
+            <div class="jejak-empty-icon">📊</div>
+            <h4>Belum Ada Jejak Analisis</h4>
+            <p>Lakukan Analisis Progress AI di menu <strong>Analisis Progress</strong> untuk mulai merekam jejakmu.</p>
+          </div>`;
+        return;
+    }
+    const colorMap = { green:'green', yellow:'yellow', red:'red', blue:'blue' };
+    panel.innerHTML = history.map((entry, i) => {
+        const badgeClass = colorMap[entry.statusColor] || 'blue';
+        const scoreText = entry.overallScore ? `<strong style="color:var(--accent);font-size:1.1rem;">${entry.overallScore}</strong>/100 &bull; ` : '';
+        return `
+          <div class="jejak-entry-card">
+            <div class="jejak-entry-meta">
+              <span class="jejak-entry-date">📅 ${entry.dateLabel || (entry.timestamp||'').substring(0,10)}</span>
+              <span class="jejak-entry-badge ${badgeClass}">${entry.status}</span>
+            </div>
+            <div class="jejak-entry-summary">
+              ${scoreText}Periode: ${entry.dateRange || '-'}
+            </div>
+            <div class="jejak-entry-actions">
+              <button class="jejak-btn-detail" onclick="openJejakDetail('harian',${i})">
+                <i data-lucide="eye" style="width:14px;height:14px;"></i> Lihat Detail
+              </button>
+              <button class="jejak-btn-delete" onclick="deleteJejakHarian(${i})" title="Hapus">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          </div>`;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+function renderJejakFisik() {
+    const panel = document.getElementById('jejakPanelFisik');
+    if (!panel) return;
+    let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+    if (history.length === 0) {
+        panel.innerHTML = `
+          <div class="jejak-empty">
+            <div class="jejak-empty-icon">📸</div>
+            <h4>Belum Ada Jejak Evaluasi Fisik</h4>
+            <p>Lakukan Evaluasi Fisik AI di menu <strong>Analisis Progress → Evaluasi Fisik</strong> untuk mulai merekam kondisi badanmu.</p>
+          </div>`;
+        return;
+    }
+    panel.innerHTML = history.map((entry, i) => {
+        const d = entry.data || {};
+        const comp = d.comparisonWithPrevious || {};
+        const statusColorMap = { Improve:'green', Decline:'red', Same:'yellow', Stable:'blue' };
+        const badgeClass = statusColorMap[comp.status] || 'blue';
+        const statusText = comp.status || 'Selesai';
+        const dateStr = entry.date || (entry.timestamp ? new Date(entry.timestamp).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : '-');
+        const scoreTotal = d.recoveryScore?.total ? `Recovery Score: <strong style="color:var(--success);">${d.recoveryScore.total}</strong>/100` : '';
+        const hasPhoto = entry.photo || (entry.photos && entry.photos[0]);
+        return `
+          <div class="jejak-entry-card fisik">
+            <div class="jejak-entry-meta">
+              <span class="jejak-entry-date">📅 ${dateStr}</span>
+              <span class="jejak-entry-badge ${badgeClass}">${statusText}</span>
+            </div>
+            ${hasPhoto ? `<img src="${entry.photo || entry.photos[0]}" style="width:80px;height:80px;object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--border);float:right;margin:0 0 8px 12px;">` : ''}
+            <div class="jejak-entry-summary">
+              ${scoreTotal ? scoreTotal + '<br>' : ''}
+              ${comp.explanation ? comp.explanation.substring(0,100) + (comp.explanation.length > 100 ? '...' : '') : 'Evaluasi fisik AI selesai.'}
+            </div>
+            <div style="clear:both;"></div>
+            <div class="jejak-entry-actions">
+              <button class="jejak-btn-detail" onclick="openJejakDetail('fisik',${i})">
+                <i data-lucide="eye" style="width:14px;height:14px;"></i> Lihat Detail
+              </button>
+              <button class="jejak-btn-delete" onclick="deleteJejakFisik(${i})" title="Hapus">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          </div>`;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+function openJejakDetail(type, index) {
+    const overlay = document.getElementById('jejakDetailOverlay');
+    const titleEl = document.getElementById('jejakDetailTitle');
+    const bodyEl = document.getElementById('jejakDetailBody');
+    if (!overlay) return;
+
+    if (type === 'harian') {
+        const history = (typeof DB !== 'undefined' ? DB.get('lf_analysis_history') : null) || [];
+        const entry = history[index];
+        if (!entry) return;
+        titleEl.textContent = 'Analisis ' + (entry.dateLabel || (entry.timestamp||'').substring(0,10));
+        bodyEl.innerHTML = entry.html || '<p>Detail tidak tersedia.</p>';
+    } else {
+        let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+        const entry = history[index];
+        if (!entry) return;
+        const d = entry.data || {};
+        titleEl.textContent = 'Evaluasi Fisik — ' + (entry.date || '-');
+        const photosArr = entry.photos || (entry.photo ? [entry.photo] : []);
+        const photosHtml = photosArr.map(p =>
+            `<img src="${p}" style="width:100px;height:100px;object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--border);">`
+        ).join('');
+        const pros = (d.ringkasanSederhana?.pros || []).map(p => `<li>${p}</li>`).join('');
+        const cons = (d.ringkasanSederhana?.cons || []).map(c => `<li>${c}</li>`).join('');
+        const rs = d.recoveryScore || {};
+        bodyEl.innerHTML = `
+          ${photosHtml ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">${photosHtml}</div>` : ''}
+          ${pros ? `<div style="margin-bottom:16px;"><strong style="color:var(--success);">✅ Kelebihan</strong><ul style="margin:6px 0 0 16px;color:var(--text2);font-size:0.88rem;">${pros}</ul></div>` : ''}
+          ${cons ? `<div style="margin-bottom:16px;"><strong style="color:var(--danger);">⚠️ Yang Perlu Diperbaiki</strong><ul style="margin:6px 0 0 16px;color:var(--text2);font-size:0.88rem;">${cons}</ul></div>` : ''}
+          ${d.ringkasanSederhana?.focus ? `<div style="margin-bottom:16px;"><strong style="color:var(--warning);">🎯 Fokus Utama</strong><p style="color:var(--text2);font-size:0.88rem;margin-top:4px;">${d.ringkasanSederhana.focus}</p></div>` : ''}
+          ${rs.total !== undefined ? `
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+              <strong style="color:var(--accent);font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;">Recovery Score</strong>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;font-size:0.85rem;color:var(--text2);">
+                <span>😴 Tidur: <strong style="color:var(--text);">${rs.sleep||0}</strong></span>
+                <span>🥩 Protein: <strong style="color:var(--text);">${rs.protein||0}</strong></span>
+                <span>🔥 Kalori: <strong style="color:var(--text);">${rs.calorie||0}</strong></span>
+                <span>🏋️ Latihan: <strong style="color:var(--text);">${rs.training||0}</strong></span>
+              </div>
+              <div style="margin-top:10px;font-size:1rem;font-weight:700;">Total: <span style="color:var(--success);">${rs.total||0}/100</span></div>
+            </div>` : ''}
+          ${d.perkiraanGoal ? `<div style="margin-bottom:16px;"><strong style="color:var(--accent);">🎯 Perkiraan Mencapai Goal</strong><p style="color:var(--text2);font-size:0.88rem;margin-top:4px;">${d.perkiraanGoal.weeks||'-'} — ${d.perkiraanGoal.desc||''}</p></div>` : ''}
+        `;
+    }
+    overlay.style.display = 'flex';
+    if (window.lucide) setTimeout(() => lucide.createIcons(), 50);
+}
+
+function closeJejakDetail() {
+    const overlay = document.getElementById('jejakDetailOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function deleteJejakHarian(index) {
+    if (!confirm('Hapus jejak analisis ini?')) return;
+    let history = (typeof DB !== 'undefined' ? DB.get('lf_analysis_history') : null) || [];
+    history.splice(index, 1);
+    if (typeof DB !== 'undefined') DB.set('lf_analysis_history', history);
+    renderJejakHarian();
+    showToast('Jejak analisis dihapus.', 'info');
+}
+
+function deleteJejakFisik(index) {
+    if (!confirm('Hapus jejak evaluasi fisik ini?')) return;
+    let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+    const origId = history[index]?.id;
+    let all = (typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [];
+    all = all.filter(e => e.id !== origId);
+    if (typeof DB !== 'undefined') DB.set('lf_physical_analyses', all);
+    renderJejakFisik();
+    showToast('Jejak evaluasi fisik dihapus.', 'info');
+}
+
+// ============================================================
+// FRIDAY REMINDER — Pengingat Update Kalkulator Tiap Jumat
+// ============================================================
+
+function getISOWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function checkFridayReminder() {
+    const today = new Date();
+    if (today.getDay() !== 5) return; // Bukan Jumat
+    const currentWeek = today.getFullYear() + '-W' + getISOWeekNumber(today);
+    const skippedWeek = typeof DB !== 'undefined' ? DB.get('lf_friday_skip_week') : null;
+    if (skippedWeek === currentWeek) return; // Sudah di-skip minggu ini
+    setTimeout(() => {
+        const overlay = document.getElementById('fridayReminderOverlay');
+        if (overlay) overlay.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    }, 1500);
+}
+
+function closeFridayReminder() {
+    const overlay = document.getElementById('fridayReminderOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const today = new Date();
+    const currentWeek = today.getFullYear() + '-W' + getISOWeekNumber(today);
+    if (typeof DB !== 'undefined') DB.set('lf_friday_skip_week', currentWeek);
+}
+
+function onFridayUpdate() {
+    closeFridayReminder();
+    showPage('calculator');
+}
