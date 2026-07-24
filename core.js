@@ -394,14 +394,14 @@ if (typeof window !== 'undefined') {
   });
 }
 
-async function callAI(messages, json = false, model = 'gpt-4o-mini', isVision = false, isGroqVision = false, retries = 1, fallbackAttempted = false) {
+async function callAI(messages, json = false, model = 'gpt-4o-mini', isVision = false, isGroqVision = false, retries = 1, fallbackAttempted = false, maxTokens = null) {
   let endpoint = '/api/ai';
   if (fallbackAttempted || window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
     endpoint = 'https://lebihfittools.vercel.app/api/ai';
   }
 
   const email = (localStorage.getItem('lf_user_email') || 'anonymous').replace(/"/g, '');
-  const body = { model, messages, json, isVision, email };
+  const body = { model, messages, json, isVision, email, max_tokens: maxTokens };
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout
@@ -608,7 +608,7 @@ async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false
   const messages = [{ role: 'user', content }];
   
   try {
-    const raw = await callAI(messages, jsonMode, 'google/gemini-2.5-flash', true);
+    const raw = await callAI(messages, jsonMode, 'google/gemini-2.5-flash', true, false, 1, false, 3500);
     return raw;
   } catch (err) {
     throw getMaskedAIError(err);

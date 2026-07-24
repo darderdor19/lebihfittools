@@ -4878,7 +4878,7 @@ Kembalikan respons dalam JSON dengan format persis seperti ini:
   }
 }`;
 
-        const rawJson = await callAI([{ role: 'user', content: prompt }], true, 'gpt-4o-mini');
+        const rawJson = await callAI([{ role: 'user', content: prompt }], true, 'gpt-4o-mini', false, false, 1, false, 3500);
         let data = null;
         try {
             let cleanJson = rawJson.trim();

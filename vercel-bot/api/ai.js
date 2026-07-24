@@ -96,11 +96,12 @@ module.exports = async function handler(req, res) {
       ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
       : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
 
+    const reqMaxTokens = req.body.max_tokens || req.body.maxTokens;
     const body = {
       model: model,
       messages: messages,
       temperature: json ? 0.1 : 0.2,
-      max_tokens: json ? 1000 : 2500
+      max_tokens: reqMaxTokens || (isVision ? 3500 : (json ? 3000 : 3500))
     };
     if (json) {
       body.response_format = { type: "json_object" };
