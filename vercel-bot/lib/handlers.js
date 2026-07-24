@@ -847,18 +847,28 @@ Analisis gambar makanan ini.`;
 
     identifyPrompt += `
 
-TUGAS UTAMA: Identifikasi nama makanan, estimasi berat (gram) per komponen makanan, dan berat total. JANGAN hitung nutrisi di sini.
+TUGAS UTAMA: Identifikasi nama makanan, estimasi berat (gram) matang per komponen/lauk, dan estimasi berat total. JANGAN hitung nutrisi di sini.
+
+GUIDELINE ESTIMASI PORSI KULINER INDONESIA (GUNAKAN STANDAR PRESISI INI):
+- Nasi Putih / Merah Matang: 1 centong sedang = ~100g (~130 kcal). 1 centong munjung / 1 piring warteg = ~150g - 200g.
+- Tempe / Tahu Goreng / Bacem: 1 potong sedang = ~40g - 50g.
+- Ayam Goreng / Bakar (Dada/Paha dengan tulang): ~100g - 120g (daging bersih ~80g).
+- Telur Ayam (Ceplok / Dadar): ~50g - 60g (dengan serapan minyak goreng ~70g).
+- Daging Sapi / Rendang / Empal: 1 potong = ~50g - 70g.
+- Ikan Goreng / Bakar: 1 ekor/potong sedang = ~80g - 120g.
+- Sayur Tumis / Kuah (Kangkung, Capcay, Sup): ~60g - 100g per porsi.
+- Gorengan (Bakwan, Mendoan, Tahu isi): 1 biji = ~50g (sangat berminyak).
 
 Instruksi:
 1. Jika BUKAN foto makanan, kembalikan: {"is_food":false}
 2. Identifikasi nama makanan secara spesifik dan akurat berdasarkan visual.
-   - Jika ada beberapa lauk/komponen berbeda (seperti Nasi Rames, Warteg, Bento, dll), identifikasi dan sebutkan rincian masing-masing komponen (misal: Nasi putih, Tempe orek, Tahu goreng, Sayur lodeh).
+   - Jika ada beberapa lauk/komponen berbeda (seperti Nasi Rames, Warteg, Bento, Padang, dll), identifikasi dan sebutkan rincian masing-masing komponen (misal: Nasi putih matang, Tempe orek basah, Tahu goreng, Sayur lodeh).
    - JANGAN tambahkan bahan yang tidak terlihat di foto.
-3. Estimasi berat total dalam gram secara logis dari porsi yang terlihat.
-4. Estimasi berat dalam gram untuk MASING-MASING komponen/lauk yang teridentifikasi secara logis.
-5. Catat metode masak jika terlihat (goreng/rebus/bakar/air-fryer).
+3. Estimasi berat total dalam gram MATANG secara logis dari porsi yang terlihat.
+4. Estimasi berat dalam gram MATANG untuk MASING-MASING komponen/lauk yang teridentifikasi.
+5. Catat metode masak & indikator minyak (Deep Fried / Tumis Minyak / Santan / Panggang / Rebus / Kukus / Air-fryer).
 6. Kembalikan HANYA JSON ini (tanpa teks lain):
-{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat total","grams":300,"cooking_method":"metode masak","components":[{"item":"Nama komponen 1","grams":150},{"item":"Nama komponen 2","grams":50}],"notes":"rincian komponen, contoh: Nasi putih (~150g), Tempe orek (~50g), Tahu goreng (~50g)"}`;
+{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat total","grams":300,"cooking_method":"metode masak","components":[{"item":"Nama komponen 1","grams":150},{"item":"Nama komponen 2","grams":50}],"notes":"rincian komponen, contoh: Nasi putih matang (~150g), Tempe orek (~50g), Tahu goreng (~50g)"}`;
 
     const rawIdentify = await callGeminiVisionAPI(images, null, identifyPrompt, true, email);
     let identified;

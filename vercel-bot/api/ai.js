@@ -23,25 +23,52 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid messages array' });
     }
 
-    // Check for text food analysis prompt to inject database references
+    // Check for text/photo food analysis prompt to inject database references
     const userMsg = messages[messages.length - 1];
     const msgContent = userMsg && typeof userMsg.content === 'string' ? userMsg.content : '';
-    if (msgContent.includes('== BAHAN UTAMA') && msgContent.includes('PORSI ==')) {
-      const nameMatch = msgContent.match(/Nama Makanan[^\n:]*:\s*([^\n"]+)/i);
-      if (nameMatch) {
-        const foodName = nameMatch[1].replace(/^"/, '').replace(/".*$/, '').trim();
+    if (msgContent.includes('BAHAN UTAMA') || msgContent.includes('MAKANAN YANG DIIDENTIFIKASI DARI FOTO') || msgContent.includes('Nama Makanan')) {
+      let searchQueries = [];
+      
+      // Extract food name or components breakdown
+      const nameMatch = msgContent.match(/Nama Makanan[^\n:]*:\s*([^\n"]+)/i) || msgContent.match(/Nama\s*:\s*([^\n"]+)/i);
+      if (nameMatch) searchQueries.push(nameMatch[1].replace(/^"/, '').replace(/".*$/, '').trim());
+
+      const rincianMatch = msgContent.match(/rincian bahan\s*:\s*([^\)\n]+)/i);
+      if (rincianMatch) {
+        const parts = rincianMatch[1].split(',');
+        parts.forEach(p => {
+          const itemName = p.split(':')[0].replace(/~\d+g?/i, '').trim();
+          if (itemName && itemName.length > 2) searchQueries.push(itemName);
+        });
+      }
+
+      if (searchQueries.length > 0) {
         try {
           const { searchFoodDatabase } = require('../lib/foodSearch');
-          const dbMatches = await searchFoodDatabase(foodName);
-          if (dbMatches && dbMatches.length > 0) {
-            let referenceContext = "\n\n== DATABASE REFERENCE DITEMUKAN (Gunakan angka gizi per 100g ini secara ketat untuk kalkulasi gizi makanan user): ==\n";
-            dbMatches.forEach(item => {
-              referenceContext += `- ${item.name}: cal ${item.cal} kcal | protein ${item.protein}g | carbs ${item.carbs}g | fat ${item.fat}g | fiber ${item.fiber}g | sugar ${item.sugar}g | sodium ${item.sodium}mg | calcium ${item.calcium}mg | iron ${item.iron}mg | vitC ${item.vitC}mg | vitD ${item.vitD}mcg | zinc ${item.zinc}mg\n`;
+          let allMatches = [];
+          for (const q of searchQueries) {
+            const matches = await searchFoodDatabase(q);
+            if (matches && matches.length > 0) {
+              allMatches.push(...matches);
+            }
+          }
+          if (allMatches.length > 0) {
+            let referenceContext = "\n\n== OFFICIAL TKPI INDONESIA DATABASE (Per 100g — Wajib gunakan nilai gizi presisi ini): ==\n";
+            const seen = new Set();
+            allMatches.forEach(item => {
+              if (!seen.has(item.name)) {
+                seen.add(item.name);
+                referenceContext += `- ${item.name}: cal ${item.cal} kcal | protein ${item.protein}g | carbs ${item.carbs}g | fat ${item.fat}g | fiber ${item.fiber}g | sugar ${item.sugar}g | sodium ${item.sodium}mg | calcium ${item.calcium}mg | iron ${item.iron}mg | vitC ${item.vitC}mg | vitD ${item.vitD}mcg | zinc ${item.zinc}mg\n`;
+              }
             });
-            // Inject into both old and new prompt format
-            userMsg.content = userMsg.content
-              .replace('== DATABASE REFERENCE (Per 100g): ==', `== DATABASE REFERENCE (Per 100g): ==${referenceContext}`)
-              .replace('== PRIORITAS DATABASE (Per 100g', `== PRIORITAS DATABASE (Per 100g \u2014 DB MATCH:${referenceContext}\n\nSelebihnya (Per 100g`);
+            
+            if (userMsg.content.includes('== DATABASE REFERENCE (Per 100g MATANG): ==')) {
+              userMsg.content = userMsg.content.replace('== DATABASE REFERENCE (Per 100g MATANG): ==', `== DATABASE REFERENCE (Per 100g MATANG): ==${referenceContext}`);
+            } else if (userMsg.content.includes('== DATABASE REFERENCE (Per 100g): ==')) {
+              userMsg.content = userMsg.content.replace('== DATABASE REFERENCE (Per 100g): ==', `== DATABASE REFERENCE (Per 100g): ==${referenceContext}`);
+            } else {
+              userMsg.content += referenceContext;
+            }
           }
         } catch (dbErr) {
           console.error('[ai] DB search error:', dbErr);

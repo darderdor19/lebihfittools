@@ -80,26 +80,38 @@ async function analyzeFood(text, email = 'telegram_user') {
     console.error('[groq.js] DB search error:', dbErr);
   }
 
-  const prompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia).
+  const prompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
 Gunakan Atwater Factors untuk kalori: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
 Referensi kecukupan vitamin/mineral menggunakan AKG Indonesia (RDA Indonesia).
 
 == BAHAN UTAMA & PORSI ==
 Nama Makanan / Deskripsi: "${text}"
 
-== PRIORITAS DATABASE (Per 100g — cek urutan ini): ==${referenceContext}
+== PRIORITAS DATABASE (Per 100g — Cek urutan ini): ==${referenceContext}
 Jika tidak ada di database di atas, gunakan data USDA FoodData Central atau TKPI Indonesia.
 
-== ATURAN KALKULASI KETAT ==
-1. Ekstrak berat tiap bahan dalam gram. Jika tidak disebutkan, gunakan estimasi porsi standar Indonesia.
-2. Mentah vs Matang: kata "fillet/mentah/raw" = data mentah; selain itu asumsikan matang.
-3. Air Fryer/Oven tanpa minyak = TANPA penambahan lemak/kalori minyak.
-4. MULTI-BAHAN: hitung tiap bahan TERPISAH lalu JUMLAHKAN — JANGAN kalikan total berat dengan 1 gizi saja.
-5. Perkalian: (Nilai per 100g) × (Berat / 100). Lakukan untuk SEMUA makro DAN mikro.
-6. Minyak goreng/margarin nyata: tambahkan +88 kcal & +10g lemak per 10g/1 sdm.
-7. JANGAN biarkan nilai mikro (sodium, calcium, iron, vitC, vitD, zinc) = 0 kecuali memang 0.
-8. Di bagian "notes", tuliskan kembali rincian detail lauk dan gramasi masing-masing bahan yang diidentifikasi (misal: "Rincian: Nasi putih (150g), Tempe orek (50g), Tahu goreng (50g)").
-9. Jawab HANYA JSON valid tanpa teks/markdown:
+== STANDAR PORSI KULINER INDONESIA (ACUAN PRESISI) ==
+- Nasi Putih / Merah Matang: 1 centong = ~100g (~130 kcal). 1 piring warteg/padang = ~150g - 200g.
+- Tempe / Tahu Goreng: 1 potong = ~40g - 50g (~80 - 110 kcal, 5 - 8g protein).
+- Ayam Goreng / Bakar (Paha/Dada): 1 potong = ~100g (~165 - 220 kcal, 25 - 30g protein).
+- Telur Ayam (Ceplok/Dadar/Rebus): 1 butir = ~50g - 60g (~78 - 110 kcal, 6.3g protein).
+- Daging Sapi / Rendang: 1 potong = ~60g - 70g (~160 - 220 kcal, 18 - 22g protein).
+- Gorengan (Bakwan, Mendoan, Tahu isi): 1 biji = ~50g (~140 - 180 kcal, 10 - 14g lemak).
+- Minuman Manis (Es Teh / Kopi Susu): 1 gelas = ~250ml (gula 15 - 25g = ~60 - 100 kcal).
+
+== ATURAN KALKULASI PRESISI KETAT ==
+1. Ekstrak berat porsi dalam gram MATANG. Gunakan estimasi porsi standar Indonesia di atas jika tidak disebutkan.
+2. Mentah vs Matang: kata "fillet/mentah/raw" = data mentah; selain itu wajib asumsikan matang.
+3. ATURAN PENGOLAHAN MINYAK:
+   - Deep Fried / Goreng Tepung / Gorengan: Tambahkan +10g lemak minyak (+90 kcal) per 100g item.
+   - Tumis / Goreng Biasa: Tambahkan +5g lemak minyak (+45 kcal) per porsi.
+   - Santan / Gulai: Tambahkan +8g lemak santan (+72 kcal) per 100g.
+   - Air Fryer / Rebus / Kukus / Panggang tanpa minyak: TANPA penambahan lemak minyak.
+4. MULTI-BAHAN: hitung tiap bahan TERPISAH berdasarkan berat gram masing-masing, lalu JUMLAHKAN.
+5. Perkalian: (Nilai per 100g) × (Berat / 100). Lakukan untuk SEMUA makro DAN MIKRO.
+6. JANGAN biarkan nilai mikro (sodium, calcium, iron, vitC, vitD, zinc) = 0 kecuali memang 0.
+7. Di bagian "notes", tuliskan rincian detail lauk dan gramasi masing-masing bahan (misal: "Rincian: Nasi putih matang (150g), Tempe orek (50g), Tahu goreng (50g)").
+8. Jawab HANYA JSON valid tanpa teks/markdown:
 {"name":"nama makanan","portion":"estimasi gram","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail menu & gramasi masing-masing lauk"}
 Bulatkan 1 desimal.`;
   const content = await callGroq([{ role: 'user', content: prompt }], true, 1200, email);
