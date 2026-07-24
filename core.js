@@ -472,7 +472,7 @@ async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', is
 
 async function analyzePhotoAI(images, mime = null, userDescription = '', onProgress = null) {
   // =============================================
-  // STEP 1: Gemini — Identifikasi nama & berat
+  // STEP 1: Gemini — Identifikasi nama & berat per komponen
   // =============================================
   if (onProgress) onProgress('🔍 Mengidentifikasi makanan dari foto...');
 
@@ -485,18 +485,19 @@ Analisis gambar ini dan identifikasi makanan yang ada di foto.`;
 
   identifyPrompt += `
 
-TUGAS UTAMA: Identifikasi nama makanan & estimasi berat (gram) saja.
+TUGAS UTAMA: Identifikasi nama makanan, estimasi berat (gram) per komponen makanan, dan berat total.
 JANGAN menghitung nilai nutrisi di sini.
 
 Instruksi:
 1. Jika BUKAN foto makanan/minuman, kembalikan: {"is_food":false}
 2. Identifikasi nama makanan secara spesifik dan akurat berdasarkan visual.
+   - Jika ada beberapa lauk/komponen (seperti Nasi Rames, Warteg, Bento, dll), identifikasi dan sebutkan rincian masing-masing komponen (misal: Nasi putih, Tempe orek, Tahu goreng, Sayur lodeh).
    - Jangan tambahkan bahan yang TIDAK terlihat di foto (misal: jangan tambahkan "dada ayam" jika tidak terlihat).
-   - Jika ada beberapa item, sebutkan semuanya.
 3. Estimasi berat total makanan dalam gram secara logis berdasarkan visual porsi.
-4. Catat metode memasak jika terlihat (goreng/rebus/bakar/air-fryer).
-5. Kembalikan HANYA JSON ini (tanpa teks lain):
-{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat","grams":250,"cooking_method":"air-fryer/rebus/goreng/dll","notes":"catatan visual singkat"}`;
+4. Estimasi berat dalam gram untuk MASING-MASING komponen/lauk yang teridentifikasi secara logis.
+5. Catat metode memasak jika terlihat (goreng/rebus/bakar/air-fryer).
+6. Kembalikan HANYA JSON ini (tanpa teks lain):
+{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat total","grams":300,"cooking_method":"goreng/rebus/dll","components":[{"item":"Nama komponen 1","grams":150},{"item":"Nama komponen 2","grams":50}],"notes":"catatan rincian komponen, contoh: Nasi putih (~150g), Tempe orek (~50g), Tahu goreng (~50g)"}`;
 
   const identifyContent = [{ type: 'text', text: identifyPrompt }];
   if (Array.isArray(images)) {
@@ -534,28 +535,37 @@ Instruksi:
   const foodName = identified.name || 'makanan';
   const grams = identified.grams || 100;
   const cookingMethod = identified.cooking_method || '';
-  const descForCalc = userDescription || identified.notes || '';
+  
+  let detailQuery = `${foodName}, total porsi: ${grams}g`;
+  if (identified.components && identified.components.length > 0) {
+    const detailBahan = identified.components.map(c => `${c.item}: ${c.grams}g`).join(', ');
+    detailQuery += ` (rincian bahan: ${detailBahan})`;
+  }
+  if (cookingMethod) {
+    detailQuery += `, cara masak: ${cookingMethod}`;
+  }
+  if (userDescription) {
+    detailQuery += `, catatan: ${userDescription}`;
+  }
 
   const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia).
 Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
 Evaluasi kecukupan vitamin/mineral menggunakan AKG Indonesia (RDA Indonesia).
 
 == MAKANAN YANG DIIDENTIFIKASI DARI FOTO ==
-Nama: ${foodName}
-Berat Estimasi: ${grams}g
-Metode Masak: ${cookingMethod || 'tidak diketahui'}
-Deskripsi Tambahan: ${descForCalc || 'tidak ada'}
+${detailQuery}
 
 == INSTRUKSI KALKULASI KETAT ==
-1. Cari data gizi per 100g untuk "${foodName}" dari USDA FoodData Central atau TKPI Indonesia.
-2. Jika ada beberapa komponen (multi-bahan), hitung tiap bahan TERPISAH lalu JUMLAHKAN.
+1. Cari data gizi per 100g untuk masing-masing komponen bahan di atas dari USDA FoodData Central atau TKPI Indonesia.
+2. Hitung gizi tiap komponen bahan secara TERPISAH berdasarkan berat gram masing-masing, lalu JUMLAHKAN hasilnya untuk gizi total.
 3. Air Fryer / Oven tanpa minyak = TANPA penambahan lemak/kalori minyak.
 4. Goreng = TAMBAHKAN estimasi minyak yang diserap (+6-10g lemak per porsi rata-rata).
-5. Perkalian wajib: (Nilai per 100g) × (${grams} / 100) untuk SEMUA makro DAN mikro.
+5. Perkalian wajib: (Nilai per 100g) × (Berat komponen / 100) untuk SEMUA makro DAN mikro.
 6. JANGAN biarkan nilai mikro (sodium, calcium, iron, vitC, vitD, zinc) = 0 kecuali memang benar 0.
 7. Bulatkan ke 1 angka desimal.
-8. Jawab HANYA JSON valid tanpa teks/markdown:
-{"name":"${foodName}","portion":"${grams}g","calculation":"ringkasan perkalian makro+mikro","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"catatan singkat analisis max 20 kata"}`;
+8. Di bagian "notes", tuliskan kembali rincian detail menu dan gramasi masing-masing lauk yang diidentifikasi dari foto (misal: "Rincian: Nasi putih (150g), Tempe orek (50g), Tahu goreng (50g)").
+9. Jawab HANYA JSON valid tanpa teks/markdown:
+{"name":"${foodName}","portion":"${grams}g","calculation":"ringkasan perkalian makro+mikro","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail menu & gramasi masing-masing lauk"}`;
 
   try {
     const rawNutrition = await callAI([{ role: 'user', content: nutritionPrompt }], true, 'llama-3.1-8b-instant', false);

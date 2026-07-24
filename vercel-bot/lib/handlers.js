@@ -836,7 +836,7 @@ async function processFoodPhotos(chatId, userId) {
     }
 
     // =============================================
-    // STEP 1: Gemini — Identifikasi nama & berat
+    // STEP 1: Gemini — Identifikasi nama & berat per komponen
     // =============================================
     let identifyPrompt = `Kamu adalah sistem identifikasi visual makanan yang sangat akurat.
 Analisis gambar makanan ini.`;
@@ -847,17 +847,18 @@ Analisis gambar makanan ini.`;
 
     identifyPrompt += `
 
-TUGAS: Identifikasi nama makanan & estimasi berat (gram) SAJA. JANGAN hitung nutrisi di sini.
+TUGAS UTAMA: Identifikasi nama makanan, estimasi berat (gram) per komponen makanan, dan berat total. JANGAN hitung nutrisi di sini.
 
 Instruksi:
 1. Jika BUKAN foto makanan, kembalikan: {"is_food":false}
-2. Identifikasi nama makanan secara spesifik dan akurat berdasarkan tampilan visual.
+2. Identifikasi nama makanan secara spesifik dan akurat berdasarkan visual.
+   - Jika ada beberapa lauk/komponen berbeda (seperti Nasi Rames, Warteg, Bento, dll), identifikasi dan sebutkan rincian masing-masing komponen (misal: Nasi putih, Tempe orek, Tahu goreng, Sayur lodeh).
    - JANGAN tambahkan bahan yang tidak terlihat di foto.
-   - Jika ada beberapa item berbeda, sebutkan semuanya.
 3. Estimasi berat total dalam gram secara logis dari porsi yang terlihat.
-4. Catat metode masak jika terlihat (goreng/rebus/bakar/air-fryer).
-5. Kembalikan HANYA JSON ini (tanpa teks lain):
-{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat","grams":250,"cooking_method":"metode masak"}`;
+4. Estimasi berat dalam gram untuk MASING-MASING komponen/lauk yang teridentifikasi secara logis.
+5. Catat metode masak jika terlihat (goreng/rebus/bakar/air-fryer).
+6. Kembalikan HANYA JSON ini (tanpa teks lain):
+{"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat total","grams":300,"cooking_method":"metode masak","components":[{"item":"Nama komponen 1","grams":150},{"item":"Nama komponen 2","grams":50}],"notes":"rincian komponen, contoh: Nasi putih (~150g), Tempe orek (~50g), Tahu goreng (~50g)"}`;
 
     const rawIdentify = await callGeminiVisionAPI(images, null, identifyPrompt, true, email);
     let identified;
@@ -877,13 +878,26 @@ Instruksi:
     // =============================================
     // STEP 2: Qwen — Hitung makro & mikro nutrisi
     // =============================================
-    await sendMessage(chatId, `✅ Teridentifikasi: *${identified.name}* (~${identified.grams}g)\n🧮 *Step 2/2*: Menghitung nutrisi berstandar USDA/TKPI...`);
+    const safeGrams = identified.grams || 100;
+    let detailQuery = `${identified.name}, total porsi: ${safeGrams}g`;
+    if (identified.components && identified.components.length > 0) {
+      const detailBahan = identified.components.map(c => `${c.item}: ${c.grams}g`).join(', ');
+      detailQuery += ` (rincian bahan: ${detailBahan})`;
+    }
+    if (identified.cooking_method) {
+      detailQuery += `, cara masak: ${identified.cooking_method}`;
+    }
+    if (userDesc) {
+      detailQuery += `, catatan: ${userDesc}`;
+    }
 
-    const foodQuery = `${identified.name}, porsi: ${identified.grams}g, cara masak: ${identified.cooking_method || 'tidak diketahui'}${userDesc ? ', catatan: ' + userDesc : ''}`;
+    await sendMessage(chatId, `✅ Teridentifikasi: *${identified.name}* (~${safeGrams}g)\n📝 Rincian: _${identified.notes || '-' }_\n🧮 *Step 2/2*: Menghitung nutrisi berstandar USDA/TKPI...`);
+
+    const foodQuery = `${detailQuery}`;
     const parsed = await analyzeFood(foodQuery, email);
     // Ensure name and portion from Step 1 are preserved
     parsed.name = parsed.name || identified.name;
-    parsed.portion = parsed.portion || identified.portion || `${identified.grams}g`;
+    parsed.portion = parsed.portion || identified.portion || `${safeGrams}g`;
 
 
     await setCache(`${userId}_food_ai`, JSON.stringify(parsed));

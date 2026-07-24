@@ -98,8 +98,9 @@ Jika tidak ada di database di atas, gunakan data USDA FoodData Central atau TKPI
 5. Perkalian: (Nilai per 100g) × (Berat / 100). Lakukan untuk SEMUA makro DAN mikro.
 6. Minyak goreng/margarin nyata: tambahkan +88 kcal & +10g lemak per 10g/1 sdm.
 7. JANGAN biarkan nilai mikro (sodium, calcium, iron, vitC, vitD, zinc) = 0 kecuali memang 0.
-8. Jawab HANYA JSON valid tanpa teks/markdown:
-{"name":"nama makanan","portion":"estimasi gram","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0}
+8. Di bagian "notes", tuliskan kembali rincian detail lauk dan gramasi masing-masing bahan yang diidentifikasi (misal: "Rincian: Nasi putih (150g), Tempe orek (50g), Tahu goreng (50g)").
+9. Jawab HANYA JSON valid tanpa teks/markdown:
+{"name":"nama makanan","portion":"estimasi gram","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail menu & gramasi masing-masing lauk"}
 Bulatkan 1 desimal.`;
   const content = await callGroq([{ role: 'user', content: prompt }], true, 1200, email);
   try {
