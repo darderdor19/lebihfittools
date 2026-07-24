@@ -1348,7 +1348,7 @@ Gas terus, body goals nggak akan nunggu! 💪🔥`;
           'openrouter/free'
       ];
       if (!activeModel || oldModels.includes(activeModel)) {
-          activeModel = 'llama-3.1-8b-instant';
+          activeModel = 'gpt-4o-mini';
           localStorage.setItem('lf_openroutermodel', activeModel);
       }
       
@@ -2537,7 +2537,7 @@ Coba kirim gambar atau tanya lagi seputar latihan, makanan, kalori, atau progres
           }
         }
 
-        const model = localStorage.getItem(MODEL_NAME) || 'llama-3.1-8b-instant';
+        const model = localStorage.getItem(MODEL_NAME) || 'gpt-4o-mini';
         
         // Build payload messages with system context and multimodal support
         const userContext = generateUserContextSummary(queryText);

@@ -34,19 +34,19 @@ module.exports = async function handler(req, res) {
     }
 
     const model = hasImage 
-      ? (process.env.VISION_MODEL || 'gemini-2.5-flash-lite') 
-      : (process.env.TEXT_MODEL || 'qwen3.5-flash');
+      ? (process.env.VISION_MODEL || 'gemini-2.5-flash') 
+      : (process.env.TEXT_MODEL || 'gpt-4o-mini');
 
     const apiEndpoint = hasImage
       ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
-      : 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+      : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
 
     const { stream } = req.body;
     const body = {
       model: model,
       messages: messages,
       temperature: 0.7,
-      max_tokens: 4096,
+      max_tokens: 2500,
       stream: !!stream
     };
 

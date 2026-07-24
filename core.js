@@ -102,7 +102,7 @@ const getOpenRouterModel = () => {
         'openrouter/free'
     ];
     if (!model || oldModels.includes(model)) {
-        model = 'llama-3.1-8b-instant';
+        model = 'gpt-4o-mini';
         DB.set('lf_openroutermodel', model);
     }
     return model;
@@ -394,7 +394,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-async function callAI(messages, json = false, model = 'llama-3.1-8b-instant', isVision = false, isGroqVision = false, retries = 1, fallbackAttempted = false) {
+async function callAI(messages, json = false, model = 'gpt-4o-mini', isVision = false, isGroqVision = false, retries = 1, fallbackAttempted = false) {
   let endpoint = '/api/ai';
   if (fallbackAttempted || window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
     endpoint = 'https://lebihfittools.vercel.app/api/ai';
@@ -680,7 +680,7 @@ Deskripsi/Cara Masak Baru: ${desc || 'tidak ada deskripsi tambahan'}${historical
 {"calculation":"tuliskan langkah perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8}
 Bulatkan 1 angka di belakang koma.`;
 
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.1-8b-instant');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'gpt-4o-mini');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   try {
@@ -708,7 +708,7 @@ async function calcAI(profile) {
 Jawab dalam JSON format:
 {"cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"bmr":0,"tdee":0,"notes":"penjelasan singkat dalam bahasa Indonesia max 3 kalimat"}
 Semua angka dalam satuan standar. Jawab HANYA dengan JSON valid.`;
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.1-8b-instant');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'gpt-4o-mini');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   try {
@@ -797,7 +797,7 @@ SANGAT PENTING: Untuk gram makronutrisi, Anda WAJIB membagi persentase kalori de
 Jawab HANYA dengan JSON valid format berikut tanpa markdown/teks lain:
 {"kcal":0,"fatG":0,"carbG":0,"proteinG":0,"analysis":"isi feedback di sini"}`;
 
-  const raw = await callAI([{ role:'user', content: prompt }], true, 'llama-3.1-8b-instant');
+  const raw = await callAI([{ role:'user', content: prompt }], true, 'gpt-4o-mini');
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   
