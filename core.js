@@ -557,13 +557,42 @@ Instruksi:
 6. Kembalikan HANYA JSON ini (tanpa teks lain):
 {"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat total","grams":300,"cooking_method":"goreng/rebus/dll","components":[{"item":"Nama komponen 1","grams":150},{"item":"Nama komponen 2","grams":50}],"notes":"catatan rincian komponen, contoh: Nasi putih (~150g), Tempe orek (~50g), Tahu goreng (~50g)"}`;
 
+function formatImageUrlPayload(img, defaultMime = 'image/jpeg') {
+  let rawBase64 = '';
+  let mime = defaultMime;
+
+  if (typeof img === 'string') {
+    if (img.startsWith('data:')) {
+      const parts = img.split(',');
+      mime = parts[0].split(':')[1].split(';')[0];
+      rawBase64 = parts[1];
+    } else {
+      rawBase64 = img;
+    }
+  } else if (img && typeof img === 'object') {
+    mime = img.mime || defaultMime;
+    const src = String(img.base64 || img.url || '');
+    if (src.startsWith('data:')) {
+      const parts = src.split(',');
+      if (parts[0] && parts[0].includes('image/')) {
+        mime = parts[0].split(':')[1].split(';')[0];
+      }
+      rawBase64 = parts[1];
+    } else {
+      rawBase64 = src;
+    }
+  }
+
+  return { type: 'image_url', image_url: { url: `data:${mime};base64,${rawBase64}` } };
+}
+
   const identifyContent = [{ type: 'text', text: identifyPrompt }];
   if (Array.isArray(images)) {
     images.forEach(img => {
-      identifyContent.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
+      identifyContent.push(formatImageUrlPayload(img, mime));
     });
   } else {
-    identifyContent.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${images}` } });
+    identifyContent.push(formatImageUrlPayload(images, mime));
   }
 
   let identified;
@@ -647,10 +676,10 @@ async function analyzePhysicalPhotoAI(images, mime, promptText, jsonMode = false
   const content = [{ type: 'text', text: promptText }];
   if (Array.isArray(images)) {
     images.forEach(img => {
-      content.push({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } });
+      content.push(formatImageUrlPayload(img, mime));
     });
   } else {
-    content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${images}` } });
+    content.push(formatImageUrlPayload(images, mime));
   }
 
   const messages = [{ role: 'user', content }];

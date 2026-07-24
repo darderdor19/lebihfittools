@@ -4229,4 +4229,10 @@ a{color:var(--accent);text-decoration:none}
 @media (max-width: 480px) {
   .jejak-detail-body { padding: 16px; }
   .friday-modal { padding: 28px 20px; }
+}
+
+/* ===== LOADING SPINNER ANIMATION ===== */
+@keyframes lfSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
