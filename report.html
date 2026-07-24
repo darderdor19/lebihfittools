@@ -1119,14 +1119,14 @@ Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan
 
     // ===== CALL AI HELPER =====
     async function callAI(messages, apiKey, json = false, model = 'gpt-4o-mini') {
-      if (!apiKey) throw new Error('API Key belum diset.');
-      const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-      const body = { model: model, messages, max_tokens: 2500 };
-      if (json) body.response_format = { type: 'json_object' };
-      
+      let endpoint = '/api/ai';
+      if (window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+        endpoint = 'https://lebihfittools.vercel.app/api/ai';
+      }
+      const body = { model, messages, json, email: 'report_user' };
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
       if (!res.ok) {
@@ -1134,6 +1134,9 @@ Jangan gunakan emoji sama sekali. Gunakan desain layout HTML yang bersih, elegan
         throw new Error(err.error?.message || `HTTP ${res.status}`);
       }
       const data = await res.json();
+      if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error("Format respons AI tidak valid.");
+      }
       return data.choices[0].message.content;
     }
 
