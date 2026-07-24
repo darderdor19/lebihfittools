@@ -1659,11 +1659,11 @@
   </div>
 </div>
 
-<!-- ===== MODAL: EDIT SUBSCRIPTION ===== -->
+<!-- ===== MODAL: EDIT SUBSCRIPTION & LIMIT ===== -->
 <div class="modal-overlay hidden" id="subModal">
   <div class="modal-card">
     <div class="modal-header">
-      <h3><i data-lucide="edit-3" style="width:16px;height:16px;color:var(--accent);"></i> Edit Langganan User</h3>
+      <h3><i data-lucide="edit-3" style="width:16px;height:16px;color:var(--accent);"></i> Edit Langganan & Limit User</h3>
       <button class="modal-close" onclick="closeSubModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
     </div>
     <div class="modal-form-group">
@@ -1671,7 +1671,7 @@
       <input type="text" id="subModalEmail" disabled>
     </div>
     <div class="modal-form-group">
-      <label>Pilih Paket</label>
+      <label>📅 Time Subscription (Waktu Langganan)</label>
       <select id="subModalSelect">
         <option value="trial">🔄 Reset Free Trial (3 Hari)</option>
         <option value="month1">📅 1 Bulan (30 Hari)</option>
@@ -1680,6 +1680,13 @@
         <option value="year">🗓️ 1 Tahun (365 Hari)</option>
         <option value="lifetime">♾️ Lifetime (Selamanya)</option>
         <option value="revoke">🚫 Cabut Akses (Blokir)</option>
+      </select>
+    </div>
+    <div class="modal-form-group" style="margin-top:12px;">
+      <label>⚡ Limit Harian AI</label>
+      <select id="subModalLimitSelect">
+        <option value="default">🟢 Default Limit (Limit Standar Harian)</option>
+        <option value="unlimited">🔓 Bebasin Limit (Unlimited / Bebas Pakai)</option>
       </select>
     </div>
     <div id="subModalInfo" style="font-size:0.8rem;color:var(--text2);margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;display:none;"></div>
@@ -1969,6 +1976,9 @@ function renderUserTable(users) {
     const joinedAt = meta.createdAt ? new Date(meta.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
     
     const status = getStatusInfo(meta);
+    const limitTag = (meta.unlimitedLimit || meta.isUnlimited) 
+      ? '<span class="badge" style="background:rgba(59,130,246,0.12);color:#3b82f6;margin-left:4px;">🔓 Unlimited</span>'
+      : '<span class="badge" style="background:rgba(107,114,128,0.12);color:#9ca3af;margin-left:4px;">🟢 Default Limit</span>';
     
     // Filter by status
     if (filterStatus !== 'all' && status.type !== filterStatus) return;
@@ -1983,7 +1993,7 @@ function renderUserTable(users) {
           <div style="font-size:0.75rem;color:var(--text2);">${phone}</div>
         </td>
         <td>${name}</td>
-        <td><span class="badge badge-${status.type}">${status.label}</span></td>
+        <td><span class="badge badge-${status.type}">${status.label}</span>${limitTag}</td>
         <td style="color:var(--text2);font-size:0.82rem;">${joinedAt}</td>
         <td>
           <button class="btn-sm btn-warning" onclick="openSubModal('${safeEmail}', '${origEmail}')">
@@ -2125,10 +2135,15 @@ function openSubModal(safeEmail, origEmail) {
   
   const meta = (allUsersData[safeEmail] || {}).lf_user_meta || {};
   const select = document.getElementById('subModalSelect');
+  const limitSelect = document.getElementById('subModalLimitSelect');
   
   if (meta.isPro) select.value = 'lifetime';
   else if (meta.proUntil) select.value = 'month1';
   else select.value = 'trial';
+
+  if (limitSelect) {
+    limitSelect.value = (meta.unlimitedLimit || meta.isUnlimited) ? 'unlimited' : 'default';
+  }
   
   updateSubModalInfo();
   document.getElementById('subModal').classList.remove('hidden');
@@ -2166,26 +2181,40 @@ function getDateStr(addDays) {
 async function saveSubscription() {
   if (!currentEditSafeEmail) return;
   const val = document.getElementById('subModalSelect').value;
+  const limitVal = document.getElementById('subModalLimitSelect').value;
+  const isUnlimited = (limitVal === 'unlimited');
   const metaRef = fbDb.ref(`users/${currentEditSafeEmail}/lf_user_meta`);
   
-  let updateData = {};
+  let updateData = {
+    unlimitedLimit: isUnlimited,
+    isUnlimited: isUnlimited
+  };
   
   if (val === 'lifetime') {
-    updateData = { isPro: true, proUntil: null, isBlocked: false };
+    updateData.isPro = true;
+    updateData.proUntil = null;
+    updateData.isBlocked = false;
   } else if (val === 'trial') {
-    updateData = { isPro: false, proUntil: null, isBlocked: false, createdAt: Date.now() };
+    updateData.isPro = false;
+    updateData.proUntil = null;
+    updateData.isBlocked = false;
+    updateData.createdAt = Date.now();
   } else if (val === 'revoke') {
-    updateData = { isPro: false, proUntil: null, isBlocked: true };
+    updateData.isPro = false;
+    updateData.proUntil = null;
+    updateData.isBlocked = true;
   } else {
     const days = { month1: 30, month3: 90, month6: 180, year: 365 }[val];
     const d = new Date();
-    d.setDate(d.getDate() + days);
-    updateData = { isPro: false, proUntil: d.toISOString().split('T')[0], isBlocked: false };
+    d.setDate(d.getDate() + (days || 30));
+    updateData.isPro = false;
+    updateData.proUntil = d.toISOString().split('T')[0];
+    updateData.isBlocked = false;
   }
   
   try {
     await metaRef.update(updateData);
-    showToast('✅ Langganan berhasil diperbarui!', 'success');
+    showToast('✅ Langganan & limit berhasil diperbarui!', 'success');
     closeSubModal();
     loadAllUsers();
   } catch (err) {
