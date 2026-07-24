@@ -69,6 +69,13 @@ const AI_DAILY_LIMITS = {
 async function checkAndIncrementUsageBackend(email, featureKey) {
   if (!email) return { allowed: true };
   const safeEmail = safe(email);
+
+  // Check if user has unlimited limit set by admin
+  const userMeta = await getFirebase(`users/${safeEmail}/lf_user_meta`) || {};
+  if (userMeta.unlimitedLimit || userMeta.isUnlimited) {
+    return { allowed: true, used: 0, limit: '∞' };
+  }
+
   const today = todayKey(); // returns YYYY-MM-DD WIB
   const path = `users/${safeEmail}/lf_usage_${today}`;
   

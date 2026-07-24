@@ -146,6 +146,12 @@ const AI_DAILY_LIMITS = {
 };
 
 async function checkAndIncrementUsage(featureKey) {
+  // Check if user has unlimited limit set by admin
+  const userMeta = DB.get('lf_user_meta') || {};
+  if (userMeta.unlimitedLimit || userMeta.isUnlimited) {
+    return { allowed: true, used: 0, limit: '∞' };
+  }
+
   const limit = AI_DAILY_LIMITS[featureKey];
   if (!limit) return { allowed: true, used: 0, limit: 999 };
 
@@ -168,9 +174,22 @@ async function checkAndIncrementUsage(featureKey) {
 }
 
 function getUsageSummary() {
+  const userMeta = DB.get('lf_user_meta') || {};
+  const isUnlimited = !!(userMeta.unlimitedLimit || userMeta.isUnlimited);
   const today = todayKey();
   const storageKey = `lf_usage_${today}`;
   const usageToday = DB.get(storageKey) || {};
+  
+  if (isUnlimited) {
+    return {
+      food_scan: { used: usageToday.food_scan || 0, limit: '∞ (Bebas)' },
+      manual_food_ai: { used: usageToday.manual_food_ai || 0, limit: '∞ (Bebas)' },
+      body_analysis: { used: usageToday.body_analysis || 0, limit: '∞ (Bebas)' },
+      ai_image: { used: usageToday.ai_image || 0, limit: '∞ (Bebas)' },
+      ai_text: { used: usageToday.ai_text || 0, limit: '∞ (Bebas)' }
+    };
+  }
+
   return {
     food_scan: { used: usageToday.food_scan || 0, limit: AI_DAILY_LIMITS.food_scan },
     manual_food_ai: { used: usageToday.manual_food_ai || 0, limit: AI_DAILY_LIMITS.manual_food_ai },

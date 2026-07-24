@@ -95,6 +95,13 @@ function renderUsersTable() {
             statusHtml = '<span style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:4px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">Trial / Expired</span>';
         }
         
+        // Append limit status tag
+        if (meta.unlimitedLimit || meta.isUnlimited) {
+            statusHtml += '<br><span style="background:rgba(59,130,246,0.1);color:#3b82f6;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-top:4px;display:inline-block;">🔓 Unlimited Limit</span>';
+        } else {
+            statusHtml += '<br><span style="background:rgba(107,114,128,0.1);color:#9ca3af;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-top:4px;display:inline-block;">🟢 Default Limit</span>';
+        }
+        
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
         tr.innerHTML = `
@@ -115,8 +122,9 @@ function openAdminSubModal(safeEmail, originalEmail) {
     
     document.getElementById('adminSubEmail').value = originalEmail;
     
-    const meta = adminAllUsers[safeEmail].lf_user_meta || {};
+    const meta = adminAllUsers[safeEmail]?.lf_user_meta || {};
     const select = document.getElementById('adminSubSelect');
+    const limitSelect = document.getElementById('adminLimitSelect');
     
     if (meta.isBlocked) {
         select.value = 'revoke';
@@ -126,6 +134,12 @@ function openAdminSubModal(safeEmail, originalEmail) {
         select.value = 'month'; // default select
     } else {
         select.value = 'trial';
+    }
+
+    if (meta.unlimitedLimit || meta.isUnlimited) {
+        limitSelect.value = 'unlimited';
+    } else {
+        limitSelect.value = 'default';
     }
     
     document.getElementById('adminSubModal').classList.remove('hidden');
@@ -139,31 +153,47 @@ async function saveAdminSub() {
     if (!fbDb || !currentEditSafeEmail) return;
     
     const selectValue = document.getElementById('adminSubSelect').value;
+    const limitValue = document.getElementById('adminLimitSelect').value;
+    const isUnlimited = (limitValue === 'unlimited');
     const metaRef = fbDb.ref(`users/${currentEditSafeEmail}/lf_user_meta`);
     
-    let updateData = {};
+    let updateData = {
+        unlimitedLimit: isUnlimited,
+        isUnlimited: isUnlimited
+    };
     
     if (selectValue === 'lifetime') {
-        updateData = { isPro: true, proUntil: null, isBlocked: false };
+        updateData.isPro = true;
+        updateData.proUntil = null;
+        updateData.isBlocked = false;
     } else if (selectValue === 'month') {
         const d = new Date();
         d.setDate(d.getDate() + 30);
-        updateData = { isPro: false, proUntil: d.toISOString().split('T')[0], isBlocked: false };
+        updateData.isPro = false;
+        updateData.proUntil = d.toISOString().split('T')[0];
+        updateData.isBlocked = false;
     } else if (selectValue === 'year') {
         const d = new Date();
         d.setDate(d.getDate() + 365);
-        updateData = { isPro: false, proUntil: d.toISOString().split('T')[0], isBlocked: false };
+        updateData.isPro = false;
+        updateData.proUntil = d.toISOString().split('T')[0];
+        updateData.isBlocked = false;
     } else if (selectValue === 'trial') {
         // Reset trial: set createdAt to now so they get a fresh 3-day trial
-        updateData = { isPro: false, proUntil: null, isBlocked: false, createdAt: Date.now() };
+        updateData.isPro = false;
+        updateData.proUntil = null;
+        updateData.isBlocked = false;
+        updateData.createdAt = Date.now();
     } else if (selectValue === 'revoke') {
         // Block user completely
-        updateData = { isPro: false, proUntil: null, isBlocked: true };
+        updateData.isPro = false;
+        updateData.proUntil = null;
+        updateData.isBlocked = true;
     }
     
     try {
         await metaRef.update(updateData);
-        showToast('Berhasil update langganan!', 'success');
+        showToast('Berhasil update langganan & limit user!', 'success');
         closeAdminSubModal();
         loadAllUsers(); 
     } catch (err) {

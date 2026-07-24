@@ -2228,25 +2228,32 @@
     </div>
   </div>
 
-  <!-- ADMIN: SET SUBSCRIPTION MODAL -->
+  <!-- ADMIN: SET SUBSCRIPTION & LIMIT MODAL -->
   <div id="adminSubModal" class="modal-overlay hidden" style="z-index:9999999;">
-    <div class="modal-card" style="max-width:400px;">
+    <div class="modal-card" style="max-width:420px;">
       <div class="modal-header">
-        <h3><i data-lucide="edit-3" style="color:var(--accent);"></i> Edit Langganan</h3>
+        <h3><i data-lucide="edit-3" style="color:var(--accent);"></i> Edit User & Limit</h3>
         <button class="modal-close" onclick="closeAdminSubModal()"><i data-lucide="x"></i></button>
       </div>
       <div class="form-group" style="margin-bottom:12px;">
-        <label>User Email</label>
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">User Email</label>
         <input type="text" id="adminSubEmail" class="form-input" disabled style="background:var(--bg3);">
       </div>
-      <div class="form-group">
-        <label>Pilih Paket Langganan</label>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">📅 Time Subscription (Waktu Langganan)</label>
         <select id="adminSubSelect" class="form-input">
           <option value="trial">Free Trial (Reset 3 Hari)</option>
-          <option value="month">1 Bulan</option>
-          <option value="year">1 Tahun</option>
+          <option value="month">1 Bulan (30 Hari)</option>
+          <option value="year">1 Tahun (365 Hari)</option>
           <option value="lifetime">Lifetime (Akses Selamanya)</option>
           <option value="revoke">Cabut Akses (Blokir)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">⚡ Limit Harian AI</label>
+        <select id="adminLimitSelect" class="form-input">
+          <option value="default">🟢 Default Limit (Limit Standar Harian)</option>
+          <option value="unlimited">🔓 Bebasin Limit (Unlimited / Bebas Pakai)</option>
         </select>
       </div>
       <div class="form-actions" style="margin-top:20px;">
