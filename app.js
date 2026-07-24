@@ -4881,9 +4881,7 @@ Kembalikan respons dalam JSON dengan format persis seperti ini:
         const rawJson = await callAI([{ role: 'user', content: prompt }], true, 'gpt-4o-mini', false, false, 1, false, 3500);
         let data = null;
         try {
-            let cleanJson = rawJson.trim();
-            const match = cleanJson.match(/\{[\s\S]*\}/);
-            data = match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+            data = safeParseAIJson(rawJson);
         } catch (e) {
             console.error("Failed to parse progress analysis JSON:", rawJson, e);
             throw new Error("Format analisis dari AI tidak valid. Silakan coba lagi.");
@@ -5828,18 +5826,18 @@ Catatan Tambahan User: "${customDesc || '-'}"
 ${previousContextText}
 ${visualComparisonPromptNote}
 
-== SKEMA JSON RESPONS (WAJIB PERSIS SEPERTI INI) ==
+== SKEMA JSON RESPONS (WAJIB 100% JSON VALID TANPA KOMENTAR ATAU KURUNG TAMBAHAN) ==
 {
   "comparisonWithPrevious": {
     "hasPrevious": ${previousAnalysis ? 'true' : 'false'},
-    "status": "Improve" (atau "Stagnan" / "Memburuk"),
-    "score": 15 (nilai -100 sampai 100, positif = membaik/improve, negatif = memburuk/regress, 0 jika stagnan atau tidak ada data pembanding),
+    "status": "Improve",
+    "score": 15,
     "explanation": "Kondisi otot perut terlihat lebih tajam dibanding analisis sebelumnya. Defisit kalori yang lu pertahankan berhasil mengurangi lemak."
   },
   "progressiveOverload": {
     "score": 85,
-    "status": "Optimal" (atau "Butuh Peningkatan" / "Kurang Beban"),
-    "explanation": "Berdasarkan detail latihan lu, ada peningkatan beban yang bagus pada Bench Press dari 60kg ke 62.5kg. Namun untuk gerakan aksesoris seperti lateral raise dan tricep pushdown masih menggunakan volume yang sama. Pertahankan intensitas dan coba tambah reps/beban secara bertahap!"
+    "status": "Optimal",
+    "explanation": "Berdasarkan detail latihan lu, ada peningkatan beban yang bagus pada Bench Press dari 60kg ke 62.5kg. Pertahankan intensitas dan coba tambah reps/beban secara bertahap!"
   },
   "ringkasanSederhana": {
     "pros": ["Asupan protein optimal", "Defisit kalori sudah tepat"],
@@ -5909,9 +5907,7 @@ ${visualComparisonPromptNote}
         const rawJson = await analyzePhysicalPhotoAI(imagesInput, mimeType, promptText, true);
         let data = null;
         try {
-            let cleanJson = rawJson.trim();
-            const match = cleanJson.match(/\{[\s\S]*\}/);
-            data = match ? JSON.parse(match[0]) : JSON.parse(cleanJson);
+            data = safeParseAIJson(rawJson);
         } catch (e) {
             console.error("Failed to parse physical analysis JSON:", rawJson, e);
             throw new Error("Format evaluasi dari AI tidak valid. Silakan coba lagi.");

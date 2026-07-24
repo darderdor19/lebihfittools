@@ -337,7 +337,37 @@ function sumNutrients(items) {
   }, { cal:0, protein:0, carbs:0, fat:0, fiber:0, sugar:0, sodium:0, calcium:0, iron:0, vitC:0, vitD:0, zinc:0 });
 }
 
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function safeParseAIJson(rawStr) {
+  if (!rawStr) return null;
+  let clean = typeof rawStr === 'string' ? rawStr.trim() : String(rawStr).trim();
+  
+  // 1. Strip markdown code fencing
+  clean = clean.replace(/```json/gi, '').replace(/```/g, '').trim();
+  
+  // 2. Extract JSON object substring if surrounded by extra text
+  const match = clean.match(/\{[\s\S]*\}/);
+  if (match) clean = match[0];
+
+  // 3. Clean inline parenthetical notes inside value strings or invalid comments
+  // e.g. "status": "Improve" (atau "Stagnan") -> "status": "Improve"
+  clean = clean.replace(/("\s*:\s*"[^"]*")\s*\([^)]*\)/g, '$1');
+
+  // 4. Clean trailing commas before closing braces/brackets
+  clean = clean.replace(/,\s*([\}\]])/g, '$1');
+
+  try {
+    return JSON.parse(clean);
+  } catch (e1) {
+    // Attempt additional repairs: strip javascript comments
+    clean = clean.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
+    try {
+      return JSON.parse(clean);
+    } catch (e2) {
+      console.error('[safeParseAIJson] Failed parsing raw JSON:', rawStr, e2);
+      throw e1;
+    }
+  }
+}
 
 // ===== AI API =====
 
