@@ -518,6 +518,35 @@ async function callAI(messages, json = false, model = 'gpt-4o-mini', isVision = 
   }
 }
 
+function formatImageUrlPayload(img, defaultMime = 'image/jpeg') {
+  let rawBase64 = '';
+  let mime = defaultMime;
+
+  if (typeof img === 'string') {
+    if (img.startsWith('data:')) {
+      const parts = img.split(',');
+      mime = parts[0].split(':')[1].split(';')[0];
+      rawBase64 = parts[1];
+    } else {
+      rawBase64 = img;
+    }
+  } else if (img && typeof img === 'object') {
+    mime = img.mime || defaultMime;
+    const src = String(img.base64 || img.url || '');
+    if (src.startsWith('data:')) {
+      const parts = src.split(',');
+      if (parts[0] && parts[0].includes('image/')) {
+        mime = parts[0].split(':')[1].split(';')[0];
+      }
+      rawBase64 = parts[1];
+    } else {
+      rawBase64 = src;
+    }
+  }
+
+  return { type: 'image_url', image_url: { url: `data:${mime};base64,${rawBase64}` } };
+}
+
 async function analyzePhotoAI(images, mime = null, userDescription = '', onProgress = null) {
   // =============================================
   // STEP 1: Gemini — Identifikasi nama & berat per komponen
@@ -556,35 +585,6 @@ Instruksi:
 5. Catat metode memasak & indikator minyak (Deep Fried / Tumis Minyak / Santan / Panggang / Rebus / Kukus / Air-fryer).
 6. Kembalikan HANYA JSON ini (tanpa teks lain):
 {"is_food":true,"name":"nama makanan spesifik","portion":"estimasi berat total","grams":300,"cooking_method":"goreng/rebus/dll","components":[{"item":"Nama komponen 1","grams":150},{"item":"Nama komponen 2","grams":50}],"notes":"catatan rincian komponen, contoh: Nasi putih (~150g), Tempe orek (~50g), Tahu goreng (~50g)"}`;
-
-function formatImageUrlPayload(img, defaultMime = 'image/jpeg') {
-  let rawBase64 = '';
-  let mime = defaultMime;
-
-  if (typeof img === 'string') {
-    if (img.startsWith('data:')) {
-      const parts = img.split(',');
-      mime = parts[0].split(':')[1].split(';')[0];
-      rawBase64 = parts[1];
-    } else {
-      rawBase64 = img;
-    }
-  } else if (img && typeof img === 'object') {
-    mime = img.mime || defaultMime;
-    const src = String(img.base64 || img.url || '');
-    if (src.startsWith('data:')) {
-      const parts = src.split(',');
-      if (parts[0] && parts[0].includes('image/')) {
-        mime = parts[0].split(':')[1].split(';')[0];
-      }
-      rawBase64 = parts[1];
-    } else {
-      rawBase64 = src;
-    }
-  }
-
-  return { type: 'image_url', image_url: { url: `data:${mime};base64,${rawBase64}` } };
-}
 
   const identifyContent = [{ type: 'text', text: identifyPrompt }];
   if (Array.isArray(images)) {
