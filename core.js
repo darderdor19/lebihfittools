@@ -358,30 +358,29 @@ async function isCurrentUserAdmin() {
 }
 
 function getMaskedAIError(originalError) {
-  // Check synchronously from cache first (fast path)
-  try {
-    const rawEmail = localStorage.getItem('lf_user_email');
-    const cleanEmail = rawEmail ? rawEmail.replace(/"/g, '').trim().toLowerCase() : '';
-    if (_adminEmailsCache && cleanEmail && _adminEmailsCache.includes(cleanEmail)) {
-      return originalError;
-    }
-  } catch (e) { /* silent */ }
+  const msg = String(originalError?.message || originalError || '');
+  const lowerMsg = msg.toLowerCase();
+  
+  if (lowerMsg.includes('api key') || lowerMsg.includes('environment variable') || lowerMsg.includes('konfigurasi') || lowerMsg.includes('pasang')) {
+    return originalError;
+  }
 
-  const errMsg = String(originalError?.message || originalError || '').toLowerCase();
   const isRateLimit =
-    errMsg.includes('429') ||
-    errMsg.includes('rate limit') ||
-    errMsg.includes('quota') ||
-    errMsg.includes('exhausted') ||
-    errMsg.includes('too many requests') ||
-    errMsg.includes('capacity') ||
-    errMsg.includes('busy') ||
-    errMsg.includes('overloaded') ||
-    errMsg.includes('limit exceeded') ||
-    errMsg.includes('tokens');
+    lowerMsg.includes('429') ||
+    lowerMsg.includes('rate limit') ||
+    lowerMsg.includes('quota') ||
+    lowerMsg.includes('exhausted') ||
+    lowerMsg.includes('too many requests') ||
+    lowerMsg.includes('capacity') ||
+    lowerMsg.includes('busy') ||
+    lowerMsg.includes('overloaded') ||
+    lowerMsg.includes('limit exceeded') ||
+    lowerMsg.includes('tokens');
 
   if (isRateLimit) {
-    return new Error('LebihFit Tools sedang banyak permintaan. Coba lagi sebentar.');
+    return new Error('LebihFit Tools sedang banyak permintaan (Quota Exceeded / Rate Limit). Coba lagi sebentar.');
+  } else if (msg && !lowerMsg.includes('object object') && msg.length > 5 && msg.length < 200) {
+    return originalError;
   } else {
     return new Error('Fitur AI sedang tidak tersedia. Silakan coba beberapa saat lagi.');
   }

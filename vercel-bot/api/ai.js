@@ -82,19 +82,33 @@ module.exports = async function handler(req, res) {
     );
     const isVision = req.body.isVision || hasImage;
 
-    const apiKey = isVision ? process.env.API_KEY_IMAGE : process.env.API_KEY_TEXT;
+    // Smart API Key Resolution across all env vars
+    let apiKey = isVision 
+      ? (process.env.API_KEY_IMAGE || process.env.API_KEY_TEXT || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY)
+      : (process.env.API_KEY_TEXT || process.env.API_KEY_IMAGE || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+
     if (!apiKey) {
-      console.error('[ai] API Key missing:', isVision ? 'API_KEY_IMAGE' : 'API_KEY_TEXT');
-      return res.status(500).json({ error: { message: 'Layanan AI sedang tidak tersedia. Silakan coba beberapa saat lagi.' } });
+      console.error('[ai] API Key missing!');
+      return res.status(500).json({ error: { message: 'API Key belum dipasang di Vercel Environment Variables. Silakan isi API_KEY_TEXT atau API_KEY_IMAGE.' } });
     }
 
-    const model = isVision 
-      ? (process.env.VISION_MODEL || 'gemini-2.5-flash') 
-      : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+    // Auto-detect provider & model compatibility from API key format
+    let model, apiEndpoint;
+    const isGoogleKey = apiKey.startsWith('AIzaSy');
+    const isOpenAIKey = apiKey.startsWith('sk-');
 
-    const apiEndpoint = isVision
-      ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
-      : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
+    if (isGoogleKey) {
+      apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      model = isVision ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gemini-2.5-flash');
+    } else if (isOpenAIKey) {
+      apiEndpoint = process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+      model = isVision ? (process.env.VISION_MODEL || 'gpt-4o-mini') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+    } else {
+      apiEndpoint = isVision 
+        ? (process.env.VISION_API_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions')
+        : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
+      model = isVision ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+    }
 
     const reqMaxTokens = req.body.max_tokens || req.body.maxTokens;
     const body = {
@@ -118,13 +132,13 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      const rawMsg = err.error?.message || '';
+      const rawMsg = err.error?.message || err.message || '';
       console.error('[ai] Upstream API error:', response.status, rawMsg);
-      // Rate limit: expose safely
+      
       if (response.status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
-        return res.status(429).json({ error: { message: 'Sistem AI sedang banyak permintaan. Coba lagi sebentar.' } });
+        return res.status(429).json({ error: { message: 'Sistem AI sedang banyak permintaan (Quota Exceeded / Rate Limit). Coba lagi sebentar.' } });
       }
-      return res.status(502).json({ error: { message: 'Layanan AI tidak merespons. Silakan coba lagi.' } });
+      return res.status(response.status || 500).json({ error: { message: rawMsg || `Upstream API Error (${response.status})` } });
     }
 
     const data = await response.json();
