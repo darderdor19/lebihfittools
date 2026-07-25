@@ -6560,27 +6560,54 @@ function renderJejakFisik() {
         return;
     }
     panel.innerHTML = history.map((entry, i) => {
-        const d = entry.data || {};
+        let d = entry.data || {};
+        if (typeof d === 'string') {
+            d = safeParseAIJson(d) || {};
+        }
         const comp = d.comparisonWithPrevious || {};
         const statusColorMap = { Improve:'green', Decline:'red', Same:'yellow', Stable:'blue' };
         const badgeClass = statusColorMap[comp.status] || 'blue';
         const statusText = comp.status || 'Selesai';
         const dateStr = entry.date || (entry.timestamp ? new Date(entry.timestamp).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : '-');
-        const scoreTotal = d.recoveryScore?.total ? `Recovery Score: <strong style="color:var(--success);">${d.recoveryScore.total}</strong>/100` : '';
+        const scoreTotal = d.recoveryScore?.total ? `Recovery Score: ${d.recoveryScore.total}/100` : '';
         const hasPhoto = entry.photo || (entry.photos && entry.photos[0]);
+        
+        let explanationText = comp.explanation || d.explanation || d.notes || '';
+        if (typeof explanationText === 'string' && explanationText.trim().startsWith('{')) {
+            const parsedText = safeParseAIJson(explanationText);
+            if (parsedText && parsedText.comparisonWithPrevious?.explanation) {
+                explanationText = parsedText.comparisonWithPrevious.explanation;
+            } else {
+                explanationText = 'Evaluasi fisik AI selesai diproses.';
+            }
+        }
+        if (!explanationText || typeof explanationText !== 'string') {
+            explanationText = 'Evaluasi fisik AI selesai diproses.';
+        }
+        if (explanationText.length > 140) {
+            explanationText = explanationText.substring(0, 140) + '...';
+        }
+
         return `
-          <div class="jejak-entry-card fisik">
-            <div class="jejak-entry-meta">
-              <span class="jejak-entry-date">📅 ${dateStr}</span>
-              <span class="jejak-entry-badge ${badgeClass}">${statusText}</span>
+          <div class="jejak-entry-card fisik" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.85rem; font-weight:700; color:var(--accent); font-family:monospace;">📅 ${dateStr}</span>
+                <span class="jejak-entry-badge ${badgeClass}">${statusText}</span>
+              </div>
+              ${scoreTotal ? `<div style="font-size:0.8rem; font-weight:700; color:var(--success); background:rgba(0,255,204,0.08); padding:4px 10px; border-radius:20px; border:1px solid rgba(0,255,204,0.2);">${scoreTotal}</div>` : ''}
             </div>
-            ${hasPhoto ? `<img src="${entry.photo || entry.photos[0]}" style="width:80px;height:80px;object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--border);float:right;margin:0 0 8px 12px;">` : ''}
-            <div class="jejak-entry-summary">
-              ${scoreTotal ? scoreTotal + '<br>' : ''}
-              ${comp.explanation ? comp.explanation.substring(0,100) + (comp.explanation.length > 100 ? '...' : '') : 'Evaluasi fisik AI selesai.'}
+
+            <div style="display:flex; gap:14px; align-items:flex-start; margin-bottom:12px;">
+              ${hasPhoto ? `<img src="${entry.photo || entry.photos[0]}" style="width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid var(--border); flex-shrink:0;">` : ''}
+              <div style="flex:1;">
+                <p style="font-size:0.86rem; color:var(--text2); line-height:1.5; margin:0;">
+                  ${explanationText}
+                </p>
+              </div>
             </div>
-            <div style="clear:both;"></div>
-            <div class="jejak-entry-actions">
+
+            <div style="display:flex; gap:8px; justify-content:flex-end; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
               <button class="jejak-btn-detail" onclick="openJejakDetail('fisik',${i})">
                 <i data-lucide="eye" style="width:14px;height:14px;"></i> Lihat Detail
               </button>
