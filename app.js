@@ -6651,7 +6651,11 @@ function renderPhysicalHistoryListHtml(history) {
         if (!entry) return '';
         let d = entry.data || {};
         if (typeof d === 'string') {
-            d = safeParseAIJson(d) || {};
+            try {
+                d = safeParseAIJson(d) || {};
+            } catch (e) {
+                d = {};
+            }
         }
         const comp = d.comparisonWithPrevious || {};
         const statusColorMap = { Improve:'green', Decline:'red', Same:'yellow', Stable:'blue' };
@@ -6663,10 +6667,14 @@ function renderPhysicalHistoryListHtml(history) {
         
         let explanationText = comp.explanation || d.explanation || d.notes || '';
         if (typeof explanationText === 'string' && explanationText.trim().startsWith('{')) {
-            const parsedText = safeParseAIJson(explanationText);
-            if (parsedText && parsedText.comparisonWithPrevious?.explanation) {
-                explanationText = parsedText.comparisonWithPrevious.explanation;
-            } else {
+            try {
+                const parsedText = safeParseAIJson(explanationText);
+                if (parsedText && parsedText.comparisonWithPrevious?.explanation) {
+                    explanationText = parsedText.comparisonWithPrevious.explanation;
+                } else {
+                    explanationText = 'Evaluasi fisik AI selesai diproses.';
+                }
+            } catch (e) {
                 explanationText = 'Evaluasi fisik AI selesai diproses.';
             }
         }

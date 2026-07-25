@@ -427,7 +427,7 @@ function safeParseAIJson(rawStr) {
         // Fallback failed
       }
       console.error('[safeParseAIJson] All parse attempts failed:', rawStr, e1);
-      throw e1;
+      return null;
     }
   }
 }
