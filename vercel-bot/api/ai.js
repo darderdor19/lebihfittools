@@ -82,10 +82,13 @@ module.exports = async function handler(req, res) {
     );
     const isVision = req.body.isVision || hasImage;
 
-    // Smart API Key Resolution across all env vars
-    let apiKey = isVision 
+    // Smart API Key Resolution — Prioritize OpenAI (sk-) paid key if present
+    const envKeys = [process.env.OPENAI_API_KEY, process.env.API_KEY_TEXT, process.env.API_KEY_IMAGE, process.env.GEMINI_API_KEY].filter(Boolean);
+    const paidOpenAIKey = envKeys.find(k => k.startsWith('sk-'));
+    
+    let apiKey = paidOpenAIKey || (isVision 
       ? (process.env.API_KEY_IMAGE || process.env.API_KEY_TEXT || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY)
-      : (process.env.API_KEY_TEXT || process.env.API_KEY_IMAGE || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+      : (process.env.API_KEY_TEXT || process.env.API_KEY_IMAGE || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY));
 
     if (!apiKey) {
       console.error('[ai] API Key missing!');
