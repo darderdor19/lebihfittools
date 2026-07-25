@@ -1,3 +1,19 @@
+// Global Error Listener for troubleshooting
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error("Global JS Error: ", message, "at", source, ":", lineno);
+    if (typeof showToast === 'function') {
+        showToast("⚠️ System Error: " + message + " (Line " + lineno + ")", "error");
+    }
+    return false;
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error("Global Unhandled Promise Rejection: ", event.reason);
+    if (typeof showToast === 'function') {
+        showToast("⚠️ Connection/AI Error: " + (event.reason?.message || event.reason || "Unknown Error"), "error");
+    }
+});
+
 // State and Initialization
 let currentChart = null;
 let currentMacroChart = null;
@@ -5728,10 +5744,8 @@ async function startPhysicalAnalysis() {
             }
         }
         if (physicalHistory.length === 0) {
-            const localHist = DB.get('lf_physical_analyses');
-            if (localHist && Array.isArray(localHist)) {
-                physicalHistory = localHist.sort((a,b) => a.timestamp.localeCompare(b.timestamp));
-            }
+            const localHist = getPhysicalAnalysesSafe();
+            physicalHistory = localHist.sort((a,b) => a.timestamp.localeCompare(b.timestamp));
         }
 
         const previousAnalysis = physicalHistory.length > 0 ? physicalHistory[physicalHistory.length - 1] : null;
@@ -5944,8 +5958,7 @@ ${visualComparisonPromptNote}
                 photos: resizedPhotos
             };
             
-            let localHistory = DB.get('lf_physical_analyses') || [];
-            if (!Array.isArray(localHistory)) localHistory = [];
+            let localHistory = getPhysicalAnalysesSafe();
             localHistory.push(historyEntry);
             DB.set('lf_physical_analyses', localHistory);
             
@@ -6605,7 +6618,7 @@ function renderJejakFisik() {
                 if (val) {
                     const items = Object.values(val);
                     if (items.length > 0) {
-                        const localArr = DB.get('lf_physical_analyses') || [];
+                        const localArr = getPhysicalAnalysesSafe();
                         if (items.length !== localArr.length) {
                             DB.set('lf_physical_analyses', items);
                             const updatedHist = [...items].reverse();
@@ -6618,7 +6631,7 @@ function renderJejakFisik() {
         }
     }
 
-    let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+    let history = [...getPhysicalAnalysesSafe()].reverse();
     if (history.length === 0) {
         panel.innerHTML = `
           <div class="jejak-empty">
@@ -6633,7 +6646,9 @@ function renderJejakFisik() {
 }
 
 function renderPhysicalHistoryListHtml(history) {
+    if (!Array.isArray(history)) return '';
     return history.map((entry, i) => {
+        if (!entry) return '';
         let d = entry.data || {};
         if (typeof d === 'string') {
             d = safeParseAIJson(d) || {};
@@ -6700,13 +6715,13 @@ function openJejakDetail(type, index) {
     if (!overlay) return;
 
     if (type === 'harian') {
-        const history = (typeof DB !== 'undefined' ? DB.get('lf_analysis_history') : null) || [];
+        const history = getAnalysisHistorySafe();
         const entry = history[index];
         if (!entry) return;
         titleEl.textContent = 'Analisis ' + (entry.dateLabel || (entry.timestamp||'').substring(0,10));
         bodyEl.innerHTML = entry.html || '<p>Detail tidak tersedia.</p>';
     } else {
-        let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+        let history = [...getPhysicalAnalysesSafe()].reverse();
         const entry = history[index];
         if (!entry) return;
         const d = entry.data || {};
@@ -6748,20 +6763,20 @@ function closeJejakDetail() {
 
 function deleteJejakHarian(index) {
     if (!confirm('Hapus jejak analisis ini?')) return;
-    let history = (typeof DB !== 'undefined' ? DB.get('lf_analysis_history') : null) || [];
+    let history = getAnalysisHistorySafe();
     history.splice(index, 1);
-    if (typeof DB !== 'undefined') DB.set('lf_analysis_history', history);
+    DB.set('lf_analysis_history', history);
     renderJejakHarian();
     showToast('Jejak analisis dihapus.', 'info');
 }
 
 function deleteJejakFisik(index) {
     if (!confirm('Hapus jejak evaluasi fisik ini?')) return;
-    let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+    let history = [...getPhysicalAnalysesSafe()].reverse();
     const origId = history[index]?.id;
-    let all = (typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [];
+    let all = getPhysicalAnalysesSafe();
     all = all.filter(e => e.id !== origId);
-    if (typeof DB !== 'undefined') DB.set('lf_physical_analyses', all);
+    DB.set('lf_physical_analyses', all);
     renderJejakFisik();
     showToast('Jejak evaluasi fisik dihapus.', 'info');
 }

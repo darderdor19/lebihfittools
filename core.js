@@ -70,6 +70,48 @@ const DB = {
   }
 };
 
+const getPhysicalAnalysesSafe = () => {
+    try {
+        let raw = DB.get('lf_physical_analyses');
+        if (!raw) return [];
+        let arr = [];
+        if (Array.isArray(raw)) {
+            arr = raw.filter(item => item !== null && item !== undefined);
+        } else if (typeof raw === 'object') {
+            arr = Object.values(raw).filter(item => item !== null && item !== undefined);
+        }
+        // Self-healing: if format was not array, rewrite it to array in LocalStorage
+        if (raw && !Array.isArray(raw)) {
+            localStorage.setItem('lf_physical_analyses', JSON.stringify(arr));
+        }
+        return arr;
+    } catch (e) {
+        console.error("Error in getPhysicalAnalysesSafe:", e);
+    }
+    return [];
+};
+
+const getAnalysisHistorySafe = () => {
+    try {
+        let raw = DB.get('lf_analysis_history');
+        if (!raw) return [];
+        let arr = [];
+        if (Array.isArray(raw)) {
+            arr = raw.filter(item => item !== null && item !== undefined);
+        } else if (typeof raw === 'object') {
+            arr = Object.values(raw).filter(item => item !== null && item !== undefined);
+        }
+        // Self-healing: if format was not array, rewrite it to array in LocalStorage
+        if (raw && !Array.isArray(raw)) {
+            localStorage.setItem('lf_analysis_history', JSON.stringify(arr));
+        }
+        return arr;
+    } catch (e) {
+        console.error("Error in getAnalysisHistorySafe:", e);
+    }
+    return [];
+};
+
 const getProfile = () => {
     try {
         const p = DB.get('lf_profile');
