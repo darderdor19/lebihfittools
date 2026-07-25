@@ -2634,12 +2634,13 @@ function updateKeyStatusUI(type, keyInfo) {
   if (providerEl) providerEl.textContent = keyInfo.provider || '-';
   if (prefixEl) prefixEl.textContent = keyInfo.prefix || 'None';
   if (balanceEl) {
-    balanceEl.textContent = keyInfo.balance || '-';
-    if (keyInfo.balance && keyInfo.balance.includes('remaining')) {
-      balanceEl.style.color = 'var(--success)';
-    } else {
-      balanceEl.style.color = 'var(--text2)';
-    }
+    const isIDR = (keyInfo.balance || '').includes('IDR');
+    balanceEl.innerHTML = `
+      <span style="color:${isIDR || (keyInfo.balance && keyInfo.balance.includes('$')) ? 'var(--success)' : 'var(--text2)'}; font-weight:700;">${keyInfo.balance || '-'}</span>
+      <button onclick="editBalance('${type}')" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:0.75rem; margin-left:6px; padding:2px; vertical-align:middle;" title="Ubah Saldo Manual">
+        <i data-lucide="edit-2" style="width:12px;height:12px;"></i>
+      </button>
+    `;
   }
   if (modelEl) modelEl.textContent = keyInfo.model || '-';
   if (endpointEl) {
@@ -2662,6 +2663,7 @@ function updateKeyStatusUI(type, keyInfo) {
       errContainer.style.display = 'none';
     }
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 function showKeyStatusError() {
@@ -2678,6 +2680,31 @@ function showKeyStatusError() {
       errContainer.style.display = 'none';
     }
   });
+}
+
+async function editBalance(type) {
+  const currency = type === 'Text' ? '$' : 'IDR';
+  // Load current balance from Firebase RTDB
+  const snap = await fbDb.ref(`admins/api_balances/${type.toLowerCase()}`).once('value');
+  const curObj = snap.val() || { balance: type === 'Text' ? 17.99 : 298955, currency };
+  
+  const newValStr = prompt(`Masukkan nominal saldo ${type} baru (${currency}):`, curObj.balance);
+  if (newValStr === null) return; // cancelled
+  
+  const newVal = parseFloat(newValStr);
+  if (isNaN(newVal) || newVal < 0) {
+    alert('Nominal saldo tidak valid!');
+    return;
+  }
+  
+  curObj.balance = newVal;
+  curObj.lastUpdated = new Date().toISOString();
+  
+  await fbDb.ref(`admins/api_balances/${type.toLowerCase()}`).set(curObj);
+  showToast(`Saldo ${type} berhasil diperbarui!`, 'success');
+  
+  // Refresh UI
+  loadTokenMonitor();
 }
 
 function escapeHtml(str) {

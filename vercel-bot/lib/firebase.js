@@ -203,6 +203,40 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
     userFeatureStats.lastActive = timestamp;
     await setFirebase(userFeaturePath, userFeatureStats);
 
+    // Deduct cost from real-time API Key prepaid balances
+    try {
+      const isVision = feature === 'food_scan' || feature === 'body_analysis';
+      const balancePath = isVision ? 'admins/api_balances/vision' : 'admins/api_balances/text';
+      let balanceObj = await getFirebase(balancePath);
+      
+      if (balanceObj && typeof balanceObj.balance === 'number') {
+        let cost = 0;
+        const modelLower = (model || '').toLowerCase();
+        
+        if (modelLower.includes('gpt-4o-mini')) {
+          cost = (promptTokens * 0.00000015) + (completionTokens * 0.00000060); // USD
+        } else if (modelLower.includes('gemini-2.5-flash')) {
+          if (balanceObj.currency === 'IDR') {
+            cost = (promptTokens * 0.001225) + (completionTokens * 0.0049); // IDR from Google Cloud prepay
+          } else {
+            cost = (promptTokens * 0.000000075) + (completionTokens * 0.00000030); // USD
+          }
+        } else {
+          // Fallback generic pricing
+          cost = (totalTokens * 0.00000015);
+          if (balanceObj.currency === 'IDR') {
+            cost = cost * 16300; // USD to IDR conversion fallback
+          }
+        }
+        
+        balanceObj.balance = Math.max(0, balanceObj.balance - cost);
+        balanceObj.lastUpdated = timestamp;
+        await setFirebase(balancePath, balanceObj);
+      }
+    } catch (deductErr) {
+      console.error('[firebase] Failed to deduct API balance:', deductErr);
+    }
+
   } catch (err) {
     console.error('[firebase] Failed to log token usage:', err);
   }
