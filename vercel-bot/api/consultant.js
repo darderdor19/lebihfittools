@@ -27,13 +27,14 @@ module.exports = async function handler(req, res) {
     const hasImage = messages.some(msg => 
       Array.isArray(msg.content) && msg.content.some(part => part.type === 'image_url')
     );
-    // Smart API Key Resolution — Prioritize OpenAI (sk-) paid key if present
-    const envKeys = [process.env.OPENAI_API_KEY, process.env.API_KEY_TEXT, process.env.API_KEY_IMAGE, process.env.GEMINI_API_KEY].filter(Boolean);
-    const paidOpenAIKey = envKeys.find(k => k.startsWith('sk-'));
-
-    let apiKey = paidOpenAIKey || (hasImage 
-      ? (process.env.API_KEY_IMAGE || process.env.API_KEY_TEXT || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY)
-      : (process.env.API_KEY_TEXT || process.env.API_KEY_IMAGE || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY));
+    // Smart API Key Resolution — Vision uses Gemini (AIzaSy), Text uses OpenAI (sk-)
+    let apiKey;
+    if (hasImage) {
+      apiKey = process.env.API_KEY_IMAGE || process.env.GEMINI_API_KEY || process.env.API_KEY_TEXT || process.env.OPENAI_API_KEY;
+    } else {
+      const paidOpenAIKey = [process.env.OPENAI_API_KEY, process.env.API_KEY_TEXT, process.env.API_KEY_IMAGE].find(k => k && k.startsWith('sk-'));
+      apiKey = paidOpenAIKey || process.env.API_KEY_TEXT || process.env.OPENAI_API_KEY || process.env.API_KEY_IMAGE || process.env.GEMINI_API_KEY;
+    }
 
     if (!apiKey) {
       console.error('[consultant] API Key missing!');
