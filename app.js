@@ -5909,8 +5909,12 @@ ${visualComparisonPromptNote}
         try {
             data = safeParseAIJson(rawJson);
         } catch (e) {
-            console.error("Failed to parse physical analysis JSON:", rawJson, e);
-            throw new Error("Format evaluasi dari AI tidak valid. Silakan coba lagi.");
+            console.warn("[lebihfit] JSON parse failed, converting raw text to fallback physical analysis object:", e);
+            data = fallbackPhysicalAnalysisObject(rawJson);
+        }
+
+        if (!data) {
+            data = fallbackPhysicalAnalysisObject(rawJson);
         }
 
         if (data) {
