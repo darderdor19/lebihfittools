@@ -101,11 +101,19 @@ async function getAccessToken() {
  * Get data from Firebase path
  */
 async function getFirebase(path) {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error(tokenError || "Firebase authentication token is missing. Please ensure FIREBASE_SERVICE_ACCOUNT is correctly configured in Vercel.");
+  const secret = process.env.FIREBASE_DATABASE_SECRET || process.env.DATABASE_SECRET || process.env.FIREBASE_SECRET;
+  let url;
+  
+  if (secret) {
+    url = `${FB_URL}/${path}.json?auth=${secret}`;
+  } else {
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error(tokenError || "Firebase authentication token is missing. Please ensure FIREBASE_SERVICE_ACCOUNT or FIREBASE_DATABASE_SECRET is correctly configured in Vercel.");
+    }
+    url = `${FB_URL}/${path}.json?access_token=${token}`;
   }
-  const url = `${FB_URL}/${path}.json?access_token=${token}`;
+
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Firebase GET failed (Status ${res.status}): ${res.statusText}`);
@@ -121,11 +129,19 @@ async function getFirebase(path) {
  * Set data at Firebase path (null = delete)
  */
 async function setFirebase(path, value) {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error(tokenError || "Firebase authentication token is missing. Please ensure FIREBASE_SERVICE_ACCOUNT is correctly configured in Vercel.");
+  const secret = process.env.FIREBASE_DATABASE_SECRET || process.env.DATABASE_SECRET || process.env.FIREBASE_SECRET;
+  let url;
+  
+  if (secret) {
+    url = `${FB_URL}/${path}.json?auth=${secret}`;
+  } else {
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error(tokenError || "Firebase authentication token is missing. Please ensure FIREBASE_SERVICE_ACCOUNT or FIREBASE_DATABASE_SECRET is correctly configured in Vercel.");
+    }
+    url = `${FB_URL}/${path}.json?access_token=${token}`;
   }
-  const url = `${FB_URL}/${path}.json?access_token=${token}`;
+
   const method = value === null ? 'DELETE' : 'PUT';
   const options = {
     method,
