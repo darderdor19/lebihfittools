@@ -1160,34 +1160,55 @@
 
         <!-- API Balance & Keys Status -->
         <div class="card" style="margin-top:20px; padding:16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border);">
-          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="key" style="color:var(--warning); width:16px; height:16px;"></i> Detail Saldo & Status API Key Vercel</h3>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;" id="apiKeyStatusGrid">
+          <h3 style="margin-bottom:16px; font-size:1rem; display:flex; align-items:center; gap:8px; color:var(--text1);"><i data-lucide="key" style="color:var(--warning); width:18px; height:18px;"></i> Detail Saldo & Status API Key Vercel</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;" id="apiKeyStatusGrid">
+            
             <!-- Text API Status -->
-            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; position:relative;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <strong style="color:var(--text1); font-size:0.9rem;">📝 API Key Utama (GPT/Teks)</strong>
-                <span class="badge" id="apiKeyTextStatus" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+                  <strong style="color:var(--text1); font-size:0.95rem; display:flex; align-items:center; gap:6px;">📝 API Utama (Teks)</strong>
+                  <span class="badge" id="apiKeyTextStatus" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:6px; line-height:1.5;">
+                  <div style="display:flex; justify-content:space-between;"><span>Provider:</span> <strong style="color:var(--text1);" id="apiKeyTextProvider">-</strong></div>
+                  <div style="display:flex; justify-content:space-between;"><span>Key Prefix:</span> <strong style="color:var(--text1); font-family:monospace;" id="apiKeyTextPrefix">-</strong></div>
+                  <div style="display:flex; justify-content:space-between;"><span>Saldo / Limit:</span> <strong style="color:var(--success);" id="apiKeyTextBalance">-</strong></div>
+                  <div style="display:flex; justify-content:space-between;"><span>Model Aktif:</span> <strong style="color:var(--accent);" id="apiKeyTextModel">-</strong></div>
+                  <div style="display:flex; justify-content:space-between; flex-direction:column; margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.05);">
+                    <span style="font-size:0.75rem; color:var(--text3); margin-bottom:2px;">Endpoint URL:</span>
+                    <span style="font-size:0.75rem; color:var(--text2); word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;" id="apiKeyTextEndpoint">-</span>
+                  </div>
+                </div>
               </div>
-              <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:4px; line-height:1.4;">
-                <span>Provider: <strong style="color:var(--text1);" id="apiKeyTextProvider">-</strong></span>
-                <span>Saldo Tersisa: <strong style="color:var(--success);" id="apiKeyTextBalance">-</strong></span>
-                <span>Model Aktif: <strong style="color:var(--accent);" id="apiKeyTextModel">-</strong></span>
-                <span style="font-size:0.75rem; color:var(--text3); word-break:break-all;">Endpoint: <span id="apiKeyTextEndpoint">-</span></span>
+              <div id="apiKeyTextErrorContainer" style="margin-top:12px; font-size:0.75rem; color:#ff3b30; display:none; background:rgba(255,59,48,0.06); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,59,48,0.2); line-height:1.4;">
+                <strong>⚠️ Error Detail:</strong> <span id="apiKeyTextErrorDetail">-</span>
               </div>
             </div>
+
             <!-- Vision API Status -->
-            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; position:relative;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <strong style="color:var(--text1); font-size:0.9rem;">📸 API Key Kamera (Gemini/Vision)</strong>
-                <span class="badge" id="apiKeyVisionStatus" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+                  <strong style="color:var(--text1); font-size:0.95rem; display:flex; align-items:center; gap:6px;">📸 API Kamera (Vision)</strong>
+                  <span class="badge" id="apiKeyVisionStatus" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:6px; line-height:1.5;">
+                  <div style="display:flex; justify-content:space-between;"><span>Provider:</span> <strong style="color:var(--text1);" id="apiKeyVisionProvider">-</strong></div>
+                  <div style="display:flex; justify-content:space-between;"><span>Key Prefix:</span> <strong style="color:var(--text1); font-family:monospace;" id="apiKeyVisionPrefix">-</strong></div>
+                  <div style="display:flex; justify-content:space-between;"><span>Saldo / Limit:</span> <strong style="color:var(--success);" id="apiKeyVisionBalance">-</strong></div>
+                  <div style="display:flex; justify-content:space-between;"><span>Model Aktif:</span> <strong style="color:var(--accent);" id="apiKeyVisionModel">-</strong></div>
+                  <div style="display:flex; justify-content:space-between; flex-direction:column; margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.05);">
+                    <span style="font-size:0.75rem; color:var(--text3); margin-bottom:2px;">Endpoint URL:</span>
+                    <span style="font-size:0.75rem; color:var(--text2); word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;" id="apiKeyVisionEndpoint">-</span>
+                  </div>
+                </div>
               </div>
-              <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:4px; line-height:1.4;">
-                <span>Provider: <strong style="color:var(--text1);" id="apiKeyVisionProvider">-</strong></span>
-                <span>Saldo Tersisa: <strong style="color:var(--success);" id="apiKeyVisionBalance">-</strong></span>
-                <span>Model Aktif: <strong style="color:var(--accent);" id="apiKeyVisionModel">-</strong></span>
-                <span style="font-size:0.75rem; color:var(--text3); word-break:break-all;">Endpoint: <span id="apiKeyVisionEndpoint">-</span></span>
+              <div id="apiKeyVisionErrorContainer" style="margin-top:12px; font-size:0.75rem; color:#ff3b30; display:none; background:rgba(255,59,48,0.06); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,59,48,0.2); line-height:1.4;">
+                <strong>⚠️ Error Detail:</strong> <span id="apiKeyVisionErrorDetail">-</span>
               </div>
             </div>
+
           </div>
         </div>
 
@@ -2589,9 +2610,12 @@ async function loadTokenMonitor() {
 function updateKeyStatusUI(type, keyInfo) {
   const statusEl = document.getElementById(`apiKey${type}Status`);
   const providerEl = document.getElementById(`apiKey${type}Provider`);
+  const prefixEl = document.getElementById(`apiKey${type}Prefix`);
   const balanceEl = document.getElementById(`apiKey${type}Balance`);
   const modelEl = document.getElementById(`apiKey${type}Model`);
   const endpointEl = document.getElementById(`apiKey${type}Endpoint`);
+  const errContainer = document.getElementById(`apiKey${type}ErrorContainer`);
+  const errDetailEl = document.getElementById(`apiKey${type}ErrorDetail`);
   
   if (!keyInfo) return;
   
@@ -2608,6 +2632,7 @@ function updateKeyStatusUI(type, keyInfo) {
     }
   }
   if (providerEl) providerEl.textContent = keyInfo.provider || '-';
+  if (prefixEl) prefixEl.textContent = keyInfo.prefix || 'None';
   if (balanceEl) {
     balanceEl.textContent = keyInfo.balance || '-';
     if (keyInfo.balance && keyInfo.balance.includes('remaining')) {
@@ -2627,6 +2652,16 @@ function updateKeyStatusUI(type, keyInfo) {
     }
     endpointEl.title = rawEndpoint;
   }
+
+  // Handle Error details displaying
+  if (errContainer && errDetailEl) {
+    if (keyInfo.status !== 'Active' && keyInfo.detail) {
+      errDetailEl.textContent = keyInfo.detail;
+      errContainer.style.display = 'block';
+    } else {
+      errContainer.style.display = 'none';
+    }
+  }
 }
 
 function showKeyStatusError() {
@@ -2637,6 +2672,10 @@ function showKeyStatusError() {
       statusEl.style.background = 'rgba(255,59,48,0.12)';
       statusEl.style.color = 'var(--danger)';
       statusEl.style.border = '1px solid rgba(255,59,48,0.3)';
+    }
+    const errContainer = document.getElementById(`apiKey${type}ErrorContainer`);
+    if (errContainer) {
+      errContainer.style.display = 'none';
     }
   });
 }

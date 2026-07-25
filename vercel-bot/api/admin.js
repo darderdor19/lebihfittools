@@ -77,52 +77,57 @@ module.exports = async function handler(req, res) {
 
 async function checkKeyStatus(apiKey, isVision) {
   if (!apiKey) {
-    return { provider: 'None', status: 'Not Configured', balance: 'N/A', detail: '' };
+    return { provider: 'None', status: 'Not Configured', balance: 'N/A', detail: '', prefix: 'None' };
   }
 
   const isGoogleKey = apiKey.startsWith('AIzaSy');
   const isOpenRouterKey = apiKey.startsWith('sk-or-');
   const isOpenAIKey = apiKey.startsWith('sk-') && !isOpenRouterKey;
+  const prefix = apiKey.substring(0, 7) + '...';
 
   let provider = 'Unknown';
   let status = 'Inactive';
   let balance = 'N/A';
   let detail = '';
 
-  if (isOpenRouterKey) {
-    provider = 'OpenRouter';
-    try {
-      const resp = await fetch('https://openrouter.ai/api/v1/auth/key', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`
-        }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        status = data.data?.is_active ? 'Active' : 'Inactive';
-        const limit = data.data?.limit;
-        const usage = data.data?.usage;
-        if (limit === null || limit === undefined) {
-          balance = 'Unlimited';
-        } else {
-          const remaining = limit - usage;
-          balance = `$${remaining.toFixed(4)} remaining`;
-        }
-        detail = data.data?.label || '';
-      } else {
-        status = 'Error (' + resp.status + ')';
-      }
-    } catch (e) {
-      status = 'Fetch Error';
-      detail = e.message;
-    }
-  } else if (isGoogleKey) {
+  // Resolve the exact endpoint and model used by LebihFit configuration
+  let endpoint = '';
+  let model = '';
+
+  if (isGoogleKey) {
     provider = 'Gemini';
-    try {
-      const modelName = 'gemini-2.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-      const resp = await fetch(url, {
+    endpoint = isVision 
+      ? (process.env.VISION_API_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions')
+      : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions'); // Wait, text doesn't default to Google unless key is Gemini
+    model = isVision ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gemini-2.5-flash');
+  } else if (isOpenRouterKey) {
+    provider = 'OpenRouter';
+    endpoint = isVision 
+      ? (process.env.VISION_API_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions')
+      : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
+    model = isVision ? (process.env.VISION_MODEL || 'google/gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+  } else if (isOpenAIKey) {
+    provider = 'OpenAI';
+    endpoint = isVision 
+      ? (process.env.VISION_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions')
+      : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
+    model = isVision ? (process.env.VISION_MODEL || 'gpt-4o-mini') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+  } else {
+    provider = isVision ? 'Custom / Vision' : 'Custom / Text';
+    endpoint = isVision 
+      ? (process.env.VISION_API_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions')
+      : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
+    model = isVision ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+  }
+
+  // Google Gemini API keys are verified most reliably using direct generateContent endpoint
+  const testViaDirectGemini = isGoogleKey && (endpoint.includes('generativelanguage.googleapis.com') || !endpoint);
+
+  try {
+    let resp;
+    if (testViaDirectGemini) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,53 +135,9 @@ async function checkKeyStatus(apiKey, isVision) {
           generationConfig: { maxOutputTokens: 1 }
         })
       });
-      if (resp.ok) {
-        status = 'Active';
-        balance = 'Paid / Free (RT)';
-      } else {
-        const err = await resp.json().catch(() => ({}));
-        status = 'Error (' + resp.status + ')';
-        detail = err.error?.message || '';
-      }
-    } catch (e) {
-      status = 'Fetch Error';
-      detail = e.message;
-    }
-  } else if (isOpenAIKey) {
-    provider = 'OpenAI';
-    try {
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 1
-        })
-      });
-      if (resp.ok) {
-        status = 'Active';
-        balance = 'Pay-as-you-go';
-      } else {
-        const err = await resp.json().catch(() => ({}));
-        status = 'Error (' + resp.status + ')';
-        detail = err.error?.message || '';
-      }
-    } catch (e) {
-      status = 'Fetch Error';
-      detail = e.message;
-    }
-  } else {
-    provider = 'Custom / Nvidia';
-    try {
-      const endpoint = isVision 
-        ? (process.env.VISION_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions')
-        : (process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions');
-      const model = isVision ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
-      const resp = await fetch(endpoint, {
+    } else {
+      // Test OpenAI / OpenRouter / Custom endpoints using standard Chat Completions
+      resp = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,15 +149,51 @@ async function checkKeyStatus(apiKey, isVision) {
           max_tokens: 1
         })
       });
-      if (resp.ok) {
-        status = 'Active';
-      } else {
-        status = 'Error (' + resp.status + ')';
-      }
-    } catch (e) {
-      status = 'Fetch Error';
     }
+
+    if (resp.ok) {
+      status = 'Active';
+      if (isOpenRouterKey) {
+        // Fetch real-time balance for OpenRouter keys
+        try {
+          const balResp = await fetch('https://openrouter.ai/api/v1/auth/key', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`
+            }
+          });
+          if (balResp.ok) {
+            const balData = await balResp.json();
+            const limit = balData.data?.limit;
+            const usage = balData.data?.usage;
+            if (limit === null || limit === undefined) {
+              balance = 'Unlimited';
+            } else {
+              balance = `$${(limit - usage).toFixed(4)} remaining`;
+            }
+            detail = balData.data?.label || '';
+          } else {
+            balance = 'Active';
+          }
+        } catch (e) {
+          balance = 'Active';
+        }
+      } else if (isGoogleKey) {
+        balance = 'Free / Paid (Google)';
+      } else if (isOpenAIKey) {
+        balance = 'Pay-as-you-go';
+      } else {
+        balance = 'Active';
+      }
+    } else {
+      const err = await resp.json().catch(() => ({}));
+      status = `Error (${resp.status})`;
+      detail = err.error?.message || err.message || JSON.stringify(err) || `HTTP status ${resp.status}`;
+    }
+  } catch (e) {
+    status = 'Fetch Error';
+    detail = e.message;
   }
 
-  return { provider, status, balance, detail };
+  return { provider, status, balance, detail, prefix };
 }
