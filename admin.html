@@ -56,6 +56,24 @@
     transform: translateX(14px);
   }
 
+  /* Kill Switch Styles */
+  .kill-switch-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 4px 12px;
+    border-radius: 30px;
+  }
+
+  .api-key-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+  }
+
   /* ===== LOGIN PAGE ===== */
   #loginPage {
     flex: 1;
@@ -511,6 +529,18 @@
     }
     .admin-header-right {
       gap: 6px;
+    }
+    .kill-switch-wrap {
+      padding: 3px 8px;
+      margin-right: 4px;
+      gap: 4px;
+    }
+    .kill-switch-label {
+      display: none;
+    }
+    .api-key-grid {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
     }
     .admin-user-info {
       display: none;
@@ -1028,12 +1058,12 @@
       <span class="admin-header-logo" style="font-size:1.2rem;">LebihFit</span>
       <span class="admin-badge"><i data-lucide="shield" style="width:9px;height:9px;display:inline;"></i> ADMIN</span>
     </div>
-    <div class="admin-header-right" style="display:flex; align-items:center; gap:12px;">
+    <div class="admin-header-right">
       <!-- Global Kill Switch -->
-      <div style="display:flex; align-items:center; gap:8px; margin-right:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:4px 12px; border-radius:30px;">
+      <div class="kill-switch-wrap">
         <span style="font-size:0.75rem; color:var(--text2); font-weight:600; display:flex; align-items:center; gap:6px;">
           <span id="systemStatusDot" style="width:8px; height:8px; border-radius:50%; background:var(--success); display:inline-block; box-shadow:0 0 8px var(--success); transition: all 0.3s ease;"></span>
-          Sistem: <span id="systemStatusText" style="color:var(--success); font-weight:700; transition: all 0.3s ease;">AKTIF</span>
+          <span class="kill-switch-label">Sistem:</span> <span id="systemStatusText" style="color:var(--success); font-weight:700; transition: all 0.3s ease;">AKTIF</span>
         </span>
         <label class="switch-container" style="position:relative; display:inline-block; width:34px; height:20px; margin:0 4px;">
           <input type="checkbox" id="systemStatusToggle" onchange="toggleSystemStatus(this.checked)" style="opacity:0; width:0; height:0;">
@@ -1192,7 +1222,7 @@
         <!-- API Balance & Keys Status -->
         <div class="card" style="margin-top:20px; padding:16px; background: rgba(255,255,255,0.01); border: 1px solid var(--border);">
           <h3 style="margin-bottom:16px; font-size:1rem; display:flex; align-items:center; gap:8px; color:var(--text1);"><i data-lucide="key" style="color:var(--warning); width:18px; height:18px;"></i> Detail Saldo & Status API Key Vercel</h3>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:18px;" id="apiKeyStatusGrid">
+          <div class="api-key-grid" id="apiKeyStatusGrid">
             
             <!-- Text API Status Card -->
             <div id="apiKeyTextCard" style="background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); backdrop-filter: blur(4px); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; transition: all 0.3s ease;">
