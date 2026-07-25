@@ -3,15 +3,79 @@
 // Same approach as the GAS version — simple and reliable
 // ====================================================
 
+const crypto = require('crypto');
+
 const FB_URL = (process.env.FIREBASE_DATABASE_URL && process.env.FIREBASE_DATABASE_URL.includes('lebihfittools-default-rtdb'))
   ? process.env.FIREBASE_DATABASE_URL.replace(/\/$/, '')
   : 'https://lebihfittools-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+let cachedAccessToken = null;
+let accessTokenExpiry = 0;
+
+/**
+ * Get Google OAuth2 access token using Firebase Service Account from env
+ */
+async function getAccessToken() {
+  const saVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!saVar) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedAccessToken && now < accessTokenExpiry - 60) {
+    return cachedAccessToken;
+  }
+
+  try {
+    const sa = JSON.parse(saVar);
+    if (!sa.client_email || !sa.private_key) return null;
+
+    const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    
+    const jwtClaim = Buffer.from(JSON.stringify({
+      iss: sa.client_email,
+      scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/firebase.database',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now
+    })).toString('base64url');
+
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(`${jwtHeader}.${jwtClaim}`);
+    const signature = sign.sign(sa.private_key, 'base64url');
+
+    const signedJwt = `${jwtHeader}.${jwtClaim}.${signature}`;
+
+    const resp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: signedJwt
+      })
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error('[firebase] OAuth token fetch failed:', resp.status, errText);
+      return null;
+    }
+
+    const data = await resp.json();
+    cachedAccessToken = data.access_token;
+    accessTokenExpiry = now + (data.expires_in || 3600);
+    return cachedAccessToken;
+  } catch (e) {
+    console.error('[firebase] Failed to generate access token:', e);
+    return null;
+  }
+}
 
 /**
  * Get data from Firebase path
  */
 async function getFirebase(path) {
-  const res = await fetch(`${FB_URL}/${path}.json`);
+  const token = await getAccessToken();
+  const url = token ? `${FB_URL}/${path}.json?access_token=${token}` : `${FB_URL}/${path}.json`;
+  const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Firebase GET failed (Status ${res.status}): ${res.statusText}`);
   }
@@ -26,13 +90,15 @@ async function getFirebase(path) {
  * Set data at Firebase path (null = delete)
  */
 async function setFirebase(path, value) {
+  const token = await getAccessToken();
+  const url = token ? `${FB_URL}/${path}.json?access_token=${token}` : `${FB_URL}/${path}.json`;
   const method = value === null ? 'DELETE' : 'PUT';
   const options = {
     method,
     headers: { 'Content-Type': 'application/json' }
   };
   if (value !== null) options.body = JSON.stringify(value);
-  const res = await fetch(`${FB_URL}/${path}.json`, options);
+  const res = await fetch(url, options);
   if (!res.ok) {
     throw new Error(`Firebase SET failed (Status ${res.status}): ${res.statusText}`);
   }
