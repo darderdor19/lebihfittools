@@ -5916,9 +5916,23 @@ ${visualComparisonPromptNote}
             }
             DB.set('lf_physical_analysis_cache', cacheObj);
             
-            // Resize current photo to store in history entry
-            const resizedPhoto = await resizeImageBase64(physicalImagesList[0].base64, 400, 400);
-            const resizedPhotos = await Promise.all(physicalImagesList.map(async img => await resizeImageBase64(img.base64, 400, 400)));
+            // Resize current photo to store in history entry with fail-safe fallbacks
+            let resizedPhoto = null;
+            let resizedPhotos = [];
+            try {
+                const firstImg = physicalImagesList[0]?.base64 || physicalImagesList[0];
+                if (firstImg) resizedPhoto = await resizeImageBase64(firstImg, 400, 400);
+            } catch (e) {
+                resizedPhoto = physicalImagesList[0]?.base64 || physicalImagesList[0] || null;
+            }
+            try {
+                resizedPhotos = await Promise.all(physicalImagesList.map(async img => {
+                    const b64 = img?.base64 || img;
+                    try { return await resizeImageBase64(b64, 400, 400); } catch(e) { return b64; }
+                }));
+            } catch (e) {
+                resizedPhotos = physicalImagesList.map(img => img?.base64 || img);
+            }
             
             // Save to historical physical analyses list
             const historyEntry = {
@@ -6580,24 +6594,32 @@ function renderJejakHarian() {
 function renderJejakFisik() {
     const panel = document.getElementById('jejakPanelFisik');
     if (!panel) return;
-    let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
-    if (history.length === 0) {
-        if (typeof fbDb !== 'undefined' && fbDb) {
-            const email = localStorage.getItem('lf_user_email');
-            if (email) {
-                const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
-                fbDb.ref(`users/${safeEmail}/lf_physical_analyses`).once('value').then(snap => {
-                    const val = snap.val();
-                    if (val) {
-                        const items = Object.values(val);
-                        if (items.length > 0) {
+
+    // Always trigger background sync from Firebase DB
+    if (typeof fbDb !== 'undefined' && fbDb) {
+        const email = localStorage.getItem('lf_user_email');
+        if (email) {
+            const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+            fbDb.ref(`users/${safeEmail}/lf_physical_analyses`).once('value').then(snap => {
+                const val = snap.val();
+                if (val) {
+                    const items = Object.values(val);
+                    if (items.length > 0) {
+                        const localArr = DB.get('lf_physical_analyses') || [];
+                        if (items.length !== localArr.length) {
                             DB.set('lf_physical_analyses', items);
-                            renderJejakFisik();
+                            const updatedHist = [...items].reverse();
+                            panel.innerHTML = renderPhysicalHistoryListHtml(updatedHist);
+                            if (window.lucide) lucide.createIcons();
                         }
                     }
-                }).catch(console.error);
-            }
+                }
+            }).catch(console.error);
         }
+    }
+
+    let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
+    if (history.length === 0) {
         panel.innerHTML = `
           <div class="jejak-empty">
             <div class="jejak-empty-icon">📸</div>
@@ -6606,7 +6628,12 @@ function renderJejakFisik() {
           </div>`;
         return;
     }
-    panel.innerHTML = history.map((entry, i) => {
+    panel.innerHTML = renderPhysicalHistoryListHtml(history);
+    if (window.lucide) lucide.createIcons();
+}
+
+function renderPhysicalHistoryListHtml(history) {
+    return history.map((entry, i) => {
         let d = entry.data || {};
         if (typeof d === 'string') {
             d = safeParseAIJson(d) || {};
@@ -6664,7 +6691,6 @@ function renderJejakFisik() {
             </div>
           </div>`;
     }).join('');
-    if (window.lucide) lucide.createIcons();
 }
 
 function openJejakDetail(type, index) {
