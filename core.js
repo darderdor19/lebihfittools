@@ -711,20 +711,33 @@ Instruksi:
   // =============================================
   if (onProgress) onProgress('🧮 Menghitung nutrisi berstandar USDA/TKPI...');
 
+  // Extract portion multiplier from userDescription (e.g. "gua makan 4 porsi dan level 8" -> 4x)
+  let portionMultiplier = 1;
+  if (userDescription) {
+    const matchPortion = userDescription.match(/(\d+)\s*(porsi|piring|mangkuk|mangkok|buah|biji|potong|pcs|butir|centong|gelas|x|kali)/i);
+    if (matchPortion) {
+      const parsedNum = parseInt(matchPortion[1], 10);
+      if (!isNaN(parsedNum) && parsedNum > 0 && parsedNum <= 20) {
+        portionMultiplier = parsedNum;
+      }
+    }
+  }
+
   const foodName = identified.name || 'makanan';
-  const grams = identified.grams || 100;
+  const singlePortionGrams = identified.grams || 100;
+  const totalGrams = singlePortionGrams * portionMultiplier;
   const cookingMethod = identified.cooking_method || '';
   
-  let detailQuery = `${foodName}, total porsi: ${grams}g`;
+  let detailQuery = `${foodName}, berat 1 porsi visual: ${singlePortionGrams}g, JUMLAH PORSI YANG DIMAKAN USER: ${portionMultiplier} PORSI (TOTAL BERAT: ${totalGrams}g).`;
   if (identified.components && identified.components.length > 0) {
-    const detailBahan = identified.components.map(c => `${c.item}: ${c.grams}g`).join(', ');
-    detailQuery += ` (rincian bahan: ${detailBahan})`;
+    const detailBahan = identified.components.map(c => `${c.item}: ${c.grams * portionMultiplier}g (${c.grams}g x ${portionMultiplier} porsi)`).join(', ');
+    detailQuery += ` (rincian bahan total untuk ${portionMultiplier} porsi: ${detailBahan})`;
   }
   if (cookingMethod) {
     detailQuery += `, cara masak: ${cookingMethod}`;
   }
   if (userDescription) {
-    detailQuery += `, catatan: ${userDescription}`;
+    detailQuery += `, catatan khusus user: "${userDescription}"`;
   }
 
   const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
@@ -734,20 +747,22 @@ Evaluasi kecukupan vitamin/mineral menggunakan AKG Indonesia (RDA Indonesia).
 == MAKANAN YANG DIIDENTIFIKASI DARI FOTO ==
 ${detailQuery}
 
-== ATURAN KALKULASI PRESISI TINGGI ==
-1. Cari data gizi per 100g MATANG untuk masing-masing komponen bahan dari TKPI Indonesia / USDA FoodData Central.
-2. Hitung gizi tiap komponen bahan secara TERPISAH berdasarkan berat gram masing-masing, lalu JUMLAHKAN hasilnya.
-3. ATURAN PENGOLAHAN & MINYAK:
+== ATURAN KALKULASI PRESISI TINGGI (>95% AKURASI & DESKRIPSI USER) ==
+1. SINKRONISASI DESKRIPSI USER:
+   - User menegaskan makan sebanyak: ${portionMultiplier} PORSI (Total Berat: ${totalGrams}g).
+   - SELURUH NILAI NUTRISI (KALORI, PROTEIN, KARBOHIDRAT, LEMAK, MIKRONUTRISI & SODIUM) WAJIB DIKALIKAN TOTAL ${portionMultiplier} PORSI!
+   - Jika deskripsi user menyebutkan Level pedas (misal Level 8), tambahkan minyak cabai (+6g lemak/porsi) dan sodium bumbu pedas/kecap asin (+1.200mg sodium/porsi).
+2. Cari data gizi per 100g MATANG untuk masing-masing komponen bahan dari TKPI Indonesia / USDA FoodData Central.
+3. Hitung gizi tiap komponen bahan secara TERPISAH berdasarkan berat total ${portionMultiplier} porsi, lalu JUMLAHKAN hasilnya.
+4. ATURAN PENGOLAHAN & MINYAK:
    - Deep Fried / Goreng Tepung / Gorengan: Tambahkan +10g lemak minyak (+90 kcal) per 100g porsi gorengan.
    - Tumisan / Goreng Biasa: Tambahkan +5g lemak minyak (+45 kcal) per porsi.
    - Santan / Gulai: Tambahkan +8g lemak santan (+72 kcal) per 100g kuah.
-   - Air Fryer / Rebus / Kukus / Panggang tanpa minyak: TANPA penambahan lemak minyak.
-4. Perkalian wajib: (Nilai per 100g) × (Berat komponen / 100) untuk SEMUA makro DAN MIKRO.
-5. JANGAN biarkan nilai mikro (sodium, calcium, iron, vitC, vitD, zinc) = 0 kecuali memang benar-benar 0.
+5. Perkalian wajib: (Nilai per 100g) × (Berat total komponen / 100) untuk SEMUA makro DAN MIKRO.
 6. Bulatkan ke 1 angka desimal.
-7. Di bagian "notes", tuliskan rincian detail menu dan gramasi masing-masing lauk (misal: "Rincian: Nasi putih matang (150g), Tempe orek (50g), Tahu goreng (50g)").
+7. Di bagian "notes", tuliskan rincian detail menu dan gramasi masing-masing lauk untuk total ${portionMultiplier} porsi.
 8. Jawab HANYA JSON valid tanpa teks/markdown:
-{"name":"${foodName}","portion":"${grams}g","calculation":"ringkasan perkalian makro+mikro","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail menu & gramasi masing-masing lauk"}`;
+{"name":"${foodName}","portion":"${portionMultiplier > 1 ? portionMultiplier + ' porsi (' + totalGrams + 'g)' : totalGrams + 'g'}","calculation":"ringkasan perkalian makro+mikro untuk ${portionMultiplier} porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail menu & gramasi masing-masing lauk untuk ${portionMultiplier} porsi"}`;
 
   try {
     const rawNutrition = await callAI([{ role: 'user', content: nutritionPrompt }], true, 'gpt-4o-mini', false);
@@ -756,7 +771,7 @@ ${detailQuery}
     const result = matchNu ? JSON.parse(matchNu[0]) : JSON.parse(rawNutrition.trim());
     // Ensure name and portion from Step 1 override
     result.name = result.name || foodName;
-    result.portion = result.portion || identified.portion || `${grams}g`;
+    result.portion = portionMultiplier > 1 ? `${portionMultiplier} porsi (${totalGrams}g)` : (result.portion || `${totalGrams}g`);
     return result;
   } catch (err) {
     throw getMaskedAIError(err);
