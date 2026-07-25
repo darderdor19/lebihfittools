@@ -45,12 +45,20 @@ module.exports = async function handler(req, res) {
     const isGoogleKey = apiKey.startsWith('AIzaSy');
     const isOpenAIKey = apiKey.startsWith('sk-');
 
-    if (isGoogleKey) {
-      apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-      model = hasImage ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gemini-2.5-flash');
-    } else if (isOpenAIKey) {
+    if (isOpenAIKey) {
       apiEndpoint = process.env.TEXT_API_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
-      model = hasImage ? (process.env.VISION_MODEL || 'gpt-4o-mini') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+      let targetModel = hasImage ? (process.env.VISION_MODEL || 'gpt-4o-mini') : (process.env.TEXT_MODEL || 'gpt-4o-mini');
+      if (targetModel.toLowerCase().includes('gemini')) {
+        targetModel = 'gpt-4o-mini';
+      }
+      model = targetModel;
+    } else if (isGoogleKey) {
+      apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      let targetModel = hasImage ? (process.env.VISION_MODEL || 'gemini-2.5-flash') : (process.env.TEXT_MODEL || 'gemini-2.5-flash');
+      if (targetModel.toLowerCase().includes('gpt')) {
+        targetModel = 'gemini-2.5-flash';
+      }
+      model = targetModel;
     } else {
       apiEndpoint = hasImage 
         ? (process.env.VISION_API_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions')
