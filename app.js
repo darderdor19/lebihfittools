@@ -646,7 +646,7 @@ function renderMembershipStatus() {
 
 // Navigation
 
-function showPage(pageId) {
+function showPage(pageId, extraParam) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -663,7 +663,7 @@ function showPage(pageId) {
         const navBtn = document.querySelector(`.nav-btn[data-page="jejak-analisis"]`);
         if (navBtn) navBtn.classList.add('active');
         if (window.innerWidth <= 768) closeSidebar();
-        showJejakAnalisis();
+        showJejakAnalisis(extraParam || _currentJejakTab || 'harian');
         if (window.lucide) lucide.createIcons();
         return;
     }
@@ -6470,7 +6470,8 @@ Gunakan bahasa Indonesia santai bersahabat (kamu/lu).`;
 let _currentJejakTab = 'harian';
 
 function showJejakAnalisis(defaultTab) {
-    const tab = defaultTab || _currentJejakTab || 'harian';
+    if (defaultTab) _currentJejakTab = defaultTab;
+    const tab = _currentJejakTab || 'harian';
     const container = document.getElementById('page-jejak-analisis');
     if (!container) return;
     container.innerHTML = `
@@ -6551,6 +6552,22 @@ function renderJejakFisik() {
     if (!panel) return;
     let history = [...((typeof DB !== 'undefined' ? DB.get('lf_physical_analyses') : null) || [])].reverse();
     if (history.length === 0) {
+        if (typeof fbDb !== 'undefined' && fbDb) {
+            const email = localStorage.getItem('lf_user_email');
+            if (email) {
+                const safeEmail = email.replace(/\"/g, '').replace(/[\.\#\$\[\]]/g, '_');
+                fbDb.ref(`users/${safeEmail}/lf_physical_analyses`).once('value').then(snap => {
+                    const val = snap.val();
+                    if (val) {
+                        const items = Object.values(val);
+                        if (items.length > 0) {
+                            DB.set('lf_physical_analyses', items);
+                            renderJejakFisik();
+                        }
+                    }
+                }).catch(console.error);
+            }
+        }
         panel.innerHTML = `
           <div class="jejak-empty">
             <div class="jejak-empty-icon">📸</div>
