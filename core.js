@@ -18,6 +18,23 @@ if (firebaseConfig && firebaseConfig.apiKey && typeof firebase !== 'undefined') 
     if (firebase.auth) {
         fbAuth = firebase.auth();
     }
+    
+    // Listen to global maintenance kill switch
+    try {
+        fbDb.ref('settings/app_active').on('value', (snap) => {
+            const appActive = snap.val();
+            const maintenanceOverlay = document.getElementById('maintenanceOverlay');
+            if (maintenanceOverlay) {
+                if (appActive === false) {
+                    maintenanceOverlay.style.display = 'flex';
+                } else {
+                    maintenanceOverlay.style.display = 'none';
+                }
+            }
+        });
+    } catch (e) {
+        console.warn('[core] Failed to bind settings/app_active listener:', e);
+    }
 }
 
 function syncToFirebase(key, value) {

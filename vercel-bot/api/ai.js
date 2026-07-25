@@ -18,6 +18,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // Check Global System Maintenance Switch
+    const { getFirebase } = require('../lib/firebase');
+    const appActive = await getFirebase('settings/app_active').catch(() => true);
+    if (appActive === false) {
+      return res.status(503).json({ error: { message: 'Sistem sedang pemeliharaan global oleh admin. Silakan coba beberapa saat lagi.' } });
+    }
+
     const { messages, json } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages array' });

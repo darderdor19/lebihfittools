@@ -36,6 +36,26 @@
     flex-direction: column;
   }
 
+  /* Premium Switch Toggle CSS */
+  .switch-container input:checked + .switch-slider {
+    background-color: var(--success) !important;
+  }
+  .switch-slider::before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .switch-container input:checked + .switch-slider::before {
+    transform: translateX(14px);
+  }
+
   /* ===== LOGIN PAGE ===== */
   #loginPage {
     flex: 1;
@@ -1008,7 +1028,18 @@
       <span class="admin-header-logo" style="font-size:1.2rem;">LebihFit</span>
       <span class="admin-badge"><i data-lucide="shield" style="width:9px;height:9px;display:inline;"></i> ADMIN</span>
     </div>
-    <div class="admin-header-right">
+    <div class="admin-header-right" style="display:flex; align-items:center; gap:12px;">
+      <!-- Global Kill Switch -->
+      <div style="display:flex; align-items:center; gap:8px; margin-right:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:4px 12px; border-radius:30px;">
+        <span style="font-size:0.75rem; color:var(--text2); font-weight:600; display:flex; align-items:center; gap:6px;">
+          <span id="systemStatusDot" style="width:8px; height:8px; border-radius:50%; background:var(--success); display:inline-block; box-shadow:0 0 8px var(--success); transition: all 0.3s ease;"></span>
+          Sistem: <span id="systemStatusText" style="color:var(--success); font-weight:700; transition: all 0.3s ease;">AKTIF</span>
+        </span>
+        <label class="switch-container" style="position:relative; display:inline-block; width:34px; height:20px; margin:0 4px;">
+          <input type="checkbox" id="systemStatusToggle" onchange="toggleSystemStatus(this.checked)" style="opacity:0; width:0; height:0;">
+          <span class="switch-slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:rgba(255,255,255,0.15); border-radius:20px; transition:0.3s ease;"></span>
+        </label>
+      </div>
       <span class="admin-user-info">Login sebagai: <span id="adminEmailDisplay"></span></span>
       <button class="btn-sm btn-ghost" onclick="openChangePass()"><i data-lucide="key" style="width:13px;height:13px;"></i> Ganti Password</button>
       <button class="btn-sm btn-danger" onclick="doLogout()"><i data-lucide="log-out" style="width:13px;height:13px;"></i> Logout</button>
@@ -1850,6 +1881,77 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbDb = firebase.database();
 const fbAuth = firebase.auth();
+
+// ===== GLOBAL KILL SWITCH / APP ACTIVE REAL-TIME SYNC =====
+try {
+  fbDb.ref('settings/app_active').on('value', (snap) => {
+    const isActive = snap.val() !== false; // defaults to true if not set
+    const toggle = document.getElementById('systemStatusToggle');
+    const statusText = document.getElementById('systemStatusText');
+    const statusDot = document.getElementById('systemStatusDot');
+    
+    if (toggle) toggle.checked = isActive;
+    
+    if (isActive) {
+      if (statusText) {
+        statusText.textContent = 'AKTIF';
+        statusText.style.color = 'var(--success)';
+      }
+      if (statusDot) {
+        statusDot.style.backgroundColor = 'var(--success)';
+        statusDot.style.boxShadow = '0 0 8px var(--success)';
+      }
+    } else {
+      if (statusText) {
+        statusText.textContent = 'MAINTENANCE';
+        statusText.style.color = 'var(--danger)';
+      }
+      if (statusDot) {
+        statusDot.style.backgroundColor = 'var(--danger)';
+        statusDot.style.boxShadow = '0 0 8px var(--danger)';
+      }
+    }
+  });
+} catch (e) {
+  console.warn('[admin] Failed to bind app_active listener:', e);
+}
+
+async function toggleSystemStatus(isActive) {
+  try {
+    const statusText = document.getElementById('systemStatusText');
+    const statusDot = document.getElementById('systemStatusDot');
+    
+    await fbDb.ref('settings/app_active').set(isActive);
+    
+    if (isActive) {
+      if (statusText) {
+        statusText.textContent = 'AKTIF';
+        statusText.style.color = 'var(--success)';
+      }
+      if (statusDot) {
+        statusDot.style.backgroundColor = 'var(--success)';
+        statusDot.style.boxShadow = '0 0 8px var(--success)';
+      }
+      showToast('Sistem LebihFit berhasil DIAKTIFKAN secara global!', 'success');
+    } else {
+      if (statusText) {
+        statusText.textContent = 'MAINTENANCE';
+        statusText.style.color = 'var(--danger)';
+      }
+      if (statusDot) {
+        statusDot.style.backgroundColor = 'var(--danger)';
+        statusDot.style.boxShadow = '0 0 8px var(--danger)';
+      }
+      showToast('Sistem LebihFit berhasil DINONAKTIFKAN (Maintenance Mode)!', 'warning');
+    }
+  } catch (err) {
+    console.error('[toggleSystemStatus] failed:', err);
+    showToast('Gagal mengubah status sistem: ' + err.message, 'error');
+    // revert checkbox state
+    const toggle = document.getElementById('systemStatusToggle');
+    if (toggle) toggle.checked = !isActive;
+  }
+}
 
 // ===== SUPER ADMIN EMAIL =====
 const SUPER_ADMIN = 'jadilebihfit@gmail.com';
