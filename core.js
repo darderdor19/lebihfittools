@@ -345,8 +345,13 @@ function safeParseAIJson(rawStr) {
   clean = clean.replace(/```json/gi, '').replace(/```/g, '').trim();
   
   // 2. Extract JSON object substring if surrounded by extra text
-  const match = clean.match(/\{[\s\S]*\}/);
+  const match = clean.match(/\{[\s\S]*/);
   if (match) clean = match[0];
+
+  const lastBrace = clean.lastIndexOf('}');
+  if (lastBrace !== -1) {
+    clean = clean.substring(0, lastBrace + 1);
+  }
 
   // 3. Clean inline parenthetical notes inside value strings or invalid comments
   // e.g. "status": "Improve" (atau "Stagnan") -> "status": "Improve"
@@ -355,15 +360,27 @@ function safeParseAIJson(rawStr) {
   // 4. Clean trailing commas before closing braces/brackets
   clean = clean.replace(/,\s*([\}\]])/g, '$1');
 
+  // 5. Try standard JSON.parse
   try {
     return JSON.parse(clean);
   } catch (e1) {
-    // Attempt additional repairs: strip javascript comments
-    clean = clean.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
+    // 6. Repair unescaped newlines inside JSON string literals
+    let repaired = clean.replace(/[\r\n]+/g, " ");
+    repaired = repaired.replace(/,\s*([\}\]])/g, '$1');
+    repaired = repaired.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
+
     try {
-      return JSON.parse(clean);
+      return JSON.parse(repaired);
     } catch (e2) {
-      console.error('[safeParseAIJson] Failed parsing raw JSON:', rawStr, e2);
+      // 7. Ultimate Fallback: Use JS object literal evaluator if standard JSON parsing fails
+      try {
+        const fn = new Function('return (' + clean + ')');
+        const obj = fn();
+        if (obj && typeof obj === 'object') return obj;
+      } catch (e3) {
+        // Fallback failed
+      }
+      console.error('[safeParseAIJson] All parse attempts failed:', rawStr, e1);
       throw e1;
     }
   }
