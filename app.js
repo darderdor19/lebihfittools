@@ -4891,7 +4891,7 @@ Kembalikan respons dalam JSON dengan format persis seperti ini:
                     id: 'ah_' + Date.now(),
                     timestamp: new Date().toISOString(),
                     dateLabel: new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }),
-                    dateRange: (cacheParams && cacheParams.from && cacheParams.to) ? `${cacheParams.from} s/d ${cacheParams.to}` : 'Periode terpilih',
+                    dateRange: (cacheParams && cacheParams.from && cacheParams.to) ? formatHumanDateRange(cacheParams.from, cacheParams.to) : 'Periode terpilih',
                     overallScore: sh.overallScore || null,
                     status: sh.status || 'Analisis Selesai',
                     statusColor: sh.statusColor || 'blue',
@@ -6496,6 +6496,25 @@ function switchJejakTab(tab) {
     if (panelF) panelF.style.display = tab === 'fisik' ? '' : 'none';
 }
 
+function formatHumanDateRange(fromVal, toVal) {
+    if (!fromVal || !toVal) return '7 Hari Terakhir';
+    
+    let dFrom = typeof fromVal === 'number' || !isNaN(fromVal) ? new Date(Number(fromVal)) : new Date(fromVal);
+    let dTo = typeof toVal === 'number' || !isNaN(toVal) ? new Date(Number(toVal)) : new Date(toVal);
+
+    if (isNaN(dFrom.getTime()) || isNaN(dTo.getTime())) {
+        return `${fromVal} s/d ${toVal}`;
+    }
+
+    const strFrom = dFrom.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    const strTo = dTo.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    
+    const diffTime = Math.abs(dTo - dFrom);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    return `${strFrom} – ${strTo} (${diffDays} Hari)`;
+}
+
 function renderJejakHarian() {
     const panel = document.getElementById('jejakPanelHarian');
     if (!panel) return;
@@ -6504,27 +6523,50 @@ function renderJejakHarian() {
         panel.innerHTML = `
           <div class="jejak-empty">
             <div class="jejak-empty-icon">📊</div>
-            <h4>Belum Ada Jejak Analisis</h4>
-            <p>Lakukan Analisis Progress AI di menu <strong>Analisis Progress</strong> untuk mulai merekam jejakmu.</p>
+            <h4>Belum Ada Jejak Progres Harian</h4>
+            <p>Lakukan Analisis Progress AI di menu <strong>Analisis Progress → Analisis Tren Data</strong> untuk mulai merekam jejakmu.</p>
           </div>`;
         return;
     }
-    const colorMap = { green:'green', yellow:'yellow', red:'red', blue:'blue' };
+    const colorMap = { green:'green', yellow:'yellow', red:'red', blue:'blue', 'Bermasalah':'red', 'Optimal':'green', 'Perlu Perhatian':'yellow' };
     panel.innerHTML = history.map((entry, i) => {
-        const badgeClass = colorMap[entry.statusColor] || 'blue';
-        const scoreText = entry.overallScore ? `<strong style="color:var(--accent);font-size:1.1rem;">${entry.overallScore}</strong>/100 &bull; ` : '';
+        const badgeClass = colorMap[entry.statusColor] || (entry.status === 'BERMASALAH' ? 'red' : 'blue');
+        const scoreVal = entry.overallScore !== null && entry.overallScore !== undefined ? entry.overallScore : null;
+        const scorePill = scoreVal !== null ? `<div style="font-size:0.8rem; font-weight:700; color:${scoreVal >= 75 ? 'var(--success)' : scoreVal >= 50 ? '#ff9f0a' : 'var(--danger)'}; background:rgba(255,255,255,0.05); padding:4px 10px; border-radius:20px; border:1px solid var(--border);">Skor AI: ${scoreVal}/100</div>` : '';
+        
+        let formattedRange = entry.dateRange || '7 Hari Terakhir';
+        if (formattedRange.includes('s/d') && /\d{10,}/.test(formattedRange)) {
+            const parts = formattedRange.split('s/d');
+            formattedRange = formatHumanDateRange(parts[0].trim(), parts[1].trim());
+        }
+
         return `
-          <div class="jejak-entry-card">
-            <div class="jejak-entry-meta">
-              <span class="jejak-entry-date">📅 ${entry.dateLabel || (entry.timestamp||'').substring(0,10)}</span>
-              <span class="jejak-entry-badge ${badgeClass}">${entry.status}</span>
+          <div class="jejak-entry-card" style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.85rem; font-weight:700; color:var(--accent); font-family:monospace;">📅 ${entry.dateLabel || (entry.timestamp||'').substring(0,10)}</span>
+                <span class="jejak-entry-badge ${badgeClass}">${entry.status || 'Analisis Selesai'}</span>
+              </div>
+              ${scorePill}
             </div>
-            <div class="jejak-entry-summary">
-              ${scoreText}Periode: ${entry.dateRange || '-'}
+
+            <div style="display:flex; gap:14px; align-items:center; margin-bottom:12px;">
+              <div style="width:50px; height:50px; border-radius:10px; background:rgba(0,255,204,0.08); border:1px solid rgba(0,255,204,0.2); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+                📈
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:0.86rem; color:var(--text); font-weight:600; margin-bottom:4px;">
+                  🗓️ Rentang Evaluasi: <span style="color:var(--accent); font-weight:700;">${formattedRange}</span>
+                </div>
+                <p style="font-size:0.82rem; color:var(--text2); margin:0;">
+                  ${entry.summary || 'Hasil evaluasi komprehensif nutrisi, olahraga, dan pola tidur.'}
+                </p>
+              </div>
             </div>
-            <div class="jejak-entry-actions">
+
+            <div style="display:flex; gap:8px; justify-content:flex-end; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
               <button class="jejak-btn-detail" onclick="openJejakDetail('harian',${i})">
-                <i data-lucide="eye" style="width:14px;height:14px;"></i> Lihat Detail
+                <i data-lucide="eye" style="width:14px;height:14px;"></i> Lihat Detail Laporan
               </button>
               <button class="jejak-btn-delete" onclick="deleteJejakHarian(${i})" title="Hapus">
                 <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
