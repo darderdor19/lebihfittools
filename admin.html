@@ -1159,52 +1159,78 @@
         </div>
 
         <!-- API Balance & Keys Status -->
-        <div class="card" style="margin-top:20px; padding:16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border);">
+        <div class="card" style="margin-top:20px; padding:16px; background: rgba(255,255,255,0.01); border: 1px solid var(--border);">
           <h3 style="margin-bottom:16px; font-size:1rem; display:flex; align-items:center; gap:8px; color:var(--text1);"><i data-lucide="key" style="color:var(--warning); width:18px; height:18px;"></i> Detail Saldo & Status API Key Vercel</h3>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;" id="apiKeyStatusGrid">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:18px;" id="apiKeyStatusGrid">
             
-            <!-- Text API Status -->
-            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+            <!-- Text API Status Card -->
+            <div id="apiKeyTextCard" style="background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); backdrop-filter: blur(4px); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; transition: all 0.3s ease;">
+              <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:radial-gradient(circle, rgba(0,255,204,0.08) 0%, transparent 70%); pointer-events:none;"></div>
               <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
-                  <strong style="color:var(--text1); font-size:0.95rem; display:flex; align-items:center; gap:6px;">📝 API Utama (Teks)</strong>
-                  <span class="badge" id="apiKeyTextStatus" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+                  <strong style="color:var(--text1); font-size:0.95rem; display:flex; align-items:center; gap:8px; font-weight:700;"><span style="font-size:1.1rem;">📝</span> API Utama (Teks)</strong>
+                  <span id="apiKeyTextStatus" style="font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border); text-transform:uppercase; letter-spacing:0.05em;">Memuat...</span>
                 </div>
-                <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:6px; line-height:1.5;">
-                  <div style="display:flex; justify-content:space-between;"><span>Provider:</span> <strong style="color:var(--text1);" id="apiKeyTextProvider">-</strong></div>
-                  <div style="display:flex; justify-content:space-between;"><span>Key Prefix:</span> <strong style="color:var(--text1); font-family:monospace;" id="apiKeyTextPrefix">-</strong></div>
-                  <div style="display:flex; justify-content:space-between;"><span>Saldo / Limit:</span> <strong style="color:var(--success);" id="apiKeyTextBalance">-</strong></div>
-                  <div style="display:flex; justify-content:space-between;"><span>Model Aktif:</span> <strong style="color:var(--accent);" id="apiKeyTextModel">-</strong></div>
-                  <div style="display:flex; justify-content:space-between; flex-direction:column; margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.05);">
-                    <span style="font-size:0.75rem; color:var(--text3); margin-bottom:2px;">Endpoint URL:</span>
-                    <span style="font-size:0.75rem; color:var(--text2); word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;" id="apiKeyTextEndpoint">-</span>
+                <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:8px; line-height:1.6;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Provider:</span> 
+                    <strong style="color:var(--text1); background:rgba(255,255,255,0.04); padding:2px 8px; border-radius:4px;" id="apiKeyTextProvider">-</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Key Prefix:</span> 
+                    <strong style="color:var(--text1); font-family:monospace; font-size:0.85rem;" id="apiKeyTextPrefix">-</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Saldo / Limit:</span> 
+                    <strong style="color:var(--success); font-size:0.95rem;" id="apiKeyTextBalance">-</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Model Aktif:</span> 
+                    <strong style="color:var(--accent); font-family:monospace;" id="apiKeyTextModel">-</strong>
+                  </div>
+                  <div style="display:flex; flex-direction:column; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.08);">
+                    <span style="font-size:0.75rem; color:var(--text3); margin-bottom:4px;">Endpoint URL:</span>
+                    <span style="font-size:0.75rem; color:var(--text2); word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.3); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.02);" id="apiKeyTextEndpoint">-</span>
                   </div>
                 </div>
               </div>
-              <div id="apiKeyTextErrorContainer" style="margin-top:12px; font-size:0.75rem; color:#ff3b30; display:none; background:rgba(255,59,48,0.06); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,59,48,0.2); line-height:1.4;">
+              <div id="apiKeyTextErrorContainer" style="margin-top:14px; font-size:0.75rem; color:#ff3b30; display:none; background:rgba(255,59,48,0.08); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,59,48,0.3); line-height:1.5;">
                 <strong>⚠️ Error Detail:</strong> <span id="apiKeyTextErrorDetail">-</span>
               </div>
             </div>
 
-            <!-- Vision API Status -->
-            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+            <!-- Vision API Status Card -->
+            <div id="apiKeyVisionCard" style="background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); backdrop-filter: blur(4px); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; transition: all 0.3s ease;">
+              <div style="position:absolute; top:-20px; right:-20px; width:80px; height:80px; background:radial-gradient(circle, rgba(0,255,204,0.08) 0%, transparent 70%); pointer-events:none;"></div>
               <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
-                  <strong style="color:var(--text1); font-size:0.95rem; display:flex; align-items:center; gap:6px;">📸 API Kamera (Vision)</strong>
-                  <span class="badge" id="apiKeyVisionStatus" style="font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+                  <strong style="color:var(--text1); font-size:0.95rem; display:flex; align-items:center; gap:8px; font-weight:700;"><span style="font-size:1.1rem;">📸</span> API Kamera (Vision)</strong>
+                  <span id="apiKeyVisionStatus" style="font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border); text-transform:uppercase; letter-spacing:0.05em;">Memuat...</span>
                 </div>
-                <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:6px; line-height:1.5;">
-                  <div style="display:flex; justify-content:space-between;"><span>Provider:</span> <strong style="color:var(--text1);" id="apiKeyVisionProvider">-</strong></div>
-                  <div style="display:flex; justify-content:space-between;"><span>Key Prefix:</span> <strong style="color:var(--text1); font-family:monospace;" id="apiKeyVisionPrefix">-</strong></div>
-                  <div style="display:flex; justify-content:space-between;"><span>Saldo / Limit:</span> <strong style="color:var(--success);" id="apiKeyVisionBalance">-</strong></div>
-                  <div style="display:flex; justify-content:space-between;"><span>Model Aktif:</span> <strong style="color:var(--accent);" id="apiKeyVisionModel">-</strong></div>
-                  <div style="display:flex; justify-content:space-between; flex-direction:column; margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.05);">
-                    <span style="font-size:0.75rem; color:var(--text3); margin-bottom:2px;">Endpoint URL:</span>
-                    <span style="font-size:0.75rem; color:var(--text2); word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;" id="apiKeyVisionEndpoint">-</span>
+                <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:8px; line-height:1.6;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Provider:</span> 
+                    <strong style="color:var(--text1); background:rgba(255,255,255,0.04); padding:2px 8px; border-radius:4px;" id="apiKeyVisionProvider">-</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Key Prefix:</span> 
+                    <strong style="color:var(--text1); font-family:monospace; font-size:0.85rem;" id="apiKeyVisionPrefix">-</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Saldo / Limit:</span> 
+                    <strong style="color:var(--success); font-size:0.95rem;" id="apiKeyVisionBalance">-</strong>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text3);">Model Aktif:</span> 
+                    <strong style="color:var(--accent); font-family:monospace;" id="apiKeyVisionModel">-</strong>
+                  </div>
+                  <div style="display:flex; flex-direction:column; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.08);">
+                    <span style="font-size:0.75rem; color:var(--text3); margin-bottom:4px;">Endpoint URL:</span>
+                    <span style="font-size:0.75rem; color:var(--text2); word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.3); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.02);" id="apiKeyVisionEndpoint">-</span>
                   </div>
                 </div>
               </div>
-              <div id="apiKeyVisionErrorContainer" style="margin-top:12px; font-size:0.75rem; color:#ff3b30; display:none; background:rgba(255,59,48,0.06); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,59,48,0.2); line-height:1.4;">
+              <div id="apiKeyVisionErrorContainer" style="margin-top:14px; font-size:0.75rem; color:#ff3b30; display:none; background:rgba(255,59,48,0.08); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,59,48,0.3); line-height:1.5;">
                 <strong>⚠️ Error Detail:</strong> <span id="apiKeyVisionErrorDetail">-</span>
               </div>
             </div>
@@ -2464,6 +2490,8 @@ function showToast(msg, type = 'info') {
 }
 
 // ===== MONITORING TOKEN AI =====
+let tokenMonitorListenersAttached = false;
+
 async function loadTokenMonitor() {
   const tokenTotalEl = document.getElementById('tokenTotal');
   const tokenCostUSDEl = document.getElementById('tokenCostUSD');
@@ -2472,134 +2500,128 @@ async function loadTokenMonitor() {
   
   const userFeatureStatsBody = document.getElementById('tokenUserFeatureStatsBody');
   const logsTableBody = document.getElementById('tokenLogsTableBody');
+
+  if (tokenMonitorListenersAttached) {
+    // If listeners are already active, just fetch Vercel status and return
+    fetchVercelKeyStatus();
+    return;
+  }
   
   userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Memuat data statistik...</td></tr>';
   logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);">Memuat data log transaksi...</td></tr>';
 
   try {
-    // 1. Fetch User Stats
-    const userStatsSnap = await fbDb.ref('admins/user_token_stats').once('value');
-    const userStats = userStatsSnap.val() || {};
-    
-    // 2. Fetch User + Feature Stats
-    const userFeatureStatsSnap = await fbDb.ref('admins/user_feature_token_stats').once('value');
-    const userFeatureStats = userFeatureStatsSnap.val() || {};
-    
-    // 3. Fetch logs (last 100 entries)
-    const logsSnap = await fbDb.ref('admins/token_logs').limitToLast(100).once('value');
-    const rawLogs = logsSnap.val() || {};
-    
-    // --- Render Stats Cards ---
-    let totalTokensAllTime = 0;
-    let totalCallsAllTime = 0;
-    let activeUsersCount = Object.keys(userStats).length;
+    // 1. Real-time User Stats Sync (.on)
+    fbDb.ref('admins/user_token_stats').on('value', (userStatsSnap) => {
+      try {
+        const userStats = userStatsSnap.val() || {};
+        let totalTokensAllTime = 0;
+        let totalCallsAllTime = 0;
+        let activeUsersCount = Object.keys(userStats).length;
 
-    Object.values(userStats).forEach(u => {
-      totalTokensAllTime += (u.totalTokens || 0);
-      totalCallsAllTime += (u.callCount || 0);
+        Object.values(userStats).forEach(u => {
+          totalTokensAllTime += (u.totalTokens || 0);
+          totalCallsAllTime += (u.callCount || 0);
+        });
+
+        // Estimate Cost: $0.15 per 1,000,000 tokens
+        const estimatedCostUSD = (totalTokensAllTime / 1000000) * 0.15;
+
+        if (tokenTotalEl) tokenTotalEl.textContent = totalTokensAllTime.toLocaleString('id-ID');
+        if (tokenCostUSDEl) {
+          tokenCostUSDEl.innerHTML = `$${estimatedCostUSD.toFixed(5)} <span style="font-size:0.75rem;color:var(--text2)">(${(estimatedCostUSD * 16300).toLocaleString('id-ID', {maximumFractionDigits: 0})} IDR)</span>`;
+        }
+        if (tokenTotalCallsEl) tokenTotalCallsEl.textContent = totalCallsAllTime.toLocaleString('id-ID');
+        if (tokenActiveUsersEl) tokenActiveUsersEl.textContent = activeUsersCount;
+      } catch (err) {
+        console.error('[realtime stats error]', err);
+      }
     });
 
-    // Estimate Cost: $0.15 per 1,000,000 tokens (conservative blend of Gemini Flash & Qwen Flash)
-    const estimatedCostUSD = (totalTokensAllTime / 1000000) * 0.15;
+    // 2. Real-time Combined User + Feature Table Sync (.on)
+    fbDb.ref('admins/user_feature_token_stats').on('value', (userFeatureStatsSnap) => {
+      try {
+        const userFeatureStats = userFeatureStatsSnap.val() || {};
+        const sortedUserFeatures = Object.values(userFeatureStats).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+        
+        if (sortedUserFeatures.length === 0) {
+          userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px;">Belum ada riwayat penggunaan token per user & fitur.</td></tr>';
+        } else {
+          userFeatureStatsBody.innerHTML = sortedUserFeatures.map((uf, index) => {
+            let rankBadge = '';
+            if (index === 0) rankBadge = '🥇 ';
+            else if (index === 1) rankBadge = '🥈 ';
+            else if (index === 2) rankBadge = '🥉 ';
 
-    tokenTotalEl.textContent = totalTokensAllTime.toLocaleString('id-ID');
-    tokenCostUSDEl.innerHTML = `$${estimatedCostUSD.toFixed(5)} <span style="font-size:0.75rem;color:var(--text2)">(${(estimatedCostUSD * 16300).toLocaleString('id-ID', {maximumFractionDigits: 0})} IDR)</span>`;
-    tokenTotalCallsEl.textContent = totalCallsAllTime.toLocaleString('id-ID');
-    tokenActiveUsersEl.textContent = activeUsersCount;
+            let featureLabel = uf.feature || 'unknown';
+            if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan (Visual)';
+            else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food (Text)';
+            else if (featureLabel === 'body_analysis') featureLabel = '🧍 Body Analysis';
+            else if (featureLabel === 'ai_assistant_text') featureLabel = '💬 Assistant Teks';
+            else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assistant + Gambar';
+            else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Dashboard Eval';
+            else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Dashboard Eval';
 
-    // --- Render Combined User + Feature Table ---
-    const sortedUserFeatures = Object.values(userFeatureStats).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-    if (sortedUserFeatures.length === 0) {
-      userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px;">Belum ada riwayat penggunaan token per user & fitur.</td></tr>';
-    } else {
-      userFeatureStatsBody.innerHTML = sortedUserFeatures.map((uf, index) => {
-        let rankBadge = '';
-        if (index === 0) rankBadge = '🥇 ';
-        else if (index === 1) rankBadge = '🥈 ';
-        else if (index === 2) rankBadge = '🥉 ';
+            const lastActiveStr = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-';
 
-        let featureLabel = uf.feature || 'unknown';
-        // Pretty labels
-        if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan (Visual)';
-        else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food (Text)';
-        else if (featureLabel === 'body_analysis') featureLabel = '🧍 Body Analysis';
-        else if (featureLabel === 'ai_assistant_text') featureLabel = '💬 Assistant Teks';
-        else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assistant + Gambar';
-        else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Dashboard Eval';
-        else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Dashboard Eval';
-
-        const lastActiveStr = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-';
-
-        return `
-          <tr>
-            <td style="font-weight:700; text-align:center;">${rankBadge || (index + 1)}</td>
-            <td style="font-weight:600;color:var(--text1)">${escapeHtml(uf.email || 'anonymous')}</td>
-            <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
-            <td>${uf.callCount || 0}</td>
-            <td style="font-weight:700;color:var(--accent)">${(uf.totalTokens || 0).toLocaleString('id-ID')}</td>
-            <td style="font-size:0.75rem;color:var(--text2)">${lastActiveStr}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // --- Render Transaction Logs ---
-    const sortedLogs = Object.values(rawLogs).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-    if (sortedLogs.length === 0) {
-      logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px;">Belum ada transaksi log token.</td></tr>';
-    } else {
-      logsTableBody.innerHTML = sortedLogs.map(l => {
-        const timeStr = new Date(l.timestamp).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' });
-        let featureLabel = l.feature || 'unknown';
-        if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan';
-        else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food';
-        else if (featureLabel === 'body_analysis') featureLabel = '🧍 Body Analys.';
-        else if (featureLabel === 'ai_assistant_text') featureLabel = '💬 Assist. Teks';
-        else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assist. Gbr';
-        else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Eval';
-        else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Eval';
-
-        return `
-          <tr>
-            <td style="font-size:0.75rem;color:var(--text2)">${timeStr}</td>
-            <td style="font-weight:600;">${escapeHtml(l.email || 'anonymous')}</td>
-            <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
-            <td style="font-size:0.75rem;color:var(--text2)">${escapeHtml(l.model || 'unknown')}</td>
-            <td style="color:var(--text2)">${(l.promptTokens || 0).toLocaleString('id-ID')}</td>
-            <td style="color:var(--text2)">${(l.completionTokens || 0).toLocaleString('id-ID')}</td>
-            <td style="font-weight:700;color:var(--accent)">${(l.totalTokens || 0).toLocaleString('id-ID')}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Fetch real-time API Key status from our Vercel serverless function
-    const curEmail = localStorage.getItem('lf_user_email') || (fbAuth.currentUser ? fbAuth.currentUser.email : '');
-    if (curEmail) {
-      const cleanEmail = curEmail.replace(/"/g, '').trim();
-      let endpoint = '/api/admin';
-      if (window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
-        endpoint = 'https://lebihfittools.vercel.app/api/admin';
+            return `
+              <tr>
+                <td style="font-weight:700; text-align:center;">${rankBadge || (index + 1)}</td>
+                <td style="font-weight:600;color:var(--text1)">${escapeHtml(uf.email || 'anonymous')}</td>
+                <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
+                <td>${uf.callCount || 0}</td>
+                <td style="font-weight:700;color:var(--accent)">${(uf.totalTokens || 0).toLocaleString('id-ID')}</td>
+                <td style="font-size:0.75rem;color:var(--text2)">${lastActiveStr}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (err) {
+        console.error('[realtime table error]', err);
       }
-      
-      fetch(`${endpoint}?email=${encodeURIComponent(cleanEmail)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && !data.error) {
-            updateKeyStatusUI('Text', data.textKey);
-            updateKeyStatusUI('Vision', data.imageKey);
-          } else {
-            console.warn('[admin] failed to get key balance:', data.error);
-            showKeyStatusError();
-          }
-        })
-        .catch(err => {
-          console.error('[admin] fetch key balance error:', err);
-          showKeyStatusError();
-        });
-    } else {
-      showKeyStatusError();
-    }
+    });
+
+    // 3. Real-time Transaction Logs Sync (.on) (last 100 entries)
+    fbDb.ref('admins/token_logs').limitToLast(100).on('value', (logsSnap) => {
+      try {
+        const rawLogs = logsSnap.val() || {};
+        const sortedLogs = Object.values(rawLogs).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        
+        if (sortedLogs.length === 0) {
+          logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px;">Belum ada transaksi log token.</td></tr>';
+        } else {
+          logsTableBody.innerHTML = sortedLogs.map(l => {
+            const timeStr = new Date(l.timestamp).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' });
+            let featureLabel = l.feature || 'unknown';
+            if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan';
+            else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food';
+            else if (featureLabel === 'body_analysis') featureLabel = '🧍 Body Analys.';
+            else if (featureLabel === 'ai_assistant_text') featureLabel = '💬 Assist. Teks';
+            else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assist. Gbr';
+            else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Eval';
+            else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Eval';
+
+            return `
+              <tr>
+                <td style="font-size:0.75rem;color:var(--text2)">${timeStr}</td>
+                <td style="font-weight:600;">${escapeHtml(l.email || 'anonymous')}</td>
+                <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
+                <td style="font-size:0.75rem;color:var(--text2)">${escapeHtml(l.model || 'unknown')}</td>
+                <td style="color:var(--text2)">${(l.promptTokens || 0).toLocaleString('id-ID')}</td>
+                <td style="color:var(--text2)">${(l.completionTokens || 0).toLocaleString('id-ID')}</td>
+                <td style="font-weight:700;color:var(--accent)">${(l.totalTokens || 0).toLocaleString('id-ID')}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (err) {
+        console.error('[realtime logs error]', err);
+      }
+    });
+
+    // 4. Fetch Vercel API Key status
+    fetchVercelKeyStatus();
+    tokenMonitorListenersAttached = true;
 
   } catch (err) {
     console.error('[loadTokenMonitor] failed:', err);
@@ -2607,7 +2629,37 @@ async function loadTokenMonitor() {
   }
 }
 
+function fetchVercelKeyStatus() {
+  const curEmail = localStorage.getItem('lf_user_email') || (fbAuth.currentUser ? fbAuth.currentUser.email : '');
+  if (curEmail) {
+    const cleanEmail = curEmail.replace(/"/g, '').trim();
+    let endpoint = '/api/admin';
+    if (window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+      endpoint = 'https://lebihfittools.vercel.app/api/admin';
+    }
+    
+    fetch(`${endpoint}?email=${encodeURIComponent(cleanEmail)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          updateKeyStatusUI('Text', data.textKey);
+          updateKeyStatusUI('Vision', data.imageKey);
+        } else {
+          console.warn('[admin] failed to get key balance:', data.error);
+          showKeyStatusError();
+        }
+      })
+      .catch(err => {
+        console.error('[admin] fetch key balance error:', err);
+        showKeyStatusError();
+      });
+  } else {
+    showKeyStatusError();
+  }
+}
+
 function updateKeyStatusUI(type, keyInfo) {
+  const cardEl = document.getElementById(`apiKey${type}Card`);
   const statusEl = document.getElementById(`apiKey${type}Status`);
   const providerEl = document.getElementById(`apiKey${type}Provider`);
   const prefixEl = document.getElementById(`apiKey${type}Prefix`);
@@ -2625,22 +2677,25 @@ function updateKeyStatusUI(type, keyInfo) {
       statusEl.style.background = 'rgba(0,255,204,0.12)';
       statusEl.style.color = 'var(--success)';
       statusEl.style.border = '1px solid rgba(0,255,204,0.3)';
+      if (cardEl) {
+        cardEl.style.border = '1px solid rgba(0, 255, 204, 0.22)';
+        cardEl.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.3), 0 0 15px rgba(0, 255, 204, 0.06)';
+      }
     } else {
       statusEl.style.background = 'rgba(255,59,48,0.12)';
       statusEl.style.color = 'var(--danger)';
       statusEl.style.border = '1px solid rgba(255,59,48,0.3)';
+      if (cardEl) {
+        cardEl.style.border = '1px solid rgba(255, 59, 48, 0.28)';
+        cardEl.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 59, 48, 0.08)';
+      }
     }
   }
   if (providerEl) providerEl.textContent = keyInfo.provider || '-';
   if (prefixEl) prefixEl.textContent = keyInfo.prefix || 'None';
   if (balanceEl) {
     const isIDR = (keyInfo.balance || '').includes('IDR');
-    balanceEl.innerHTML = `
-      <span style="color:${isIDR || (keyInfo.balance && keyInfo.balance.includes('$')) ? 'var(--success)' : 'var(--text2)'}; font-weight:700;">${keyInfo.balance || '-'}</span>
-      <button onclick="editBalance('${type}')" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:0.75rem; margin-left:6px; padding:2px; vertical-align:middle;" title="Ubah Saldo Manual">
-        <i data-lucide="edit-2" style="width:12px;height:12px;"></i>
-      </button>
-    `;
+    balanceEl.innerHTML = `<span style="color:${isIDR || (keyInfo.balance && keyInfo.balance.includes('$')) ? 'var(--success)' : 'var(--text2)'}; font-weight:700;">${keyInfo.balance || '-'}</span>`;
   }
   if (modelEl) modelEl.textContent = keyInfo.model || '-';
   if (endpointEl) {
@@ -2680,31 +2735,6 @@ function showKeyStatusError() {
       errContainer.style.display = 'none';
     }
   });
-}
-
-async function editBalance(type) {
-  const currency = type === 'Text' ? '$' : 'IDR';
-  // Load current balance from Firebase RTDB
-  const snap = await fbDb.ref(`admins/api_balances/${type.toLowerCase()}`).once('value');
-  const curObj = snap.val() || { balance: type === 'Text' ? 17.99 : 298955, currency };
-  
-  const newValStr = prompt(`Masukkan nominal saldo ${type} baru (${currency}):`, curObj.balance);
-  if (newValStr === null) return; // cancelled
-  
-  const newVal = parseFloat(newValStr);
-  if (isNaN(newVal) || newVal < 0) {
-    alert('Nominal saldo tidak valid!');
-    return;
-  }
-  
-  curObj.balance = newVal;
-  curObj.lastUpdated = new Date().toISOString();
-  
-  await fbDb.ref(`admins/api_balances/${type.toLowerCase()}`).set(curObj);
-  showToast(`Saldo ${type} berhasil diperbarui!`, 'success');
-  
-  // Refresh UI
-  loadTokenMonitor();
 }
 
 function escapeHtml(str) {
