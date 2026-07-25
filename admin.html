@@ -1158,6 +1158,39 @@
           </div>
         </div>
 
+        <!-- API Balance & Keys Status -->
+        <div class="card" style="margin-top:20px; padding:16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border);">
+          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="key" style="color:var(--warning); width:16px; height:16px;"></i> Detail Saldo & Status API Key Vercel</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;" id="apiKeyStatusGrid">
+            <!-- Text API Status -->
+            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; position:relative;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong style="color:var(--text1); font-size:0.9rem;">📝 API Key Utama (GPT/Teks)</strong>
+                <span class="badge" id="apiKeyTextStatus" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+              </div>
+              <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:4px; line-height:1.4;">
+                <span>Provider: <strong style="color:var(--text1);" id="apiKeyTextProvider">-</strong></span>
+                <span>Saldo Tersisa: <strong style="color:var(--success);" id="apiKeyTextBalance">-</strong></span>
+                <span>Model Aktif: <strong style="color:var(--accent);" id="apiKeyTextModel">-</strong></span>
+                <span style="font-size:0.75rem; color:var(--text3); word-break:break-all;">Endpoint: <span id="apiKeyTextEndpoint">-</span></span>
+              </div>
+            </div>
+            <!-- Vision API Status -->
+            <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; position:relative;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong style="color:var(--text1); font-size:0.9rem;">📸 API Key Kamera (Gemini/Vision)</strong>
+                <span class="badge" id="apiKeyVisionStatus" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border);">Memuat...</span>
+              </div>
+              <div style="font-size:0.85rem; color:var(--text2); display:flex; flex-direction:column; gap:4px; line-height:1.4;">
+                <span>Provider: <strong style="color:var(--text1);" id="apiKeyVisionProvider">-</strong></span>
+                <span>Saldo Tersisa: <strong style="color:var(--success);" id="apiKeyVisionBalance">-</strong></span>
+                <span>Model Aktif: <strong style="color:var(--accent);" id="apiKeyVisionModel">-</strong></span>
+                <span style="font-size:0.75rem; color:var(--text3); word-break:break-all;">Endpoint: <span id="apiKeyVisionEndpoint">-</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Combined User & Feature Usage -->
         <div class="card" style="margin-top:20px; padding:16px;">
           <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="award" style="color:var(--accent); width:16px; height:16px;"></i> Penggunaan Token Terbesar per User & Fitur</h3>
@@ -2519,10 +2552,93 @@ async function loadTokenMonitor() {
       }).join('');
     }
 
+    // Fetch real-time API Key status from our Vercel serverless function
+    const curEmail = localStorage.getItem('lf_user_email') || (fbAuth.currentUser ? fbAuth.currentUser.email : '');
+    if (curEmail) {
+      const cleanEmail = curEmail.replace(/"/g, '').trim();
+      let endpoint = '/api/admin';
+      if (window.location.protocol === 'file:' || (!window.location.hostname.endsWith('.vercel.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+        endpoint = 'https://lebihfittools.vercel.app/api/admin';
+      }
+      
+      fetch(`${endpoint}?email=${encodeURIComponent(cleanEmail)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            updateKeyStatusUI('Text', data.textKey);
+            updateKeyStatusUI('Vision', data.imageKey);
+          } else {
+            console.warn('[admin] failed to get key balance:', data.error);
+            showKeyStatusError();
+          }
+        })
+        .catch(err => {
+          console.error('[admin] fetch key balance error:', err);
+          showKeyStatusError();
+        });
+    } else {
+      showKeyStatusError();
+    }
+
   } catch (err) {
     console.error('[loadTokenMonitor] failed:', err);
     showToast('Gagal memuat monitoring token: ' + err.message, 'error');
   }
+}
+
+function updateKeyStatusUI(type, keyInfo) {
+  const statusEl = document.getElementById(`apiKey${type}Status`);
+  const providerEl = document.getElementById(`apiKey${type}Provider`);
+  const balanceEl = document.getElementById(`apiKey${type}Balance`);
+  const modelEl = document.getElementById(`apiKey${type}Model`);
+  const endpointEl = document.getElementById(`apiKey${type}Endpoint`);
+  
+  if (!keyInfo) return;
+  
+  if (statusEl) {
+    statusEl.textContent = keyInfo.status || 'Unknown';
+    if (keyInfo.status === 'Active') {
+      statusEl.style.background = 'rgba(0,255,204,0.12)';
+      statusEl.style.color = 'var(--success)';
+      statusEl.style.border = '1px solid rgba(0,255,204,0.3)';
+    } else {
+      statusEl.style.background = 'rgba(255,59,48,0.12)';
+      statusEl.style.color = 'var(--danger)';
+      statusEl.style.border = '1px solid rgba(255,59,48,0.3)';
+    }
+  }
+  if (providerEl) providerEl.textContent = keyInfo.provider || '-';
+  if (balanceEl) {
+    balanceEl.textContent = keyInfo.balance || '-';
+    if (keyInfo.balance && keyInfo.balance.includes('remaining')) {
+      balanceEl.style.color = 'var(--success)';
+    } else {
+      balanceEl.style.color = 'var(--text2)';
+    }
+  }
+  if (modelEl) modelEl.textContent = keyInfo.model || '-';
+  if (endpointEl) {
+    let rawEndpoint = keyInfo.endpoint || '-';
+    try {
+      const url = new URL(rawEndpoint);
+      endpointEl.textContent = url.hostname + (url.pathname !== '/' ? url.pathname : '');
+    } catch(e) {
+      endpointEl.textContent = rawEndpoint;
+    }
+    endpointEl.title = rawEndpoint;
+  }
+}
+
+function showKeyStatusError() {
+  ['Text', 'Vision'].forEach(type => {
+    const statusEl = document.getElementById(`apiKey${type}Status`);
+    if (statusEl) {
+      statusEl.textContent = 'Gagal memuat';
+      statusEl.style.background = 'rgba(255,59,48,0.12)';
+      statusEl.style.color = 'var(--danger)';
+      statusEl.style.border = '1px solid rgba(255,59,48,0.3)';
+    }
+  });
 }
 
 function escapeHtml(str) {
