@@ -379,6 +379,10 @@ function sumNutrients(items) {
   }, { cal:0, protein:0, carbs:0, fat:0, fiber:0, sugar:0, sodium:0, calcium:0, iron:0, vitC:0, vitD:0, zinc:0 });
 }
 
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 function safeParseAIJson(rawStr) {
   if (!rawStr) return null;
   let clean = typeof rawStr === 'string' ? rawStr.trim() : String(rawStr).trim();
