@@ -29,16 +29,21 @@ module.exports = async function handler(req, res) {
     if (msgContent.includes('BAHAN UTAMA') || msgContent.includes('MAKANAN YANG DIIDENTIFIKASI DARI FOTO') || msgContent.includes('Nama Makanan')) {
       let searchQueries = [];
       
-      // Extract food name or components breakdown
-      const nameMatch = msgContent.match(/Nama Makanan[^\n:]*:\s*([^\n"]+)/i) || msgContent.match(/Nama\s*:\s*([^\n"]+)/i);
-      if (nameMatch) searchQueries.push(nameMatch[1].replace(/^"/, '').replace(/".*$/, '').trim());
+      // Extract food name or components breakdown with multi-word & comma/plus/and splitting
+      const rawTextToSearch = [
+        msgContent.match(/Nama Makanan[^\n:]*:\s*([^\n"]+)/i)?.[1],
+        msgContent.match(/Porsi[^\n:]*:\s*([^\n"]+)/i)?.[1],
+        msgContent.match(/Deskripsi[^\n:]*:\s*([^\n"]+)/i)?.[1],
+        msgContent.match(/rincian bahan\s*:\s*([^\)\n]+)/i)?.[1]
+      ].filter(Boolean).join(' ');
 
-      const rincianMatch = msgContent.match(/rincian bahan\s*:\s*([^\)\n]+)/i);
-      if (rincianMatch) {
-        const parts = rincianMatch[1].split(',');
-        parts.forEach(p => {
-          const itemName = p.split(':')[0].replace(/~\d+g?/i, '').trim();
-          if (itemName && itemName.length > 2) searchQueries.push(itemName);
+      if (rawTextToSearch) {
+        const items = rawTextToSearch.split(/[,+\n]|\bdan\b|\bdengan\b/gi);
+        items.forEach(it => {
+          const cleanItem = it.replace(/\d+\s*(g|gr|gram|kg|ml|oz|pcs|biji|potong|centong|piring|gelas|sendok|sdm|sdt)?/gi, '').replace(/[^\w\s]/gi, '').trim();
+          if (cleanItem && cleanItem.length >= 2) {
+            searchQueries.push(cleanItem);
+          }
         });
       }
 

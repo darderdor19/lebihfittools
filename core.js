@@ -878,17 +878,12 @@ Bulatkan 1 angka di belakang koma.`;
   
   if (!raw) throw new Error("AI tidak mengembalikan data.");
   try {
-    if (typeof raw === 'string') {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        return JSON.parse(match[0]);
-      }
-      return JSON.parse(raw);
-    }
-    return raw;
+    const data = safeParseAIJson(raw);
+    if (!data) throw new Error("Format JSON tidak valid");
+    return data;
   } catch (e) {
-    console.error("Parse Error. Raw data:", raw);
-    throw new Error("Gagal membaca hasil analisis (Format JSON tidak valid).");
+    console.error("Parse Error. Raw data:", raw, e);
+    throw new Error("Gagal membaca hasil analisis nutrisi. Silakan coba lagi.");
   }
 }
 
