@@ -12,12 +12,17 @@ const FB_URL = (process.env.FIREBASE_DATABASE_URL && process.env.FIREBASE_DATABA
 let cachedAccessToken = null;
 let accessTokenExpiry = 0;
 
+let tokenError = null;
+
 /**
  * Get Google OAuth2 access token using Firebase Service Account from env
  */
 async function getAccessToken() {
   const saVar = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!saVar) return null;
+  if (!saVar) {
+    tokenError = "FIREBASE_SERVICE_ACCOUNT environment variable is missing in Vercel.";
+    return null;
+  }
 
   const now = Math.floor(Date.now() / 1000);
   if (cachedAccessToken && now < accessTokenExpiry - 60) {
@@ -25,8 +30,24 @@ async function getAccessToken() {
   }
 
   try {
-    const sa = JSON.parse(saVar);
-    if (!sa.client_email || !sa.private_key) return null;
+    let sa;
+    try {
+      sa = JSON.parse(saVar);
+    } catch (parseErr) {
+      try {
+        // Fallback: try to sanitize raw newlines in pasted JSON string
+        const sanitized = saVar.replace(/\n/g, '\\n');
+        sa = JSON.parse(sanitized);
+      } catch (e2) {
+        tokenError = `Failed to parse FIREBASE_SERVICE_ACCOUNT JSON: ${parseErr.message}`;
+        return null;
+      }
+    }
+    
+    if (!sa.client_email || !sa.private_key) {
+      tokenError = "Service account JSON is missing client_email or private_key.";
+      return null;
+    }
 
     const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
     
@@ -40,8 +61,14 @@ async function getAccessToken() {
 
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(`${jwtHeader}.${jwtClaim}`);
-    const signature = sign.sign(sa.private_key, 'base64url');
-
+    
+    // Replace escaped newlines with actual newlines for PEM formatting
+    let privateKey = sa.private_key;
+    if (typeof privateKey === 'string' && privateKey.includes('\\n')) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+    
+    const signature = sign.sign(privateKey, 'base64url');
     const signedJwt = `${jwtHeader}.${jwtClaim}.${signature}`;
 
     const resp = await fetch('https://oauth2.googleapis.com/token', {
@@ -55,16 +82,17 @@ async function getAccessToken() {
 
     if (!resp.ok) {
       const errText = await resp.text();
-      console.error('[firebase] OAuth token fetch failed:', resp.status, errText);
+      tokenError = `Firebase OAuth token fetch failed (Status ${resp.status}): ${errText}`;
       return null;
     }
 
     const data = await resp.json();
     cachedAccessToken = data.access_token;
     accessTokenExpiry = now + (data.expires_in || 3600);
+    tokenError = null;
     return cachedAccessToken;
   } catch (e) {
-    console.error('[firebase] Failed to generate access token:', e);
+    tokenError = `Failed to generate access token: ${e.message}`;
     return null;
   }
 }
@@ -74,7 +102,10 @@ async function getAccessToken() {
  */
 async function getFirebase(path) {
   const token = await getAccessToken();
-  const url = token ? `${FB_URL}/${path}.json?access_token=${token}` : `${FB_URL}/${path}.json`;
+  if (!token) {
+    throw new Error(tokenError || "Firebase authentication token is missing. Please ensure FIREBASE_SERVICE_ACCOUNT is correctly configured in Vercel.");
+  }
+  const url = `${FB_URL}/${path}.json?access_token=${token}`;
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Firebase GET failed (Status ${res.status}): ${res.statusText}`);
@@ -91,7 +122,10 @@ async function getFirebase(path) {
  */
 async function setFirebase(path, value) {
   const token = await getAccessToken();
-  const url = token ? `${FB_URL}/${path}.json?access_token=${token}` : `${FB_URL}/${path}.json`;
+  if (!token) {
+    throw new Error(tokenError || "Firebase authentication token is missing. Please ensure FIREBASE_SERVICE_ACCOUNT is correctly configured in Vercel.");
+  }
+  const url = `${FB_URL}/${path}.json?access_token=${token}`;
   const method = value === null ? 'DELETE' : 'PUT';
   const options = {
     method,
