@@ -37,7 +37,14 @@ async function searchOpenFoodFacts(query) {
     const data = await response.json();
     if (!data.products || data.products.length === 0) return [];
     
-    return data.products.map(p => {
+    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const validProducts = data.products.filter(p => {
+      const pName = (p.product_name || '').toLowerCase();
+      if (!pName) return false;
+      return queryWords.some(qw => pName.includes(qw));
+    });
+
+    return validProducts.slice(0, 2).map(p => {
       const nuts = p.nutriments || {};
       // Open Food Facts returns sodium in grams. Kemenkes/USDA/LebihFit uses mg.
       const sodiumG = parseFloat(nuts['sodium_100g'] || nuts['sodium'] || 0);

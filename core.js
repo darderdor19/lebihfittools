@@ -842,8 +842,10 @@ Porsi/Berat Baru: ${portion || '1 porsi standar'}
 Deskripsi/Cara Masak Baru: ${desc || 'tidak ada deskripsi tambahan'}${historicalContext}
 
 == STANDAR PORSI & ACUAN KULINER INDONESIA ==
-- Nasi Putih / Merah Matang: 1 centong = ~100g (~130 kcal). 1 piring warteg/padang = ~150g - 200g.
-- Tempe / Tahu Goreng: 1 potong = ~40g - 50g (~80 - 110 kcal, 5 - 8g protein).
+- Mie Gacoan / Mie Pedas / Mie Ayam / Mie Goreng: 1 porsi = ~150g - 200g matang (~350 - 450 kcal | Karbo: 55g - 65g | Protein: 10g - 14g | Lemak: 12g - 18g). 4 porsi = ~1400 - 1800 kcal, Karbo ~220g - 260g, Protein ~40g - 56g.
+- Nasi Putih / Merah Matang: 1 centong = ~100g (~130 kcal, Karbo 28g). 1 piring warteg/padang = ~150g - 200g (~200 - 260 kcal).
+- Nasi Goreng Spesial / Padang: 1 piring = ~250g (~450 - 600 kcal | Karbo: 65g - 85g | Protein: 12g - 18g | Lemak: 15g - 22g).
+- Tempe / Tahu Goreng: 1 potong = ~40g - 50g (~80 - 110 kcal, 5 - 8g protein, 4 - 6g lemak).
 - Ayam Goreng / Bakar (Paha/Dada): 1 potong = ~100g (~165 - 220 kcal, 25 - 30g protein).
 - Telur Ayam (Ceplok/Dadar/Rebus): 1 butir = ~50g - 60g (~78 - 110 kcal, 6.3g protein).
 - Daging Sapi / Rendang: 1 potong = ~60g - 70g (~160 - 220 kcal, 18 - 22g protein).
@@ -862,16 +864,19 @@ Deskripsi/Cara Masak Baru: ${desc || 'tidak ada deskripsi tambahan'}${historical
 1. Ekstrak berat porsi baru dalam gram matang. Gunakan acuan porsi Indonesia di atas jika berbentuk porsi/biji/potong.
 2. Jika ada REFERENSI HISTORIS MAKANAN USER di atas, gunakan data nutrisi tersebut sebagai basis. Lakukan penskalaan proporsional sesuai perbandingan berat porsi baru vs porsi lama.
 3. Jika tidak ada REFERENSI HISTORIS, cari nilai gizi per 100g di database global (TKPI Indonesia / USDA FoodData Central).
-4. Mentah vs Matang: kata "fillet/mentah/raw" = mentah, selain itu wajib asumsikan matang.
-5. PENGOLAHAN MINYAK:
+4. ATWATER LOGIC & INTEGRITY:
+   - Makanan berbasis MIE / NASI / TEPUNG / GANDUM / ROTI / SINGKONG DIHARAMKAN memiliki Karbohidrat 0g! Karbohidrat WAKTU DOMINAN.
+   - Total Kalori = (Protein × 4) + (Karbohidrat × 4) + (Lemak × 9).
+5. Mentah vs Matang: kata "fillet/mentah/raw" = mentah, selain itu wajib asumsikan matang.
+6. PENGOLAHAN MINYAK:
    - Deep Fried / Goreng Tepung / Gorengan: Tambahkan +10g lemak (+90 kcal) per 100g item.
    - Tumis / Goreng Biasa: Tambahkan +5g lemak (+45 kcal) per porsi.
    - Santan / Gulai: Tambahkan +8g lemak (+72 kcal) per 100g.
    - Air Fryer / Rebus / Kukus / Panggang tanpa minyak = TANPA lemak/kalori minyak goreng.
-6. MULTI-BAHAN: kalkulasikan tiap bahan TERPISAH lalu JUMLAHKAN. Jangan kalikan berat total dengan gizi satu bahan saja.
-7. MIKRONUTRISI: hitung secara realistis untuk sodium, kalsium, besi, vitC, vitD, zinc. JANGAN biarkan bernilai 0 kecuali memang bebas gizi tersebut.
-8. Jawab HANYA JSON valid tanpa teks/markdown:
-{"calculation":"tuliskan langkah perkalian makro DAN MIKRO (misal: kalori 165*6=990, sodium 74*6=444)","cal":123.4,"protein":12.3,"carbs":45.6,"fat":7.8,"fiber":1.2,"sugar":0.5,"sodium":120.0,"calcium":15.0,"iron":1.1,"vitC":10.0,"vitD":0.0,"zinc":0.8}
+7. MULTI-BAHAN: kalkulasikan tiap bahan TERPISAH lalu JUMLAHKAN. Jangan kalikan berat total dengan gizi satu bahan saja.
+8. MIKRONUTRISI: hitung secara realistis untuk sodium, kalsium, besi, vitC, vitD, zinc. JANGAN biarkan bernilai 0 kecuali memang bebas gizi tersebut.
+9. Jawab HANYA JSON valid tanpa teks/markdown:
+{"calculation":"tuliskan langkah perkalian makro DAN MIKRO (misal: Mie Gacoan 4 porsi = 4 x 400 = 1600 kcal, Karbo 240g)","cal":1600.0,"protein":48.0,"carbs":240.0,"fat":52.0,"fiber":8.0,"sugar":12.0,"sodium":1800.0,"calcium":120.0,"iron":8.0,"vitC":0.0,"vitD":0.0,"zinc":4.0}
 Bulatkan 1 angka di belakang koma.`;
 
   const raw = await callAI([{ role:'user', content: prompt }], true, 'gpt-4o-mini');

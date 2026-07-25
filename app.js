@@ -2301,11 +2301,6 @@ function renderActivityChart(dates, allActs) {
 async function updateHistoryAIAnalysis(foodStats, fromDate, toDate) {
     const el = document.getElementById('historyAiContent');
     if (!el) return;
-    const apiKey = localStorage.getItem('lf_apikey');
-    if (!apiKey) {
-        el.innerHTML = `<p style="color:var(--text2);font-size:0.85rem;">Set API Key di Settings untuk analisis AI komprehensif.</p>`;
-        return;
-    }
 
     const email = localStorage.getItem('lf_user_email');
     if (!email) return;
@@ -4621,15 +4616,8 @@ function onProgressFilterChange() {
 }
 
 async function startProgressAnalysis() {
-    const apiKey = localStorage.getItem('lf_apikey');
     const resultTextEl = document.getElementById('progressAiResultText');
     const resultCard = document.getElementById('progressResultCard');
-    
-    if (!apiKey) {
-        alert('Set API Key terlebih dahulu di menu Settings!');
-        showPage('settings');
-        return;
-    }
     
     const radio = document.querySelector('input[name="progressPeriod"]:checked');
     const period = radio ? radio.value : '7';
