@@ -121,24 +121,61 @@ module.exports = async function handler(req, res) {
       body.response_format = { type: "json_object" };
     }
 
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastErrMsg = '';
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      const rawMsg = err.error?.message || err.message || '';
-      console.error('[ai] Upstream API error:', response.status, rawMsg);
-      
-      if (response.status === 429 || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('rate')) {
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (response.ok) break;
+
+        const err = await response.json().catch(() => ({}));
+        lastErrMsg = err.error?.message || err.message || '';
+        console.error(`[ai] Upstream API error (attempt ${attempts}/${maxAttempts}):`, response.status, lastErrMsg);
+
+        const isTransient = [500, 502, 503, 504, 429].includes(response.status) || 
+                            lastErrMsg.toLowerCase().includes('overloaded') || 
+                            lastErrMsg.toLowerCase().includes('quota') ||
+                            lastErrMsg.toLowerCase().includes('rate') ||
+                            lastErrMsg.toLowerCase().includes('busy');
+
+        if (isTransient && attempts < maxAttempts) {
+          console.warn(`[ai] Upstream API transient error (${response.status}), retrying in ${attempts * 1.5}s...`);
+          await new Promise(r => setTimeout(r, attempts * 1500));
+          continue;
+        }
+        break;
+      } catch (fetchErr) {
+        lastErrMsg = fetchErr.message;
+        console.error(`[ai] Upstream API fetch exception (attempt ${attempts}/${maxAttempts}):`, fetchErr);
+        if (attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, attempts * 1500));
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (!response || !response.ok) {
+      const status = response ? response.status : 503;
+      if (status === 429 || lastErrMsg.toLowerCase().includes('quota') || lastErrMsg.toLowerCase().includes('rate')) {
         return res.status(429).json({ error: { message: 'Sistem AI sedang banyak permintaan (Quota Exceeded / Rate Limit). Coba lagi sebentar.' } });
       }
-      return res.status(response.status || 500).json({ error: { message: rawMsg || `Upstream API Error (${response.status})` } });
+      if (status === 503 || lastErrMsg.toLowerCase().includes('overloaded') || lastErrMsg.toLowerCase().includes('busy')) {
+        return res.status(503).json({ error: { message: 'Server Google Gemini / AI sedang antre (503 Service Unavailable). Coba sebentar lagi ya bro.' } });
+      }
+      return res.status(status || 500).json({ error: { message: lastErrMsg || `Upstream API Error (${status})` } });
     }
 
     const data = await response.json();

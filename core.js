@@ -487,23 +487,24 @@ async function callAI(messages, json = false, model = 'gpt-4o-mini', isVision = 
         const err = await res.json().catch(() => ({}));
         const errMsg = err.error?.message || `HTTP ${res.status}`;
         
-        // Handle Gemini Rate Limits gracefully
-        if (res.status === 429 || errMsg.includes('Quota exceeded') || errMsg.includes('retry')) {
+        // Handle Gemini Rate Limits & 503 Server Glitches gracefully
+        const isTransientStatus = [429, 500, 502, 503, 504].includes(res.status);
+        if (isTransientStatus || errMsg.includes('Quota exceeded') || errMsg.includes('retry') || errMsg.includes('503')) {
            if (retries > 0) {
-               console.warn("[lebihfit] Rate limit hit, attempting automatic retry...", errMsg);
+               console.warn("[lebihfit] Transient/Rate limit error hit, attempting automatic retry...", errMsg);
                const match = errMsg.match(/retry in ([\d\.]+)s/i);
-               let waitMs = 5000; 
+               let waitMs = 3000; 
                if (match && match[1]) {
                    waitMs = (parseFloat(match[1]) + 1) * 1000;
                }
                if (waitMs > 35000) waitMs = 10000; 
                
                if (typeof showToast === 'function') {
-                   showToast(`Sistem AI sedang antre... (Delay ${Math.round(waitMs/1000)}s)`, 'info');
+                   showToast(`Sistem AI sedang padat... Menghubungkan ulang...`, 'info');
                }
                
                await new Promise(resolve => setTimeout(resolve, waitMs));
-               return await callAI(messages, json, model, isVision, isGroqVision, retries - 1);
+               return await callAI(messages, json, model, isVision, isGroqVision, retries - 1, fallbackAttempted, maxTokens);
            }
         }
         throw new Error(errMsg);
