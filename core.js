@@ -21,7 +21,7 @@ if (firebaseConfig && firebaseConfig.apiKey && typeof firebase !== 'undefined') 
     
     // Listen to global maintenance kill switch
     try {
-        fbDb.ref('settings/app_active').on('value', (snap) => {
+        fbDb.ref('admins/settings/app_active').on('value', (snap) => {
             const appActive = snap.val();
             const maintenanceOverlay = document.getElementById('maintenanceOverlay');
             if (maintenanceOverlay) {
@@ -33,7 +33,7 @@ if (firebaseConfig && firebaseConfig.apiKey && typeof firebase !== 'undefined') 
             }
         });
     } catch (e) {
-        console.warn('[core] Failed to bind settings/app_active listener:', e);
+        console.warn('[core] Failed to bind admins/settings/app_active listener:', e);
     }
 }
 

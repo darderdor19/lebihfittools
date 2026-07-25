@@ -1884,7 +1884,7 @@ const fbAuth = firebase.auth();
 
 // ===== GLOBAL KILL SWITCH / APP ACTIVE REAL-TIME SYNC =====
 try {
-  fbDb.ref('settings/app_active').on('value', (snap) => {
+  fbDb.ref('admins/settings/app_active').on('value', (snap) => {
     const isActive = snap.val() !== false; // defaults to true if not set
     const toggle = document.getElementById('systemStatusToggle');
     const statusText = document.getElementById('systemStatusText');
@@ -1921,7 +1921,7 @@ async function toggleSystemStatus(isActive) {
     const statusText = document.getElementById('systemStatusText');
     const statusDot = document.getElementById('systemStatusDot');
     
-    await fbDb.ref('settings/app_active').set(isActive);
+    await fbDb.ref('admins/settings/app_active').set(isActive);
     
     if (isActive) {
       if (statusText) {

@@ -20,7 +20,7 @@ module.exports = async function handler(req, res) {
   try {
     // Check Global System Maintenance Switch
     const { getFirebase } = require('../lib/firebase');
-    const appActive = await getFirebase('settings/app_active').catch(() => true);
+    const appActive = await getFirebase('admins/settings/app_active').catch(() => true);
     if (appActive === false) {
       return res.status(503).json({ error: { message: 'Sistem sedang pemeliharaan global oleh admin. Silakan coba beberapa saat lagi.' } });
     }
