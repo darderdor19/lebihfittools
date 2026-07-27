@@ -1315,9 +1315,24 @@
                     <span style="color:var(--text3);">Key Prefix:</span> 
                     <strong style="color:var(--text1); font-family:monospace; font-size:0.85rem;" id="apiKeyTextPrefix">-</strong>
                   </div>
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:var(--text3);">Saldo / Limit:</span> 
-                    <strong style="color:var(--success); font-size:0.95rem;" id="apiKeyTextBalance">-</strong>
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <span style="color:var(--text3); flex-shrink:0;">Saldo Asli:</span>
+                    <div style="display:flex; align-items:center; gap:6px; flex:1; justify-content:flex-end;">
+                      <strong style="color:var(--success); font-size:0.95rem;" id="apiKeyTextBalance">-</strong>
+                      <button onclick="openBalanceEdit('text')" title="Perbarui saldo sesuai dashboard" style="background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.2);color:var(--success);border-radius:6px;padding:2px 7px;font-size:0.68rem;cursor:pointer;font-weight:700;letter-spacing:0.03em;">✏️ Edit</button>
+                    </div>
+                  </div>
+                  <div id="balanceEditText" style="display:none; flex-direction:column; gap:6px; background:rgba(0,255,204,0.04); border:1px solid rgba(0,255,204,0.15); border-radius:8px; padding:10px; margin-top:2px;">
+                    <div style="font-size:0.72rem; color:var(--text2);">Input saldo persis dari <strong style="color:var(--text1);">dashboard OpenAI</strong> kamu:</div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <select id="balanceCurrencyText" style="background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:6px;padding:4px 6px;font-size:0.78rem;">
+                        <option value="$">USD ($)</option>
+                        <option value="IDR">IDR</option>
+                      </select>
+                      <input type="number" id="balanceInputText" placeholder="cth: 17.99" step="0.01" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:6px;padding:5px 8px;font-size:0.85rem;font-family:monospace;">
+                      <button onclick="saveBalance('text')" style="background:var(--success);color:#0d0f14;border:none;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:800;cursor:pointer;">Simpan</button>
+                      <button onclick="document.getElementById('balanceEditText').style.display='none'" style="background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:0.78rem;cursor:pointer;">✕</button>
+                    </div>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="color:var(--text3);">Model Aktif:</span> 
@@ -1351,9 +1366,24 @@
                     <span style="color:var(--text3);">Key Prefix:</span> 
                     <strong style="color:var(--text1); font-family:monospace; font-size:0.85rem;" id="apiKeyVisionPrefix">-</strong>
                   </div>
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:var(--text3);">Saldo / Limit:</span> 
-                    <strong style="color:var(--success); font-size:0.95rem;" id="apiKeyVisionBalance">-</strong>
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <span style="color:var(--text3); flex-shrink:0;">Saldo Asli:</span>
+                    <div style="display:flex; align-items:center; gap:6px; flex:1; justify-content:flex-end;">
+                      <strong style="color:var(--success); font-size:0.95rem;" id="apiKeyVisionBalance">-</strong>
+                      <button onclick="openBalanceEdit('vision')" title="Perbarui saldo sesuai dashboard" style="background:rgba(0,255,204,0.08);border:1px solid rgba(0,255,204,0.2);color:var(--success);border-radius:6px;padding:2px 7px;font-size:0.68rem;cursor:pointer;font-weight:700;letter-spacing:0.03em;">✏️ Edit</button>
+                    </div>
+                  </div>
+                  <div id="balanceEditVision" style="display:none; flex-direction:column; gap:6px; background:rgba(0,255,204,0.04); border:1px solid rgba(0,255,204,0.15); border-radius:8px; padding:10px; margin-top:2px;">
+                    <div style="font-size:0.72rem; color:var(--text2);">Input saldo persis dari <strong style="color:var(--text1);">Google AI Studio / GCP</strong> kamu:</div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <select id="balanceCurrencyVision" style="background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:6px;padding:4px 6px;font-size:0.78rem;">
+                        <option value="IDR">IDR</option>
+                        <option value="$">USD ($)</option>
+                      </select>
+                      <input type="number" id="balanceInputVision" placeholder="cth: 298944" step="1" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:6px;padding:5px 8px;font-size:0.85rem;font-family:monospace;">
+                      <button onclick="saveBalance('vision')" style="background:var(--success);color:#0d0f14;border:none;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:800;cursor:pointer;">Simpan</button>
+                      <button onclick="document.getElementById('balanceEditVision').style.display='none'" style="background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:0.78rem;cursor:pointer;">✕</button>
+                    </div>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="color:var(--text3);">Model Aktif:</span> 
@@ -2731,11 +2761,28 @@ function formatIDR(val) {
   return `Rp ${Math.round(val).toLocaleString('id-ID')}`;
 }
 
-function getModelBadge(model) {
-  const m = (model || '').toLowerCase();
+// Infer which AI model is used based on feature name (fallback when model field is missing)
+function inferModelFromFeature(feature) {
+  const geminiFeatures = ['food_scan', 'body_analysis', 'ai_assistant_image'];
+  const gptFeatures = ['manual_food_ai', 'ai_assistant_text', 'dashboard_daily', 'dashboard_weekly', 'calculator_idea', 'calculator_tdee'];
+  if (geminiFeatures.includes(feature)) return 'gemini-2.5-flash';
+  if (gptFeatures.includes(feature)) return 'gpt-4o-mini';
+  return '';
+}
+
+function getModelBadge(model, feature) {
+  // If model is unknown/empty, try to infer from feature
+  const resolvedModel = (!model || model === 'unknown' || model === '') ? inferModelFromFeature(feature || '') : model;
+  const m = (resolvedModel || '').toLowerCase();
   if (m.includes('gpt')) return `<span class="model-badge-gpt">GPT</span>`;
   if (m.includes('gemini')) return `<span class="model-badge-gemini">Gemini</span>`;
-  return `<span class="model-badge-other">${escapeHtml(model || 'unknown')}</span>`;
+  return `<span class="model-badge-other">${escapeHtml(model || '?')}</span>`;
+}
+
+// Also update computeCostIDR to use inferred model when model is unknown
+function computeCostIDRSmart(promptTokens, completionTokens, model, feature) {
+  const resolved = (!model || model === 'unknown') ? inferModelFromFeature(feature || '') : model;
+  return computeCostIDR(promptTokens, completionTokens, resolved);
 }
 
 function getFeatureTag(feature) {
@@ -2746,10 +2793,41 @@ function getFeatureTag(feature) {
     'ai_assistant_text': '💬 AI Asisten',
     'ai_assistant_image': '🖼️ Asisten+Gbr',
     'dashboard_daily': '📊 Daily Eval',
-    'dashboard_weekly': '📊 Weekly Eval'
+    'dashboard_weekly': '📊 Weekly Eval',
+    'calculator_idea': '🧮 Kalkulator',
+    'calculator_tdee': '🔥 TDEE Calc'
   };
   const label = map[feature] || feature || 'unknown';
   return `<span class="feature-tag">${escapeHtml(label)}</span>`;
+}
+
+// ── Balance Edit Functions ──
+function openBalanceEdit(type) {
+  const editDiv = document.getElementById(`balanceEdit${type.charAt(0).toUpperCase() + type.slice(1)}`);
+  if (editDiv) editDiv.style.display = 'flex';
+}
+
+async function saveBalance(type) {
+  const capType = type.charAt(0).toUpperCase() + type.slice(1);
+  const inputEl = document.getElementById(`balanceInput${capType}`);
+  const currencyEl = document.getElementById(`balanceCurrency${capType}`);
+  const editDiv = document.getElementById(`balanceEdit${capType}`);
+  if (!inputEl || !currencyEl) return;
+  const val = parseFloat(inputEl.value);
+  if (isNaN(val) || val < 0) { showToast('Nilai saldo tidak valid', 'error'); return; }
+  const currency = currencyEl.value; // '$' or 'IDR'
+  const balancePath = type === 'text' ? 'admins/api_balances/text' : 'admins/api_balances/vision';
+  try {
+    await fbDb.ref(balancePath).update({ balance: val, currency, lastUpdated: new Date().toISOString() });
+    showToast(`✅ Saldo ${type === 'text' ? 'GPT' : 'Gemini'} berhasil diperbarui!`, 'success');
+    if (editDiv) editDiv.style.display = 'none';
+    inputEl.value = '';
+    // Refresh key status to show new balance
+    setTimeout(fetchVercelKeyStatus, 600);
+  } catch(err) {
+    console.error('[saveBalance] error:', err);
+    showToast('Gagal menyimpan saldo: ' + err.message, 'error');
+  }
 }
 
 async function loadTokenMonitor() {
@@ -2799,17 +2877,18 @@ async function loadTokenMonitor() {
           // Estimate budget in IDR for this user+feature combo using their accumulated tokens
           // We approximate based on model stored in the entry (or from logs if needed)
           const modelGuess = uf.model || '';
-          const budgetIDR = computeCostIDR(uf.promptTokens || uf.totalTokens * 0.6, uf.completionTokens || uf.totalTokens * 0.4, modelGuess);
-          const lastActive = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '-';
+          const budgetIDR = computeCostIDRSmart(uf.promptTokens || uf.totalTokens * 0.6, uf.completionTokens || uf.totalTokens * 0.4, modelGuess, uf.feature);
+          // Full date with year
+          const lastActive = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
           return `
             <tr>
               <td style="font-weight:600;color:var(--text1);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(uf.email || '')}">${escapeHtml(uf.email || 'anonymous')}</td>
               <td>${getFeatureTag(uf.feature)}</td>
-              <td>${getModelBadge(uf.model || modelGuess)}</td>
+              <td>${getModelBadge(uf.model || modelGuess, uf.feature)}</td>
               <td style="text-align:right;font-weight:700;color:var(--accent);">${(uf.totalTokens || 0).toLocaleString('id-ID')}</td>
               <td style="text-align:right;font-weight:700;color:var(--warning);">${formatIDR(budgetIDR)}</td>
               <td style="color:var(--text2);">${uf.callCount || 0}</td>
-              <td style="font-size:0.75rem;color:var(--text2);">${lastActive}</td>
+              <td style="font-size:0.75rem;color:var(--text2);white-space:nowrap;">${lastActive}</td>
             </tr>`;
         }).join('');
       } catch(e) { console.error('[user budget table error]', e); }
@@ -2842,14 +2921,15 @@ async function loadTokenMonitor() {
           return;
         }
         logsTableBody.innerHTML = sorted.map(l => {
-          const timeStr = new Date(l.timestamp).toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'2-digit'});
-          const costIDR = computeCostIDR(l.promptTokens, l.completionTokens, l.model);
+          // Full date + time with year
+          const timeStr = new Date(l.timestamp).toLocaleString('id-ID', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+          const costIDR = computeCostIDRSmart(l.promptTokens, l.completionTokens, l.model, l.feature);
           return `
             <tr>
               <td style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">${timeStr}</td>
               <td style="font-weight:600;font-size:0.78rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(l.email||'')}">${escapeHtml(l.email || 'anonymous')}</td>
               <td>${getFeatureTag(l.feature)}</td>
-              <td>${getModelBadge(l.model)}</td>
+              <td>${getModelBadge(l.model, l.feature)}</td>
               <td style="text-align:right;color:var(--text2);">${(l.promptTokens||0).toLocaleString('id-ID')}</td>
               <td style="text-align:right;color:var(--text2);">${(l.completionTokens||0).toLocaleString('id-ID')}</td>
               <td style="text-align:right;font-weight:700;color:var(--accent);">${(l.totalTokens||0).toLocaleString('id-ID')}</td>
