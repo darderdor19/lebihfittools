@@ -54,12 +54,12 @@ async function initApp() {
             if (fbDb && authUser.email) {
                 const safeEmail = authUser.email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
                 fbDb.ref(`admins/${safeEmail}`).once('value').then(adminSnap => {
-                    if (authUser.email === 'jadilebihfit@gmail.com' || adminSnap.val() === true) {
-                        document.getElementById('navAdminBtn').style.display = '';
-                    } else {
-                        document.getElementById('navAdminBtn').style.display = 'none';
-                    }
-                }).catch(console.error);
+                    const btn = document.getElementById('navAdminBtn');
+                    if (btn) btn.style.display = (authUser.email === 'jadilebihfit@gmail.com' || (adminSnap && adminSnap.val() === true)) ? '' : 'none';
+                }).catch(() => {
+                    const btn = document.getElementById('navAdminBtn');
+                    if (btn) btn.style.display = (authUser.email === 'jadilebihfit@gmail.com') ? '' : 'none';
+                });
             }
 
             // Sync Firebase in the background
@@ -235,11 +235,17 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
         }
         
         // Cek admin status
-        const adminSnap = await fbDb.ref(`admins/${safeEmail}`).once('value');
-        if (email === 'jadilebihfit@gmail.com' || adminSnap.val() === true) {
-            document.getElementById('navAdminBtn').style.display = '';
-        } else {
-            document.getElementById('navAdminBtn').style.display = 'none';
+        try {
+            const adminSnap = await fbDb.ref(`admins/${safeEmail}`).once('value');
+            const navAdminBtn = document.getElementById('navAdminBtn');
+            if (navAdminBtn) {
+                navAdminBtn.style.display = (email === 'jadilebihfit@gmail.com' || (adminSnap && adminSnap.val() === true)) ? '' : 'none';
+            }
+        } catch (adminErr) {
+            const navAdminBtn = document.getElementById('navAdminBtn');
+            if (navAdminBtn) {
+                navAdminBtn.style.display = (email === 'jadilebihfit@gmail.com') ? '' : 'none';
+            }
         }
     } else {
         // No Firebase DB: use local first-run tracking
@@ -337,8 +343,12 @@ async function loginWithGoogle() {
         const safeEmail = user.email.replace(/"/g, '').replace(/[.#$[\]]/g, '_');
         let phone = null;
         if (fbDb) {
-            const snap = await fbDb.ref(`users/${safeEmail}/lf_user_phone`).once('value');
-            phone = snap.val();
+            try {
+                const snap = await fbDb.ref(`users/${safeEmail}/lf_user_phone`).once('value');
+                phone = snap ? snap.val() : null;
+            } catch (pErr) {
+                console.warn('[Google Auth] Phone lookup warning:', pErr.message);
+            }
         }
 
         if (!phone) {
