@@ -2939,7 +2939,32 @@ async function loadTokenMonitor() {
       } catch(e) { console.error('[logs realtime error]', e); }
     });
 
-    // 4. Fetch Vercel API Key status
+    // 4. Realtime API Balance Sync (.on)
+    fbDb.ref('admins/api_balances/text').on('value', (snap) => {
+      const b = snap.val();
+      if (b && typeof b.balance === 'number') {
+        const textBalanceEl = document.getElementById('apiKeyTextBalance');
+        if (textBalanceEl) {
+          textBalanceEl.innerHTML = (b.currency === 'IDR') 
+            ? `IDR ${Math.round(b.balance).toLocaleString('id-ID')}` 
+            : `$${Number(b.balance).toFixed(4)}`;
+        }
+      }
+    });
+
+    fbDb.ref('admins/api_balances/vision').on('value', (snap) => {
+      const b = snap.val();
+      if (b && typeof b.balance === 'number') {
+        const visionBalanceEl = document.getElementById('apiKeyVisionBalance');
+        if (visionBalanceEl) {
+          visionBalanceEl.innerHTML = (b.currency === 'IDR') 
+            ? `IDR ${Math.round(b.balance).toLocaleString('id-ID')}` 
+            : `$${Number(b.balance).toFixed(4)}`;
+        }
+      }
+    });
+
+    // 5. Fetch Vercel API Key status
     fetchVercelKeyStatus();
     tokenMonitorListenersAttached = true;
 

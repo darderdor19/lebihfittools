@@ -266,19 +266,22 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
         let cost = 0;
         const modelLower = (model || '').toLowerCase();
         
-        if (modelLower.includes('gpt-4o-mini')) {
+        if (modelLower.includes('gpt')) {
           cost = (promptTokens * 0.00000015) + (completionTokens * 0.00000060); // USD
-        } else if (modelLower.includes('gemini-2.5-flash')) {
+          if (balanceObj.currency === 'IDR') cost = cost * 16300;
+        } else if (modelLower.includes('gemini')) {
           if (balanceObj.currency === 'IDR') {
-            cost = (promptTokens * 0.001225) + (completionTokens * 0.0049); // IDR from Google Cloud prepay
+            cost = (promptTokens * 0.001225) + (completionTokens * 0.0049); // IDR
           } else {
             cost = (promptTokens * 0.000000075) + (completionTokens * 0.00000030); // USD
           }
         } else {
-          // Fallback generic pricing
-          cost = (totalTokens * 0.00000015);
-          if (balanceObj.currency === 'IDR') {
-            cost = cost * 16300; // USD to IDR conversion fallback
+          // Fallback based on vision/text feature
+          if (isVision) {
+            cost = balanceObj.currency === 'IDR' ? (promptTokens * 0.001225) + (completionTokens * 0.0049) : (totalTokens * 0.00000015);
+          } else {
+            cost = (promptTokens * 0.00000015) + (completionTokens * 0.00000060);
+            if (balanceObj.currency === 'IDR') cost = cost * 16300;
           }
         }
         
