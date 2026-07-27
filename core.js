@@ -816,32 +816,41 @@ Instruksi:
     detailQuery += `, catatan khusus user: "${userDescription}"`;
   }
 
+  const nutritionSystemMsg = {
+    role: 'system',
+    content: `Kamu adalah mesin kalkulator gizi presisi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes 2019).
+Tugasmu HANYA menghitung nutrisi. Gunakan Atwater: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+WAJIB: Jawab HANYA JSON valid. DILARANG teks/markdown di luar JSON.`
+  };
+
   const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
 Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
-Evaluasi kecukupan vitamin/mineral menggunakan AKG Indonesia (RDA Indonesia).
 
 == MAKANAN YANG DIIDENTIFIKASI DARI FOTO ==
 ${detailQuery}
 
-== ATURAN KALKULASI PRESISI TINGGI (>95% AKURASI & DESKRIPSI USER) ==
-1. SINKRONISASI DESKRIPSI USER:
-   - User menegaskan makan sebanyak: ${portionMultiplier} PORSI (Total Berat: ${totalGrams}g).
-   - SELURUH NILAI NUTRISI (KALORI, PROTEIN, KARBOHIDRAT, LEMAK, MIKRONUTRISI & SODIUM) WAJIB DIKALIKAN TOTAL ${portionMultiplier} PORSI!
-   - Jika deskripsi user menyebutkan Level pedas (misal Level 8), tambahkan minyak cabai (+6g lemak/porsi) dan sodium bumbu pedas/kecap asin (+1.200mg sodium/porsi).
-2. Cari data gizi per 100g MATANG untuk masing-masing komponen bahan dari TKPI Indonesia / USDA FoodData Central.
-3. Hitung gizi tiap komponen bahan secara TERPISAH berdasarkan berat total ${portionMultiplier} porsi, lalu JUMLAHKAN hasilnya.
-4. ATURAN PENGOLAHAN & MINYAK:
-   - Deep Fried / Goreng Tepung / Gorengan: Tambahkan +10g lemak minyak (+90 kcal) per 100g porsi gorengan.
-   - Tumisan / Goreng Biasa: Tambahkan +5g lemak minyak (+45 kcal) per porsi.
-   - Santan / Gulai: Tambahkan +8g lemak santan (+72 kcal) per 100g kuah.
-5. Perkalian wajib: (Nilai per 100g) × (Berat total komponen / 100) untuk SEMUA makro DAN MIKRO.
-6. Bulatkan ke 1 angka desimal.
-7. Di bagian "notes", tuliskan rincian detail menu dan gramasi masing-masing lauk untuk total ${portionMultiplier} porsi.
-8. Jawab HANYA JSON valid tanpa teks/markdown:
-{"name":"${foodName}","portion":"${portionMultiplier > 1 ? portionMultiplier + ' porsi (' + totalGrams + 'g)' : totalGrams + 'g'}","calculation":"ringkasan perkalian makro+mikro untuk ${portionMultiplier} porsi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail menu & gramasi masing-masing lauk untuk ${portionMultiplier} porsi"}`;
+== ATURAN KALKULASI PRESISI TINGGI (>97% AKURASI) ==
+1. SINKRONISASI PORSI: User makan ${portionMultiplier} PORSI (Total: ${totalGrams}g). SEMUA NILAI NUTRISI WAJIB DIKALIKAN ${portionMultiplier} PORSI.
+2. Cari nilai per 100g MATANG di TKPI Indonesia / USDA untuk setiap komponen bahan.
+3. Hitung tiap komponen TERPISAH: (nilai per 100g) × (gram total / 100). Lakukan untuk SEMUA makro DAN MIKRO.
+4. MULTI-BAHAN: Jumlahkan semua komponen setelah dihitung terpisah.
+5. ATWATER INTEGRITY: Makanan berbasis mie/nasi/tepung/roti WAJIB Karbo > 0 (BUKAN 0g).
+6. SODIUM RULES:
+   - Mie pedas/Resto: 1 porsi = 1200–1600mg. Sup/Soto: 900–1400mg. Bumbu/sambal: 500–900mg.
+   - Makanan polos/rebusan tanpa garam: 10–80mg per 100g.
+7. MINYAK & PENGOLAHAN:
+   - Deep Fried/Goreng Tepung: +10g lemak (+90 kcal) per 100g porsi.
+   - Tumis/Goreng Biasa: +5g lemak (+45 kcal) per porsi.
+   - Santan/Gulai: +8g lemak (+72 kcal) per 100g.
+   - Air Fryer/Rebus/Kukus/Panggang: TANPA tambahan lemak.
+8. Level pedas Resto (Level 8 dll): Tambah +6g lemak/porsi (minyak cabai) + +1200mg sodium/porsi.
+9. VERIFIKASI: cal HARUS ≈ (protein×4)+(carbs×4)+(fat×9) ±5%. Koreksi jika tidak sesuai.
+10. Bulatkan ke 1 angka desimal.
+11. Jawab HANYA JSON valid (tanpa teks/markdown di luar JSON):
+{"name":"${foodName}","portion":"${portionMultiplier > 1 ? portionMultiplier + ' porsi (' + totalGrams + 'g)' : totalGrams + 'g'}","calculation":"rincian perkalian semua komponen dan makro+mikro","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail bahan & gram untuk ${portionMultiplier} porsi"}`;
 
   try {
-    const rawNutrition = await callAI([{ role: 'user', content: nutritionPrompt }], true, 'gpt-4o-mini', false);
+    const rawNutrition = await callAI([nutritionSystemMsg, { role: 'user', content: nutritionPrompt }], true, 'gpt-4o-mini', false);
     if (!rawNutrition) throw new Error('AI tidak mengembalikan data nutrisi.');
     const matchNu = rawNutrition.trim().match(/\{[\s\S]*\}/);
     const result = matchNu ? JSON.parse(matchNu[0]) : JSON.parse(rawNutrition.trim());
@@ -915,8 +924,77 @@ function findHistoricalFoodMatch(name) {
 }
 
 async function analyzeTextAI(name, portion, desc) {
-  let historicalContext = '';
-  const histMatch = findHistoricalFoodMatch(name);
+  const systemMsg = {
+    role: 'system',
+    content: `Kamu adalah mesin kalkulator gizi presisi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes 2019).
+Tugasmu HANYA menghitung nilai gizi berdasarkan data yang diberikan. Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+WAJIB: Jawab HANYA dengan JSON valid. DILARANG menambahkan teks, penjelasan, atau markdown di luar JSON.`
+  };
+
+  const prompt = `== INPUT MAKANAN ==
+Nama Makanan: ${name}
+Porsi/Berat: ${portion || '1 porsi standar Indonesia'}
+Deskripsi/Cara Masak: ${desc || 'standar'}
+
+== STANDAR PORSI KULINER INDONESIA (ACUAN PRESISI) ==
+- Nasi Putih/Merah Matang: 1 centong = ~100g (~130 kcal). 1 piring warteg/padang = ~150–200g (~200–260 kcal).
+- Nasi Goreng Spesial: 1 piring = ~250g (~450–600 kcal | Karbo:65–85g | Protein:12–18g | Lemak:15–22g).
+- Mie Gacoan/Mie Pedas/Mie Ayam: 1 porsi = ~170g matang (~380–450 kcal | Karbo:60g | Protein:12g | Lemak:15g | Sodium:1200–1600mg).
+- Tempe/Tahu Goreng: 1 potong = ~45g (~90 kcal, 6g protein, 5g lemak).
+- Ayam Goreng/Bakar (Paha/Dada): 1 potong = ~110g (~200 kcal, 28g protein).
+- Telur Ayam Ceplok/Dadar: 1 butir = ~55g (~100 kcal, 6.3g protein, 7g lemak).
+- Telur Rebus: 1 butir = ~50g (~78 kcal, 6.3g protein, 5.3g lemak).
+- Daging Sapi/Rendang: 1 potong = ~65g (~185 kcal, 20g protein).
+- Gorengan (Bakwan, Mendoan, Tahu Isi): 1 biji = ~50g (~160 kcal, 12g lemak).
+- Minuman Manis (Es Teh/Kopi Susu): 1 gelas = ~250ml (~80–120 kcal, gula 15–25g).
+
+== DATABASE REFERENCE (Per 100g MATANG): ==
+- Nasi Putih: 130 kcal | Karbo:28g | Protein:2.7g | Lemak:0.3g | Serat:0.4g | Gula:0.1g | Sodium:1mg | Kalsium:10mg | Besi:1.2mg | VitC:0mg | VitD:0mcg | Zinc:0.5mg
+- Nasi Merah: 111 kcal | Karbo:23g | Protein:2.6g | Lemak:0.9g | Serat:1.8g | Gula:0g | Sodium:5mg | Kalsium:10mg | Besi:0.5mg | VitC:0mg | VitD:0mcg | Zinc:0.6mg
+- Dada Ayam Matang (panggang/rebus): 165 kcal | Karbo:0g | Protein:31g | Lemak:3.6g | Serat:0g | Gula:0g | Sodium:74mg | Kalsium:15mg | Besi:1mg | VitC:0mg | VitD:0mcg | Zinc:1mg
+- Dada Ayam Mentah/Raw: 120 kcal | Karbo:0g | Protein:23g | Lemak:2.5g | Serat:0g | Gula:0g | Sodium:65mg | Kalsium:10mg | Besi:0.7mg | VitC:0mg | VitD:0mcg | Zinc:0.8mg
+- Paha Ayam Matang: 209 kcal | Karbo:0g | Protein:26g | Lemak:10.9g | Serat:0g | Gula:0g | Sodium:84mg | Kalsium:11mg | Besi:1.3mg | VitC:0mg | VitD:0.1mcg | Zinc:2.7mg
+- Telur Ayam Rebus: 155 kcal | Karbo:1.1g | Protein:13g | Lemak:11g | Serat:0g | Gula:1.1g | Sodium:124mg | Kalsium:50mg | Besi:1.8mg | VitC:0mg | VitD:2.2mcg | Zinc:1.3mg
+- Tempe: 193 kcal | Karbo:8.7g | Protein:20.7g | Lemak:11g | Serat:1.4g | Gula:0g | Sodium:9mg | Kalsium:111mg | Besi:2.7mg | VitC:0mg | VitD:0mcg | Zinc:1.8mg
+- Tahu Putih: 76 kcal | Karbo:1.9g | Protein:8g | Lemak:4.2g | Serat:0.3g | Gula:0g | Sodium:7mg | Kalsium:350mg | Besi:5.4mg | VitC:0.2mg | VitD:0mcg | Zinc:0.8mg
+- Singkong Rebus: 160 kcal | Karbo:38g | Protein:1.4g | Lemak:0.3g | Serat:1.8g | Gula:1.7g | Sodium:14mg | Kalsium:16mg | Besi:0.3mg | VitC:20mg | VitD:0mcg | Zinc:0.3mg
+- Minyak Goreng (per 10g/1sdm): 88 kcal | Karbo:0g | Protein:0g | Lemak:10g | Serat:0g | Gula:0g | Sodium:0mg | Kalsium:0mg | Besi:0mg | VitC:0mg | VitD:0mcg | Zinc:0mg
+
+== INSTRUKSI KALKULASI KETAT (>97% AKURASI) ==
+1. Konversi porsi ke gram MATANG terlebih dahulu. Gunakan acuan standar Indonesia di atas.
+2. Cari data per 100g di DATABASE REFERENCE di atas atau USDA/TKPI jika tidak ada.
+3. Hitung: Nilai = (data per 100g) × (gram porsi / 100). Lakukan untuk SEMUA makro DAN MIKRO.
+4. MULTI-BAHAN: Hitung MASING-MASING bahan TERPISAH sesuai beratnya, lalu JUMLAHKAN.
+5. MULTI-PORSI: Kalikan semua nilai dengan jumlah porsi yang disebutkan.
+6. ATWATER INTEGRITY: Makanan berbasis mie/nasi/tepung/roti/singkong WAJIB memiliki Karbo dominan (BUKAN 0g).
+7. SODIUM RULES:
+   - Mie Instan/Mie Pedas Resto: 1 porsi = 1200–1600mg sodium.
+   - Sup/Soto/Bakso/Ramen berkulah: 1 porsi = 900–1400mg sodium.
+   - Makanan berbumbu/sambal/kecap: 500–900mg sodium.
+   - Rebusan polos/tanpa garam: 10–80mg per 100g.
+8. PENGOLAHAN MINYAK:
+   - Deep Fried/Goreng Tepung: Tambah +10g lemak (+90 kcal) per 100g item.
+   - Tumis/Goreng Biasa: Tambah +5g lemak (+45 kcal) per porsi.
+   - Santan/Gulai: Tambah +8g lemak (+72 kcal) per 100g.
+   - Air Fryer/Rebus/Kukus/Panggang tanpa minyak: TANPA tambahan lemak.
+9. Mentah vs Matang: "fillet/mentah/raw" = gunakan data mentah. Selain itu = matang.
+10. VERIFIKASI: Total Kalori HARUS = (Protein×4) + (Karbo×4) + (Lemak×9) ± 5%. Jika tidak, koreksi.
+11. Jawab HANYA JSON valid ini (tanpa teks/markdown apapun di luar JSON):
+{"calculation":"rincian perkalian detail semua makro+mikro misal: Nasi 150g → 130×1.5=195kcal, Karbo=28×1.5=42g...","cal":0.0,"protein":0.0,"carbs":0.0,"fat":0.0,"fiber":0.0,"sugar":0.0,"sodium":0.0,"calcium":0.0,"iron":0.0,"vitC":0.0,"vitD":0.0,"zinc":0.0}
+Bulatkan 1 angka desimal.`;
+
+  const raw = await callAI([systemMsg, { role:'user', content: prompt }], true, 'gpt-4o-mini');
+  
+  if (!raw) throw new Error("AI tidak mengembalikan data.");
+  try {
+    const data = safeParseAIJson(raw);
+    if (!data) throw new Error("Format JSON tidak valid");
+    return data;
+  } catch (e) {
+    console.error("Parse Error. Raw data:", raw, e);
+    throw new Error("Gagal membaca hasil analisis nutrisi. Silakan coba lagi.");
+  }
+}
   if (histMatch) {
     historicalContext = `\n\n== REFERENSI HISTORIS MAKANAN USER (Gunakan data gizi ini sebagai basis dan sesuaikan dengan gram/deskripsi baru): ==
 - Nama Makanan: ${histMatch.name} (Porsi lama: ${histMatch.portion || 'tidak ada'})
