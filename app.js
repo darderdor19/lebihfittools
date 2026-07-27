@@ -6349,47 +6349,75 @@ function renderPhysicalAnalysisUI(data) {
 function openLoginModal(source = '') {
     loginSource = source;
     
-    // Check if user is already logged in and expired
-    const authUser = getAuthUser();
-    if (authUser) {
-        const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
-        const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
-        const cachedProUntil = localStorage.getItem('lf_user_pro_until');
-        const cachedIsBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
-        
-        let isExpired = false;
-        let createdAt = null;
-        if (cachedCreatedAt) {
-            createdAt = parseInt(JSON.parse(cachedCreatedAt));
-            const now = Date.now();
-            let isTimeBasedPro = false;
-            if (cachedProUntil) {
-                const untilDate = new Date(JSON.parse(cachedProUntil)).getTime();
-                if (untilDate > now) isTimeBasedPro = true;
+    try {
+        const authUser = getAuthUser();
+        if (authUser) {
+            let isExpired = false;
+            let isBlocked = false;
+            try {
+                const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
+                const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
+                const cachedProUntil = localStorage.getItem('lf_user_pro_until');
+                isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
+                
+                if (cachedCreatedAt) {
+                    let parsed = cachedCreatedAt;
+                    if (typeof cachedCreatedAt === 'string' && (cachedCreatedAt.startsWith('"') || cachedCreatedAt.startsWith('{'))) {
+                        parsed = JSON.parse(cachedCreatedAt);
+                    }
+                    const createdAt = parseInt(parsed, 10);
+                    const now = Date.now();
+                    let isTimeBasedPro = false;
+                    if (cachedProUntil) {
+                        let parsedUntil = cachedProUntil;
+                        if (typeof cachedProUntil === 'string' && (cachedProUntil.startsWith('"') || cachedProUntil.startsWith('{'))) {
+                            parsedUntil = JSON.parse(cachedProUntil);
+                        }
+                        const untilDate = new Date(parsedUntil).getTime();
+                        if (untilDate > now) isTimeBasedPro = true;
+                    }
+                    const trialDuration = 3 * 24 * 60 * 60 * 1000;
+                    isExpired = !cachedIsPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
+                }
+            } catch (err) {
+                console.error("Error checking auth status in openLoginModal:", err);
             }
-            const trialDuration = 3 * 24 * 60 * 60 * 1000;
-            isExpired = !cachedIsPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
-        }
-        
-        if (source === 'trial' && (isExpired || cachedIsBlocked)) {
-            alert("kamu sudah mencoba trial dan trial nya sudah habis");
-            const pricingSection = document.getElementById('lp-pricing');
-            if (pricingSection) {
-                pricingSection.scrollIntoView({ behavior: 'smooth' });
+
+            if (isExpired || isBlocked) {
+                alert("kamu sudah mencoba trial dan trial nya sudah habis");
+                const pricingSection = document.getElementById('lp-pricing') || document.getElementById('lp-pricing-1month');
+                if (pricingSection) {
+                    pricingSection.scrollIntoView({ behavior: 'smooth' });
+                }
+                return;
             }
+
+            // User is logged in & active: direct to dashboard!
+            const lp = document.getElementById('landingPage');
+            if (lp) lp.classList.add('hidden');
+            const appEl = document.getElementById('app');
+            if (appEl) appEl.classList.remove('hidden');
             return;
         }
+    } catch (e) {
+        console.error("openLoginModal error check:", e);
     }
 
     const authOverlay = document.getElementById('authOverlay');
-    if (authOverlay) authOverlay.classList.remove('hidden');
+    if (authOverlay) {
+        authOverlay.classList.remove('hidden');
+        authOverlay.style.display = 'flex';
+    }
     resetAuth();
 }
 window.openLoginModal = openLoginModal;
 
 function closeLoginModal() {
     const authOverlay = document.getElementById('authOverlay');
-    if (authOverlay) authOverlay.classList.add('hidden');
+    if (authOverlay) {
+        authOverlay.classList.add('hidden');
+        authOverlay.style.display = 'none';
+    }
 }
 window.closeLoginModal = closeLoginModal;
 
