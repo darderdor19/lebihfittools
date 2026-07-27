@@ -39,9 +39,14 @@ async function initApp() {
         updateApiStatus(true);
 
         if (!authUser) {
-            document.getElementById('landingPage').classList.remove('hidden');
-            document.getElementById('app').classList.add('hidden');
-            document.getElementById('authOverlay').classList.add('hidden');
+            const lp = document.getElementById('landingPage');
+            if (lp) lp.classList.remove('hidden');
+            const appEl = document.getElementById('app');
+            if (appEl) appEl.classList.add('hidden');
+            const authOl = document.getElementById('authOverlay');
+            if (authOl) authOl.classList.add('hidden');
+            const trialOl = document.getElementById('trialExpiredOverlay');
+            if (trialOl) trialOl.classList.add('hidden');
         } else {
             document.getElementById('landingPage').classList.add('hidden');
             
@@ -134,6 +139,11 @@ async function initApp() {
         }
     } catch (err) {
         console.error("Error in initApp:", err);
+        // Fallback: show landing page if something goes wrong so screen isn't black
+        const lp = document.getElementById('landingPage');
+        if (lp) lp.classList.remove('hidden');
+        const appEl = document.getElementById('app');
+        if (appEl) appEl.classList.add('hidden');
     } finally {
         // Initialize Lucide icons if available
         if (window.lucide) {
@@ -4030,7 +4040,7 @@ function confirmDeleteAccount() {
 function logout() {
     showCustomConfirm("Yakin ingin log out bro?", () => {
         clearAuthUser();
-        window.location.reload();
+        window.location.href = window.location.origin + window.location.pathname;
     });
 }
 
@@ -4049,7 +4059,7 @@ function triggerRealLogout() {
     
     showCustomConfirm("Yakin ingin log out bro?", () => {
         clearAuthUser();
-        window.location.reload();
+        window.location.href = window.location.origin + window.location.pathname;
     }, () => {
         const overlay = document.getElementById('trialExpiredOverlay');
         if (overlay) overlay.classList.remove('hidden');

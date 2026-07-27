@@ -190,11 +190,18 @@ const setAuthUser = (email, name) => {
   if(name) DB.set('lf_user_name', name);
 };
 const clearAuthUser = () => {
-    Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('lf_')) {
-            localStorage.removeItem(key);
+    try {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('lf_')) {
+                localStorage.removeItem(key);
+            }
+        });
+    } catch (e) {}
+    try {
+        if (typeof fbAuth !== 'undefined' && fbAuth && fbAuth.currentUser) {
+            fbAuth.signOut().catch(() => {});
         }
-    });
+    } catch (e) {}
 };
 
 function getLogs() { return DB.get('lf_logs') || {}; }

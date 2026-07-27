@@ -2749,8 +2749,8 @@ function computeCostIDR(promptTokens, completionTokens, model) {
     // $0.15/1M input, $0.60/1M output → IDR
     return ((p * 0.00000015) + (c * 0.00000060)) * USD_TO_IDR;
   } else if (m.includes('gemini')) {
-    // IDR 1.225/1M input, IDR 4.900/1M output
-    return (p * 0.000001225) + (c * 0.0000049);
+    // Gemini 2.5 Flash: $0.30/1M input ($0.00000030/tok), $2.50/1M output ($0.00000250/tok) × 16300 IDR
+    return (p * 0.00489) + (c * 0.04075);
   }
   return ((p + c) * 0.00000015) * USD_TO_IDR;
 }

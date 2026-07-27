@@ -271,14 +271,14 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
           if (balanceObj.currency === 'IDR') cost = cost * 16300;
         } else if (modelLower.includes('gemini')) {
           if (balanceObj.currency === 'IDR') {
-            cost = (promptTokens * 0.001225) + (completionTokens * 0.0049); // IDR
+            cost = (promptTokens * 0.00489) + (completionTokens * 0.04075); // IDR
           } else {
-            cost = (promptTokens * 0.000000075) + (completionTokens * 0.00000030); // USD
+            cost = (promptTokens * 0.00000030) + (completionTokens * 0.00000250); // USD
           }
         } else {
           // Fallback based on vision/text feature
           if (isVision) {
-            cost = balanceObj.currency === 'IDR' ? (promptTokens * 0.001225) + (completionTokens * 0.0049) : (totalTokens * 0.00000015);
+            cost = balanceObj.currency === 'IDR' ? (promptTokens * 0.00489) + (completionTokens * 0.04075) : (promptTokens * 0.00000030) + (completionTokens * 0.00000250);
           } else {
             cost = (promptTokens * 0.00000015) + (completionTokens * 0.00000060);
             if (balanceObj.currency === 'IDR') cost = cost * 16300;
