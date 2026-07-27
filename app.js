@@ -153,8 +153,9 @@ async function initApp() {
         // Hide loading screen
         const loader = document.getElementById('loadingOverlay');
         if (loader) {
+            loader.style.pointerEvents = 'none';
             loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 400);
+            loader.style.display = 'none';
         }
     }
 }
@@ -6380,13 +6381,17 @@ function openLoginModal(source = '') {
         }
     }
 
-    document.getElementById('authOverlay').classList.remove('hidden');
+    const authOverlay = document.getElementById('authOverlay');
+    if (authOverlay) authOverlay.classList.remove('hidden');
     resetAuth();
 }
+window.openLoginModal = openLoginModal;
 
 function closeLoginModal() {
-    document.getElementById('authOverlay').classList.add('hidden');
+    const authOverlay = document.getElementById('authOverlay');
+    if (authOverlay) authOverlay.classList.add('hidden');
 }
+window.closeLoginModal = closeLoginModal;
 
 function toggleFaq(item) {
     const isActive = item.classList.contains('active');
