@@ -25,6 +25,12 @@ module.exports = async function handler(req, res) {
       return res.status(503).json({ error: { message: 'Sistem sedang pemeliharaan global oleh admin. Silakan coba beberapa saat lagi.' } });
     }
 
+    // Check AI Assistant Feature Toggle
+    const aiActive = await getFirebase('admins/settings/ai_active').catch(() => true);
+    if (aiActive === false) {
+      return res.status(503).json({ error: { message: 'Fitur AI Asisten sedang dinonaktifkan oleh admin. Silakan coba lagi nanti.' } });
+    }
+
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages array' });

@@ -35,6 +35,19 @@ if (firebaseConfig && firebaseConfig.apiKey && typeof firebase !== 'undefined') 
     } catch (e) {
         console.warn('[core] Failed to bind admins/settings/app_active listener:', e);
     }
+
+    // Listen to AI Assistant feature toggle
+    try {
+        fbDb.ref('admins/settings/ai_active').on('value', (snap) => {
+            const aiActive = snap.val();
+            // Expose globally for app.js to check
+            window.__aiAssistantActive = aiActive !== false;
+            // Dispatch custom event so app can react
+            document.dispatchEvent(new CustomEvent('aiActiveChanged', { detail: { active: window.__aiAssistantActive } }));
+        });
+    } catch (e) {
+        console.warn('[core] Failed to bind admins/settings/ai_active listener:', e);
+    }
 }
 
 function syncToFirebase(key, value) {

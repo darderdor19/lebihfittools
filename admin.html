@@ -74,6 +74,64 @@
     gap: 18px;
   }
 
+  /* Sidebar feature toggle */
+  .sidebar-feature-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    margin-top: 2px;
+  }
+  .sidebar-feature-toggle .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: var(--text2);
+  }
+  .sidebar-feature-toggle .toggle-label svg { width: 15px; height: 15px; }
+  .mini-switch { position: relative; display: inline-block; width: 30px; height: 17px; flex-shrink:0; }
+  .mini-switch input { opacity: 0; width: 0; height: 0; }
+  .mini-switch-slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.12); border-radius: 17px; transition: 0.3s ease;
+  }
+  .mini-switch-slider::before {
+    position: absolute; content: ""; height: 11px; width: 11px; left: 3px; bottom: 3px;
+    background: white; border-radius: 50%; transition: 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .mini-switch input:checked + .mini-switch-slider { background: var(--success); }
+  .mini-switch input:checked + .mini-switch-slider::before { transform: translateX(13px); }
+
+  /* Token monitor compact summary bar */
+  .token-summary-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .token-summary-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .token-summary-item .ts-label { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .token-summary-item .ts-value { font-size: 1.3rem; font-weight: 800; }
+
+  /* Per-user budget table model badge */
+  .model-badge-gpt { background: rgba(16,185,129,0.12); color: #10b981; border:1px solid rgba(16,185,129,0.25); padding:2px 7px; border-radius:6px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+  .model-badge-gemini { background: rgba(99,102,241,0.12); color: #818cf8; border:1px solid rgba(99,102,241,0.25); padding:2px 7px; border-radius:6px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+  .model-badge-other { background: rgba(255,255,255,0.06); color: var(--text2); border:1px solid var(--border); padding:2px 7px; border-radius:6px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+  .feature-tag { padding:2px 8px; border-radius:5px; font-size:0.7rem; background:rgba(0,240,255,0.08); color:var(--accent); border:1px solid rgba(0,240,255,0.15); white-space:nowrap; }
+
   /* ===== LOGIN PAGE ===== */
   #loginPage {
     flex: 1;
@@ -1095,6 +1153,18 @@
         <i data-lucide="bar-chart-2"></i> Report Penjualan
       </button>
       <div class="sidebar-divider"></div>
+      <span class="sidebar-label">Fitur AI</span>
+      <div class="sidebar-feature-toggle">
+        <span class="toggle-label">
+          <i data-lucide="message-circle"></i>
+          AI Asisten
+        </span>
+        <label class="mini-switch">
+          <input type="checkbox" id="aiAssistantToggle" onchange="toggleAiAssistant(this.checked)" checked>
+          <span class="mini-switch-slider"></span>
+        </label>
+      </div>
+      <div class="sidebar-divider"></div>
       <span class="sidebar-label">Akun</span>
       <button class="sidebar-item" onclick="openChangePass()">
         <i data-lucide="key"></i> Ganti Password
@@ -1199,28 +1269,32 @@
           </button>
         </div>
 
-        <!-- Token Stats -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Total Token Digunakan</div>
-            <div class="stat-value" style="color:var(--accent)" id="tokenTotal">-</div>
+        <!-- Compact Summary Bar -->
+        <div class="token-summary-bar">
+          <div class="token-summary-item">
+            <span class="ts-label">Total Token</span>
+            <span class="ts-value" style="color:var(--accent)" id="tokenTotal">-</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Estimasi Biaya (USD)</div>
-            <div class="stat-value warning" id="tokenCostUSD">-</div>
+          <div class="token-summary-item">
+            <span class="ts-label">Total API Calls</span>
+            <span class="ts-value" style="color:var(--success)" id="tokenTotalCalls">-</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total API Calls</div>
-            <div class="stat-value success" id="tokenTotalCalls">-</div>
+          <div class="token-summary-item">
+            <span class="ts-label">Biaya GPT (USD)</span>
+            <span class="ts-value" style="color:#10b981;font-size:1rem;" id="tokenCostGPT">-</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Pengguna Unik Aktif</div>
-            <div class="stat-value info" style="color:#5ac8fa" id="tokenActiveUsers">-</div>
+          <div class="token-summary-item">
+            <span class="ts-label">Biaya Gemini (IDR)</span>
+            <span class="ts-value" style="color:#818cf8;font-size:1rem;" id="tokenCostGemini">-</span>
+          </div>
+          <div class="token-summary-item">
+            <span class="ts-label">User Aktif</span>
+            <span class="ts-value" style="color:var(--warning)" id="tokenActiveUsers">-</span>
           </div>
         </div>
 
-        <!-- API Balance & Keys Status -->
-        <div class="card" style="margin-top:20px; padding:16px; background: rgba(255,255,255,0.01); border: 1px solid var(--border);">
+        <!-- API Balance & Keys Status (dipertahankan) -->
+        <div class="card" style="padding:16px; background: rgba(255,255,255,0.01); border: 1px solid var(--border);">
           <h3 style="margin-bottom:16px; font-size:1rem; display:flex; align-items:center; gap:8px; color:var(--text1);"><i data-lucide="key" style="color:var(--warning); width:18px; height:18px;"></i> Detail Saldo & Status API Key Vercel</h3>
           <div class="api-key-grid" id="apiKeyStatusGrid">
             
@@ -1299,46 +1373,56 @@
           </div>
         </div>
 
-        <!-- Combined User & Feature Usage -->
+        <!-- Per-User Detail: Fitur, AI, Token, Budget IDR (realtime) -->
         <div class="card" style="margin-top:20px; padding:16px;">
-          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="award" style="color:var(--accent); width:16px; height:16px;"></i> Penggunaan Token Terbesar per User & Fitur</h3>
+          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="users" style="color:var(--accent); width:16px; height:16px;"></i>
+            Detail Penggunaan per User
+            <span style="font-size:0.72rem; color:var(--text2); font-weight:400; margin-left:4px;">• realtime</span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;box-shadow:0 0 6px var(--success);animation:pulse 2s infinite;"></span>
+          </h3>
           <div style="overflow-x:auto;">
             <table class="data-table" style="font-size:0.8rem;">
               <thead>
                 <tr>
-                  <th style="width: 50px;">Rank</th>
-                  <th>Email Pengguna</th>
-                  <th>Fitur yang Digunakan</th>
-                  <th>Jumlah Calls</th>
-                  <th>Total Token</th>
+                  <th>Email User</th>
+                  <th>Fitur</th>
+                  <th>Model AI</th>
+                  <th style="text-align:right;">Token (Total)</th>
+                  <th style="text-align:right;">Budget (IDR)</th>
+                  <th>Calls</th>
                   <th>Terakhir Aktif</th>
                 </tr>
               </thead>
-              <tbody id="tokenUserFeatureStatsBody">
-                <tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px;">Memuat statistik penggunaan...</td></tr>
+              <tbody id="userBudgetTableBody">
+                <tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px;">Memuat data...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Bottom: Recent Token Logs -->
+        <!-- Recent Transaction Logs -->
         <div class="card" style="margin-top:20px; padding:16px;">
-          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;"><i data-lucide="clock" style="color:var(--warning); width:16px; height:16px;"></i> Riwayat Log Transaksi Token (100 Terakhir)</h3>
-          <div style="overflow-x:auto; max-height: 400px; overflow-y: auto;">
-            <table class="data-table" style="font-size:0.8rem;">
+          <h3 style="margin-bottom:12px; font-size:1rem; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="clock" style="color:var(--warning); width:16px; height:16px;"></i>
+            Log Transaksi Terbaru (50)
+          </h3>
+          <div style="overflow-x:auto; max-height:380px; overflow-y:auto;">
+            <table class="data-table" style="font-size:0.78rem;">
               <thead>
                 <tr>
                   <th>Waktu</th>
-                  <th>User Email</th>
+                  <th>User</th>
                   <th>Fitur</th>
                   <th>Model</th>
-                  <th>Prompt</th>
-                  <th>Completion</th>
-                  <th>Total</th>
+                  <th style="text-align:right;">Prompt</th>
+                  <th style="text-align:right;">Output</th>
+                  <th style="text-align:right;">Total</th>
+                  <th style="text-align:right;">Biaya</th>
                 </tr>
               </thead>
               <tbody id="tokenLogsTableBody">
-                <tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px;">Memuat log transaksi...</td></tr>
+                <tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px;">Memuat log...</td></tr>
               </tbody>
             </table>
           </div>
@@ -2069,6 +2153,7 @@ function showDashboard(user) {
   document.getElementById('adminEmailDisplay').textContent = user.email;
   lucide.createIcons();
   loadAllUsers();
+  listenAiToggle(); // sync AI toggle from Firebase
   if (user.email === SUPER_ADMIN) {
     document.getElementById('nav-admins').style.display = '';
     loadAdmins();
@@ -2624,131 +2709,154 @@ function showToast(msg, type = 'info') {
 // ===== MONITORING TOKEN AI =====
 let tokenMonitorListenersAttached = false;
 
+// ── Helper: compute IDR cost from a log entry ──
+function computeCostIDR(promptTokens, completionTokens, model) {
+  const m = (model || '').toLowerCase();
+  const p = promptTokens || 0;
+  const c = completionTokens || 0;
+  const USD_TO_IDR = 16300;
+  if (m.includes('gpt-4o-mini')) {
+    // $0.15/1M input, $0.60/1M output → IDR
+    return ((p * 0.00000015) + (c * 0.00000060)) * USD_TO_IDR;
+  } else if (m.includes('gemini')) {
+    // IDR 1.225/1M input, IDR 4.900/1M output
+    return (p * 0.000001225) + (c * 0.0000049);
+  }
+  return ((p + c) * 0.00000015) * USD_TO_IDR;
+}
+
+function formatIDR(val) {
+  if (!val || val === 0) return 'Rp 0';
+  if (val < 1) return `Rp ${val.toFixed(4)}`;
+  return `Rp ${Math.round(val).toLocaleString('id-ID')}`;
+}
+
+function getModelBadge(model) {
+  const m = (model || '').toLowerCase();
+  if (m.includes('gpt')) return `<span class="model-badge-gpt">GPT</span>`;
+  if (m.includes('gemini')) return `<span class="model-badge-gemini">Gemini</span>`;
+  return `<span class="model-badge-other">${escapeHtml(model || 'unknown')}</span>`;
+}
+
+function getFeatureTag(feature) {
+  const map = {
+    'food_scan': '📷 Food Scan',
+    'manual_food_ai': '✍️ Manual Food',
+    'body_analysis': '🧍 Body Analysis',
+    'ai_assistant_text': '💬 AI Asisten',
+    'ai_assistant_image': '🖼️ Asisten+Gbr',
+    'dashboard_daily': '📊 Daily Eval',
+    'dashboard_weekly': '📊 Weekly Eval'
+  };
+  const label = map[feature] || feature || 'unknown';
+  return `<span class="feature-tag">${escapeHtml(label)}</span>`;
+}
+
 async function loadTokenMonitor() {
   const tokenTotalEl = document.getElementById('tokenTotal');
-  const tokenCostUSDEl = document.getElementById('tokenCostUSD');
   const tokenTotalCallsEl = document.getElementById('tokenTotalCalls');
+  const tokenCostGPTEl = document.getElementById('tokenCostGPT');
+  const tokenCostGeminiEl = document.getElementById('tokenCostGemini');
   const tokenActiveUsersEl = document.getElementById('tokenActiveUsers');
-  
-  const userFeatureStatsBody = document.getElementById('tokenUserFeatureStatsBody');
+  const userBudgetBody = document.getElementById('userBudgetTableBody');
   const logsTableBody = document.getElementById('tokenLogsTableBody');
 
   if (tokenMonitorListenersAttached) {
-    // If listeners are already active, just fetch Vercel status and return
     fetchVercelKeyStatus();
     return;
   }
-  
-  userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text2);">Memuat data statistik...</td></tr>';
-  logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);">Memuat data log transaksi...</td></tr>';
+
+  if (userBudgetBody) userBudgetBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);">Menghubungkan ke Firebase realtime...</td></tr>';
+  if (logsTableBody) logsTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text2);">Memuat log transaksi...</td></tr>';
 
   try {
-    // 1. Real-time User Stats Sync (.on)
-    fbDb.ref('admins/user_token_stats').on('value', (userStatsSnap) => {
+    // 1. Realtime summary from user_token_stats
+    fbDb.ref('admins/user_token_stats').on('value', (snap) => {
       try {
-        const userStats = userStatsSnap.val() || {};
-        let totalTokensAllTime = 0;
-        let totalCallsAllTime = 0;
-        let activeUsersCount = Object.keys(userStats).length;
-
-        Object.values(userStats).forEach(u => {
-          totalTokensAllTime += (u.totalTokens || 0);
-          totalCallsAllTime += (u.callCount || 0);
+        const stats = snap.val() || {};
+        let totalTokens = 0, totalCalls = 0;
+        Object.values(stats).forEach(u => {
+          totalTokens += (u.totalTokens || 0);
+          totalCalls += (u.callCount || 0);
         });
-
-        // Estimate Cost: $0.15 per 1,000,000 tokens
-        const estimatedCostUSD = (totalTokensAllTime / 1000000) * 0.15;
-
-        if (tokenTotalEl) tokenTotalEl.textContent = totalTokensAllTime.toLocaleString('id-ID');
-        if (tokenCostUSDEl) {
-          tokenCostUSDEl.innerHTML = `$${estimatedCostUSD.toFixed(5)} <span style="font-size:0.75rem;color:var(--text2)">(${(estimatedCostUSD * 16300).toLocaleString('id-ID', {maximumFractionDigits: 0})} IDR)</span>`;
-        }
-        if (tokenTotalCallsEl) tokenTotalCallsEl.textContent = totalCallsAllTime.toLocaleString('id-ID');
-        if (tokenActiveUsersEl) tokenActiveUsersEl.textContent = activeUsersCount;
-      } catch (err) {
-        console.error('[realtime stats error]', err);
-      }
+        if (tokenTotalEl) tokenTotalEl.textContent = totalTokens.toLocaleString('id-ID');
+        if (tokenTotalCallsEl) tokenTotalCallsEl.textContent = totalCalls.toLocaleString('id-ID');
+        if (tokenActiveUsersEl) tokenActiveUsersEl.textContent = Object.keys(stats).length;
+      } catch(e) { console.error('[stats summary error]', e); }
     });
 
-    // 2. Real-time Combined User + Feature Table Sync (.on)
-    fbDb.ref('admins/user_feature_token_stats').on('value', (userFeatureStatsSnap) => {
+    // 2. Realtime per-user+feature table (user_feature_token_stats)
+    fbDb.ref('admins/user_feature_token_stats').on('value', (snap) => {
       try {
-        const userFeatureStats = userFeatureStatsSnap.val() || {};
-        const sortedUserFeatures = Object.values(userFeatureStats).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-        
-        if (sortedUserFeatures.length === 0) {
-          userFeatureStatsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:16px;">Belum ada riwayat penggunaan token per user & fitur.</td></tr>';
-        } else {
-          userFeatureStatsBody.innerHTML = sortedUserFeatures.map((uf, index) => {
-            let rankBadge = '';
-            if (index === 0) rankBadge = '🥇 ';
-            else if (index === 1) rankBadge = '🥈 ';
-            else if (index === 2) rankBadge = '🥉 ';
-
-            let featureLabel = uf.feature || 'unknown';
-            if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan (Visual)';
-            else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food (Text)';
-            else if (featureLabel === 'body_analysis') featureLabel = '🧍 Body Analysis';
-            else if (featureLabel === 'ai_assistant_text') featureLabel = '💬 Assistant Teks';
-            else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assistant + Gambar';
-            else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Dashboard Eval';
-            else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Dashboard Eval';
-
-            const lastActiveStr = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-';
-
-            return `
-              <tr>
-                <td style="font-weight:700; text-align:center;">${rankBadge || (index + 1)}</td>
-                <td style="font-weight:600;color:var(--text1)">${escapeHtml(uf.email || 'anonymous')}</td>
-                <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
-                <td>${uf.callCount || 0}</td>
-                <td style="font-weight:700;color:var(--accent)">${(uf.totalTokens || 0).toLocaleString('id-ID')}</td>
-                <td style="font-size:0.75rem;color:var(--text2)">${lastActiveStr}</td>
-              </tr>
-            `;
-          }).join('');
+        const data = snap.val() || {};
+        const rows = Object.values(data).sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+        if (!userBudgetBody) return;
+        if (rows.length === 0) {
+          userBudgetBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px;">Belum ada data penggunaan.</td></tr>';
+          return;
         }
-      } catch (err) {
-        console.error('[realtime table error]', err);
-      }
+        userBudgetBody.innerHTML = rows.map(uf => {
+          // Estimate budget in IDR for this user+feature combo using their accumulated tokens
+          // We approximate based on model stored in the entry (or from logs if needed)
+          const modelGuess = uf.model || '';
+          const budgetIDR = computeCostIDR(uf.promptTokens || uf.totalTokens * 0.6, uf.completionTokens || uf.totalTokens * 0.4, modelGuess);
+          const lastActive = uf.lastActive ? new Date(uf.lastActive).toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '-';
+          return `
+            <tr>
+              <td style="font-weight:600;color:var(--text1);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(uf.email || '')}">${escapeHtml(uf.email || 'anonymous')}</td>
+              <td>${getFeatureTag(uf.feature)}</td>
+              <td>${getModelBadge(uf.model || modelGuess)}</td>
+              <td style="text-align:right;font-weight:700;color:var(--accent);">${(uf.totalTokens || 0).toLocaleString('id-ID')}</td>
+              <td style="text-align:right;font-weight:700;color:var(--warning);">${formatIDR(budgetIDR)}</td>
+              <td style="color:var(--text2);">${uf.callCount || 0}</td>
+              <td style="font-size:0.75rem;color:var(--text2);">${lastActive}</td>
+            </tr>`;
+        }).join('');
+      } catch(e) { console.error('[user budget table error]', e); }
     });
 
-    // 3. Real-time Transaction Logs Sync (.on) (last 100 entries)
-    fbDb.ref('admins/token_logs').limitToLast(100).on('value', (logsSnap) => {
+    // 3. Realtime token logs (last 50) — now tracking model + cost column
+    fbDb.ref('admins/token_logs').limitToLast(50).on('value', (snap) => {
       try {
-        const rawLogs = logsSnap.val() || {};
-        const sortedLogs = Object.values(rawLogs).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-        
-        if (sortedLogs.length === 0) {
-          logsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px;">Belum ada transaksi log token.</td></tr>';
-        } else {
-          logsTableBody.innerHTML = sortedLogs.map(l => {
-            const timeStr = new Date(l.timestamp).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' });
-            let featureLabel = l.feature || 'unknown';
-            if (featureLabel === 'food_scan') featureLabel = '📷 Food Scan';
-            else if (featureLabel === 'manual_food_ai') featureLabel = '✍️ Manual Food';
-            else if (featureLabel === 'body_analysis') featureLabel = '🧍 Body Analys.';
-            else if (featureLabel === 'ai_assistant_text') featureLabel = '💬 Assist. Teks';
-            else if (featureLabel === 'ai_assistant_image') featureLabel = '🖼️ Assist. Gbr';
-            else if (featureLabel === 'dashboard_daily') featureLabel = '📊 Daily Eval';
-            else if (featureLabel === 'dashboard_weekly') featureLabel = '📊 Weekly Eval';
+        const rawLogs = snap.val() || {};
+        const sorted = Object.values(rawLogs).sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
-            return `
-              <tr>
-                <td style="font-size:0.75rem;color:var(--text2)">${timeStr}</td>
-                <td style="font-weight:600;">${escapeHtml(l.email || 'anonymous')}</td>
-                <td><span style="padding:2px 6px;border-radius:4px;font-size:0.7rem;background:rgba(94,92,230,0.15);color:var(--accent)">${escapeHtml(featureLabel)}</span></td>
-                <td style="font-size:0.75rem;color:var(--text2)">${escapeHtml(l.model || 'unknown')}</td>
-                <td style="color:var(--text2)">${(l.promptTokens || 0).toLocaleString('id-ID')}</td>
-                <td style="color:var(--text2)">${(l.completionTokens || 0).toLocaleString('id-ID')}</td>
-                <td style="font-weight:700;color:var(--accent)">${(l.totalTokens || 0).toLocaleString('id-ID')}</td>
-              </tr>
-            `;
-          }).join('');
+        // Accumulate GPT vs Gemini costs for summary bar
+        let totalGptCostUSD = 0, totalGeminiCostIDR = 0;
+        sorted.forEach(l => {
+          const m = (l.model || '').toLowerCase();
+          const p = l.promptTokens || 0;
+          const c = l.completionTokens || 0;
+          if (m.includes('gpt')) {
+            totalGptCostUSD += (p * 0.00000015) + (c * 0.00000060);
+          } else if (m.includes('gemini')) {
+            totalGeminiCostIDR += (p * 0.000001225) + (c * 0.0000049);
+          }
+        });
+        if (tokenCostGPTEl) tokenCostGPTEl.textContent = `$${totalGptCostUSD.toFixed(5)}`;
+        if (tokenCostGeminiEl) tokenCostGeminiEl.textContent = formatIDR(totalGeminiCostIDR);
+
+        if (!logsTableBody) return;
+        if (sorted.length === 0) {
+          logsTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px;">Belum ada log transaksi.</td></tr>';
+          return;
         }
-      } catch (err) {
-        console.error('[realtime logs error]', err);
-      }
+        logsTableBody.innerHTML = sorted.map(l => {
+          const timeStr = new Date(l.timestamp).toLocaleString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'2-digit'});
+          const costIDR = computeCostIDR(l.promptTokens, l.completionTokens, l.model);
+          return `
+            <tr>
+              <td style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">${timeStr}</td>
+              <td style="font-weight:600;font-size:0.78rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(l.email||'')}">${escapeHtml(l.email || 'anonymous')}</td>
+              <td>${getFeatureTag(l.feature)}</td>
+              <td>${getModelBadge(l.model)}</td>
+              <td style="text-align:right;color:var(--text2);">${(l.promptTokens||0).toLocaleString('id-ID')}</td>
+              <td style="text-align:right;color:var(--text2);">${(l.completionTokens||0).toLocaleString('id-ID')}</td>
+              <td style="text-align:right;font-weight:700;color:var(--accent);">${(l.totalTokens||0).toLocaleString('id-ID')}</td>
+              <td style="text-align:right;color:var(--warning);font-size:0.78rem;">${formatIDR(costIDR)}</td>
+            </tr>`;
+        }).join('');
+      } catch(e) { console.error('[logs realtime error]', e); }
     });
 
     // 4. Fetch Vercel API Key status
@@ -2758,6 +2866,32 @@ async function loadTokenMonitor() {
   } catch (err) {
     console.error('[loadTokenMonitor] failed:', err);
     showToast('Gagal memuat monitoring token: ' + err.message, 'error');
+  }
+}
+
+// ── AI Assistant Toggle ──
+let aiToggleListening = false;
+
+function listenAiToggle() {
+  if (aiToggleListening) return;
+  aiToggleListening = true;
+  fbDb.ref('admins/settings/ai_active').on('value', (snap) => {
+    const isActive = snap.val() !== false; // defaults to true if null
+    const toggleEl = document.getElementById('aiAssistantToggle');
+    if (toggleEl) toggleEl.checked = isActive;
+  });
+}
+
+async function toggleAiAssistant(checked) {
+  try {
+    await fbDb.ref('admins/settings/ai_active').set(checked);
+    showToast(checked ? '✅ Fitur AI Asisten diaktifkan' : '🔴 Fitur AI Asisten dinonaktifkan', checked ? 'success' : 'info');
+  } catch(err) {
+    console.error('[toggleAiAssistant] error:', err);
+    showToast('Gagal mengubah status AI Asisten: ' + err.message, 'error');
+    // Revert toggle visual
+    const toggleEl = document.getElementById('aiAssistantToggle');
+    if (toggleEl) toggleEl.checked = !checked;
   }
 }
 

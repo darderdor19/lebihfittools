@@ -247,10 +247,13 @@ async function logTokenUsage(email, feature, promptTokens, completionTokens, mod
 
     // Update aggregated stats for user + feature combined
     const userFeaturePath = `admins/user_feature_token_stats/${safeEmail}_${feature}`;
-    let userFeatureStats = await getFirebase(userFeaturePath) || { email: cleanEmail, feature, totalTokens: 0, callCount: 0 };
+    let userFeatureStats = await getFirebase(userFeaturePath) || { email: cleanEmail, feature, totalTokens: 0, callCount: 0, promptTokens: 0, completionTokens: 0 };
     userFeatureStats.totalTokens = (userFeatureStats.totalTokens || 0) + totalTokens;
+    userFeatureStats.promptTokens = (userFeatureStats.promptTokens || 0) + (promptTokens || 0);
+    userFeatureStats.completionTokens = (userFeatureStats.completionTokens || 0) + (completionTokens || 0);
     userFeatureStats.callCount = (userFeatureStats.callCount || 0) + 1;
     userFeatureStats.lastActive = timestamp;
+    userFeatureStats.model = model || userFeatureStats.model || 'unknown'; // track most recent model
     await setFirebase(userFeaturePath, userFeatureStats);
 
     // Deduct cost from real-time API Key prepaid balances
