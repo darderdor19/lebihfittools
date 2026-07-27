@@ -315,6 +315,11 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
 // Google Sign-in
 let _pendingGoogleUser = null;
 async function loginWithGoogle() {
+    if (typeof fbAuth === 'undefined' || !fbAuth) {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            fbAuth = firebase.auth();
+        }
+    }
     if (!fbAuth) {
         showToast("Firebase Auth belum siap. Refresh halaman.", "error");
         return;
@@ -348,9 +353,10 @@ async function loginWithGoogle() {
     } catch (err) {
         console.error('[Google Auth]', err);
         if (err.code === 'auth/popup-closed-by-user') return;
-        showToast("Login Google gagal: " + (err.message || err.code), "error");
+        showToast("Gagal Login Google: " + (err.message || err), "error");
     }
 }
+window.loginWithGoogle = loginWithGoogle;
 
 async function saveGooglePhone() {
     const phone = document.getElementById('googlePhoneInput').value.trim();
