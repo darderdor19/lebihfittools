@@ -825,21 +825,41 @@ Instruksi:
 
   const nutritionSystemMsg = {
     role: 'system',
-    content: `Kamu adalah mesin kalkulator gizi presisi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes 2019).
-Tugasmu HANYA menghitung nutrisi. Gunakan Atwater: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+    content: `Kamu adalah mesin kalkulator gizi presisi tinggi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes 2019).
+Tugasmu HANYA menghitung nutrisi dari data visual yang diberikan.
+Gunakan Atwater: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+SEMUA NILAI MIKRO WAJIB DIHITUNG — DILARANG default 0 tanpa kalkulasi.
 WAJIB: Jawab HANYA JSON valid. DILARANG teks/markdown di luar JSON.`
   };
 
-  const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
+  const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan presisi tinggi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
 Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
 
 == MAKANAN YANG DIIDENTIFIKASI DARI FOTO ==
 ${detailQuery}
 
+== DATABASE REFERENCE CEPAT (Per 100g MATANG) ==
+- Nasi Putih: 130 kcal|K:28g|P:2.7g|L:0.3g|Serat:0.4g|Na:1mg|Ca:10mg|Fe:1.2mg|VitC:0|VitD:0|Zn:0.5mg
+- Mie Telur Matang: 138 kcal|K:25g|P:4.5g|L:2g|Serat:1g|Na:6mg|Ca:10mg|Fe:1.4mg|VitC:0|VitD:0|Zn:0.5mg
+- Dada Ayam Matang: 165 kcal|K:0g|P:31g|L:3.6g|Na:74mg|Ca:15mg|Fe:1mg|VitD:0|Zn:1mg
+- Paha Ayam Matang: 209 kcal|K:0g|P:26g|L:10.9g|Na:84mg|Ca:11mg|Fe:1.3mg|VitD:0.1mcg|Zn:2.7mg
+- Telur Rebus (per 100g): 155 kcal|K:1.1g|P:13g|L:11g|Na:124mg|Ca:50mg|Fe:1.8mg|VitD:2.2mcg|Zn:1.3mg
+- Daging Sapi Matang: 250 kcal|K:0g|P:26g|L:15g|Na:72mg|Ca:18mg|Fe:2.6mg|VitD:0.1mcg|Zn:6.3mg
+- Tempe: 193 kcal|K:8.7g|P:20.7g|L:11g|Serat:1.4g|Na:9mg|Ca:111mg|Fe:2.7mg|VitD:0|Zn:1.8mg
+- Tahu Putih: 76 kcal|K:1.9g|P:8g|L:4.2g|Na:7mg|Ca:350mg|Fe:5.4mg|VitC:0.2mg|Zn:0.8mg
+- Ikan Nila/Mujair Matang: 128 kcal|K:0g|P:26g|L:2.7g|Na:56mg|Ca:14mg|Fe:0.7mg|VitD:3.1mcg|Zn:0.4mg
+- Ikan Lele Goreng: 230 kcal|K:0g|P:18g|L:17g|Na:60mg|Ca:15mg|Fe:0.6mg|Zn:0.7mg
+- Udang Matang: 99 kcal|K:0.2g|P:24g|L:0.3g|Na:111mg|Ca:52mg|Fe:0.3mg|Zn:1.6mg
+- Kangkung Tumis: 30 kcal|K:3g|P:2.6g|L:0.5g|Serat:2.1g|Na:50mg|Ca:77mg|Fe:2.5mg|VitC:30mg|Zn:0.2mg
+- Bayam Rebus: 23 kcal|K:3.6g|P:2.9g|L:0.3g|Serat:2.2g|Na:70mg|Ca:136mg|Fe:3.6mg|VitC:10mg|Zn:0.8mg
+- Sambal Terasi (15g/1sdm): 15 kcal|K:2g|P:0.5g|L:0.5g|Na:350mg|VitC:5mg
+- Santan Kental (100ml): 230 kcal|K:6g|P:2.3g|L:24g|Na:15mg|Ca:16mg|Fe:1.6mg|Zn:0.7mg
+- Minyak Goreng (10g/1sdm): 88 kcal|L:10g
+
 == ATURAN KALKULASI PRESISI TINGGI (>97% AKURASI) ==
 1. SINKRONISASI PORSI: User makan ${portionMultiplier} PORSI (Total: ${totalGrams}g). SEMUA NILAI NUTRISI WAJIB DIKALIKAN ${portionMultiplier} PORSI.
-2. Cari nilai per 100g MATANG di TKPI Indonesia / USDA untuk setiap komponen bahan.
-3. Hitung tiap komponen TERPISAH: (nilai per 100g) × (gram total / 100). Lakukan untuk SEMUA makro DAN MIKRO.
+2. Cari nilai per 100g MATANG di database di atas atau TKPI/USDA untuk setiap komponen.
+3. Hitung tiap komponen TERPISAH: (nilai per 100g) × (gram total / 100). Lakukan untuk SEMUA 12 field nutrisi.
 4. MULTI-BAHAN: Jumlahkan semua komponen setelah dihitung terpisah.
 5. ATWATER INTEGRITY: Makanan berbasis mie/nasi/tepung/roti WAJIB Karbo > 0 (BUKAN 0g).
 6. SODIUM RULES:
@@ -851,10 +871,22 @@ ${detailQuery}
    - Santan/Gulai: +8g lemak (+72 kcal) per 100g.
    - Air Fryer/Rebus/Kukus/Panggang: TANPA tambahan lemak.
 8. Level pedas Resto (Level 8 dll): Tambah +6g lemak/porsi (minyak cabai) + +1200mg sodium/porsi.
-9. VERIFIKASI: cal HARUS ≈ (protein×4)+(carbs×4)+(fat×9) ±5%. Koreksi jika tidak sesuai.
-10. Bulatkan ke 1 angka desimal.
-11. Jawab HANYA JSON valid (tanpa teks/markdown di luar JSON):
-{"name":"${foodName}","portion":"${portionMultiplier > 1 ? portionMultiplier + ' porsi (' + totalGrams + 'g)' : totalGrams + 'g'}","calculation":"rincian perkalian semua komponen dan makro+mikro","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail bahan & gram untuk ${portionMultiplier} porsi"}`;
+9. MICRONUTRIENT WAJIB DIHITUNG (DILARANG ASAL 0):
+   - fiber: Sayuran 2–4g/100g, buah 1–3g/100g, nasi 0.3–0.5g/100g.
+   - sugar: Minuman manis 15–25g/gelas, buah 8–15g/100g.
+   - calcium: Tahu 350mg/100g, susu 113mg/100ml, tempe 111mg/100g, ikan 10–50mg/100g.
+   - iron: Daging merah 2–3mg/100g, bayam 3.6mg/100g, tempe 2.7mg/100g.
+   - vitC: Jeruk/pepaya 40–60mg/100g, sayur hijau 10–65mg/100g, daging/telur ~0.
+   - vitD: Ikan berlemak 3–11mcg/100g, telur 2.2mcg/100g, susu 1.3mcg/100ml.
+   - zinc: Daging sapi 6mg/100g, keju 3mg/100g, tempe 1.8mg/100g.
+10. COMMON MISTAKES (HINDARI):
+   - Goreng tapi lemak < 5g → SALAH. Sayuran/buah tapi fiber = 0 → SALAH.
+   - Susu/keju tapi calcium = 0 → SALAH. Ikan/telur tapi vitD = 0 → SALAH.
+   - Mie/nasi tapi karbo = 0 → SALAH. Resto tapi sodium < 100mg → SALAH.
+11. VERIFIKASI: cal HARUS ≈ (protein×4)+(carbs×4)+(fat×9) ±5%. Koreksi jika tidak sesuai.
+12. Bulatkan ke 1 angka desimal.
+13. Jawab HANYA JSON valid (tanpa teks/markdown di luar JSON):
+{"name":"${foodName}","portion":"${portionMultiplier > 1 ? portionMultiplier + ' porsi (' + totalGrams + 'g)' : totalGrams + 'g'}","calculation":"WAJIB ISI: rincian perkalian per komponen untuk semua 12 field nutrisi","cal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"sodium":0,"calcium":0,"iron":0,"vitC":0,"vitD":0,"zinc":0,"notes":"rincian detail bahan & gram untuk ${portionMultiplier} porsi"}`;
 
   try {
     const rawNutrition = await callAI([nutritionSystemMsg, { role: 'user', content: nutritionPrompt }], true, 'gpt-4o-mini', false);
@@ -933,9 +965,11 @@ function findHistoricalFoodMatch(name) {
 async function analyzeTextAI(name, portion, desc) {
   const systemMsg = {
     role: 'system',
-    content: `Kamu adalah mesin kalkulator gizi presisi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes 2019).
-Tugasmu HANYA menghitung nilai gizi berdasarkan data yang diberikan. Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
-WAJIB: Jawab HANYA dengan JSON valid. DILARANG menambahkan teks, penjelasan, atau markdown di luar JSON.`
+    content: `Kamu adalah mesin kalkulator gizi presisi tinggi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes 2019).
+Tugasmu HANYA menghitung nilai gizi berdasarkan data yang diberikan.
+Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
+WAJIB: Jawab HANYA dengan JSON valid. DILARANG menambahkan teks, penjelasan, atau markdown di luar JSON.
+SEMUA NILAI MIKRO WAJIB DIHITUNG — DILARANG default 0 tanpa kalkulasi.`
   };
 
   const prompt = `== INPUT MAKANAN ==
@@ -945,8 +979,8 @@ Deskripsi/Cara Masak: ${desc || 'standar'}
 
 == STANDAR PORSI KULINER INDONESIA (ACUAN PRESISI) ==
 - Nasi Putih/Merah Matang: 1 centong = ~100g (~130 kcal). 1 piring warteg/padang = ~150–200g (~200–260 kcal).
-- Nasi Goreng Spesial: 1 piring = ~250g (~450–600 kcal | Karbo:65–85g | Protein:12–18g | Lemak:15–22g).
-- Mie Gacoan/Mie Pedas/Mie Ayam: 1 porsi = ~170g matang (~380–450 kcal | Karbo:60g | Protein:12g | Lemak:15g | Sodium:1200–1600mg).
+- Nasi Goreng Spesial: 1 piring = ~250g (~450–600 kcal | K:65–85g | P:12–18g | L:15–22g).
+- Mie Gacoan/Mie Pedas/Mie Ayam: 1 porsi = ~170g matang (~380–450 kcal | K:60g | P:12g | L:15g | Na:1200–1600mg).
 - Tempe/Tahu Goreng: 1 potong = ~45g (~90 kcal, 6g protein, 5g lemak).
 - Ayam Goreng/Bakar (Paha/Dada): 1 potong = ~110g (~200 kcal, 28g protein).
 - Telur Ayam Ceplok/Dadar: 1 butir = ~55g (~100 kcal, 6.3g protein, 7g lemak).
@@ -954,29 +988,88 @@ Deskripsi/Cara Masak: ${desc || 'standar'}
 - Daging Sapi/Rendang: 1 potong = ~65g (~185 kcal, 20g protein).
 - Gorengan (Bakwan, Mendoan, Tahu Isi): 1 biji = ~50g (~160 kcal, 12g lemak).
 - Minuman Manis (Es Teh/Kopi Susu): 1 gelas = ~250ml (~80–120 kcal, gula 15–25g).
+- Ikan Goreng: 1 potong = ~100g (~200 kcal, P:20g, L:12g).
+- Udang Goreng Tepung: 1 porsi = ~100g (~230 kcal, P:18g, L:14g).
+- Soto Ayam + Nasi: 1 mangkuk = ~400ml kuah + lauk (~350 kcal, Na:900–1300mg).
+- Bakso + Mie: 1 mangkuk = ~400ml (~350–450 kcal, Na:1000–1500mg).
+- Gado-gado/Pecel: 1 porsi = ~250g (~350 kcal, Serat:6–8g).
+- Nasi Padang (Nasi+Rendang+Sayur+Sambal): ~500–700 kcal total.
+- Bubur Ayam: 1 mangkuk = ~350g (~250 kcal, K:35g, P:12g).
+- Indomie Goreng: 1 bungkus = 85g kering (~380 kcal | K:52g | P:8g | L:16g | Na:1050mg).
+- Indomie Kuah Soto: 1 bungkus = 75g kering (~310 kcal | K:44g | P:7g | L:12g | Na:1120mg).
 
-== DATABASE REFERENCE (Per 100g MATANG): ==
-- Nasi Putih: 130 kcal | Karbo:28g | Protein:2.7g | Lemak:0.3g | Serat:0.4g | Gula:0.1g | Sodium:1mg | Kalsium:10mg | Besi:1.2mg | VitC:0mg | VitD:0mcg | Zinc:0.5mg
-- Nasi Merah: 111 kcal | Karbo:23g | Protein:2.6g | Lemak:0.9g | Serat:1.8g | Gula:0g | Sodium:5mg | Kalsium:10mg | Besi:0.5mg | VitC:0mg | VitD:0mcg | Zinc:0.6mg
-- Dada Ayam Matang (panggang/rebus): 165 kcal | Karbo:0g | Protein:31g | Lemak:3.6g | Serat:0g | Gula:0g | Sodium:74mg | Kalsium:15mg | Besi:1mg | VitC:0mg | VitD:0mcg | Zinc:1mg
-- Dada Ayam Mentah/Raw: 120 kcal | Karbo:0g | Protein:23g | Lemak:2.5g | Serat:0g | Gula:0g | Sodium:65mg | Kalsium:10mg | Besi:0.7mg | VitC:0mg | VitD:0mcg | Zinc:0.8mg
-- Paha Ayam Matang: 209 kcal | Karbo:0g | Protein:26g | Lemak:10.9g | Serat:0g | Gula:0g | Sodium:84mg | Kalsium:11mg | Besi:1.3mg | VitC:0mg | VitD:0.1mcg | Zinc:2.7mg
-- Telur Ayam Rebus: 155 kcal | Karbo:1.1g | Protein:13g | Lemak:11g | Serat:0g | Gula:1.1g | Sodium:124mg | Kalsium:50mg | Besi:1.8mg | VitC:0mg | VitD:2.2mcg | Zinc:1.3mg
-- Tempe: 193 kcal | Karbo:8.7g | Protein:20.7g | Lemak:11g | Serat:1.4g | Gula:0g | Sodium:9mg | Kalsium:111mg | Besi:2.7mg | VitC:0mg | VitD:0mcg | Zinc:1.8mg
-- Tahu Putih: 76 kcal | Karbo:1.9g | Protein:8g | Lemak:4.2g | Serat:0.3g | Gula:0g | Sodium:7mg | Kalsium:350mg | Besi:5.4mg | VitC:0.2mg | VitD:0mcg | Zinc:0.8mg
-- Singkong Rebus: 160 kcal | Karbo:38g | Protein:1.4g | Lemak:0.3g | Serat:1.8g | Gula:1.7g | Sodium:14mg | Kalsium:16mg | Besi:0.3mg | VitC:20mg | VitD:0mcg | Zinc:0.3mg
-- Minyak Goreng (per 10g/1sdm): 88 kcal | Karbo:0g | Protein:0g | Lemak:10g | Serat:0g | Gula:0g | Sodium:0mg | Kalsium:0mg | Besi:0mg | VitC:0mg | VitD:0mcg | Zinc:0mg
+== DATABASE REFERENCE (Per 100g MATANG) ==
+[KARBOHIDRAT POKOK]
+- Nasi Putih: 130 kcal|K:28g|P:2.7g|L:0.3g|Serat:0.4g|Gula:0.1g|Na:1mg|Ca:10mg|Fe:1.2mg|VitC:0|VitD:0|Zn:0.5mg
+- Nasi Merah: 111 kcal|K:23g|P:2.6g|L:0.9g|Serat:1.8g|Gula:0g|Na:5mg|Ca:10mg|Fe:0.5mg|VitC:0|VitD:0|Zn:0.6mg
+- Mie Telur Matang: 138 kcal|K:25g|P:4.5g|L:2g|Serat:1g|Gula:0.4g|Na:6mg|Ca:10mg|Fe:1.4mg|VitC:0|VitD:0|Zn:0.5mg
+- Roti Tawar Putih: 265 kcal|K:49g|P:9g|L:3.2g|Serat:2.7g|Gula:5g|Na:491mg|Ca:260mg|Fe:3.6mg|VitC:0|VitD:0|Zn:0.7mg
+- Kentang Rebus: 87 kcal|K:20g|P:1.9g|L:0.1g|Serat:1.8g|Gula:0.8g|Na:6mg|Ca:5mg|Fe:0.3mg|VitC:13mg|VitD:0|Zn:0.3mg
+- Singkong Rebus: 160 kcal|K:38g|P:1.4g|L:0.3g|Serat:1.8g|Gula:1.7g|Na:14mg|Ca:16mg|Fe:0.3mg|VitC:20mg|VitD:0|Zn:0.3mg
+- Oatmeal Matang: 68 kcal|K:12g|P:2.4g|L:1.4g|Serat:1.7g|Gula:0.3g|Na:5mg|Ca:9mg|Fe:1.4mg|VitC:0|VitD:0|Zn:0.6mg
+
+[PROTEIN HEWANI]
+- Dada Ayam Matang: 165 kcal|K:0g|P:31g|L:3.6g|Serat:0g|Gula:0g|Na:74mg|Ca:15mg|Fe:1mg|VitC:0|VitD:0|Zn:1mg
+- Paha Ayam Matang: 209 kcal|K:0g|P:26g|L:10.9g|Serat:0g|Gula:0g|Na:84mg|Ca:11mg|Fe:1.3mg|VitC:0|VitD:0.1mcg|Zn:2.7mg
+- Telur Ayam Rebus (per 100g): 155 kcal|K:1.1g|P:13g|L:11g|Serat:0g|Gula:1.1g|Na:124mg|Ca:50mg|Fe:1.8mg|VitC:0|VitD:2.2mcg|Zn:1.3mg
+- Daging Sapi Matang (lean): 250 kcal|K:0g|P:26g|L:15g|Serat:0g|Gula:0g|Na:72mg|Ca:18mg|Fe:2.6mg|VitC:0|VitD:0.1mcg|Zn:6.3mg
+- Ikan Nila/Mujair Matang: 128 kcal|K:0g|P:26g|L:2.7g|Serat:0g|Gula:0g|Na:56mg|Ca:14mg|Fe:0.7mg|VitC:0|VitD:3.1mcg|Zn:0.4mg
+- Ikan Tongkol/Tuna: 132 kcal|K:0g|P:28g|L:1.3g|Serat:0g|Gula:0g|Na:47mg|Ca:4mg|Fe:1.3mg|VitC:0|VitD:4.9mcg|Zn:0.8mg
+- Ikan Lele Goreng: 230 kcal|K:0g|P:18g|L:17g|Serat:0g|Gula:0g|Na:60mg|Ca:15mg|Fe:0.6mg|VitC:0|VitD:0|Zn:0.7mg
+- Udang Matang: 99 kcal|K:0.2g|P:24g|L:0.3g|Serat:0g|Gula:0g|Na:111mg|Ca:52mg|Fe:0.3mg|VitC:0|VitD:0|Zn:1.6mg
+- Cumi Matang: 175 kcal|K:3.1g|P:18g|L:7.5g|Serat:0g|Gula:0g|Na:744mg|Ca:32mg|Fe:1.1mg|VitC:5mg|VitD:0|Zn:1.8mg
+- Ikan Salmon Matang: 208 kcal|K:0g|P:20g|L:13g|Serat:0g|Gula:0g|Na:59mg|Ca:9mg|Fe:0.3mg|VitC:0|VitD:11mcg|Zn:0.6mg
+- Susu Sapi Full Cream (per 100ml): 61 kcal|K:4.8g|P:3.2g|L:3.3g|Serat:0g|Gula:5g|Na:43mg|Ca:113mg|Fe:0mg|VitC:0|VitD:1.3mcg|Zn:0.4mg
+- Keju Cheddar: 403 kcal|K:1.3g|P:25g|L:33g|Serat:0g|Gula:0.5g|Na:621mg|Ca:721mg|Fe:0.7mg|VitC:0|VitD:0.6mcg|Zn:3.1mg
+
+[PROTEIN NABATI]
+- Tempe: 193 kcal|K:8.7g|P:20.7g|L:11g|Serat:1.4g|Gula:0g|Na:9mg|Ca:111mg|Fe:2.7mg|VitC:0|VitD:0|Zn:1.8mg
+- Tahu Putih: 76 kcal|K:1.9g|P:8g|L:4.2g|Serat:0.3g|Gula:0g|Na:7mg|Ca:350mg|Fe:5.4mg|VitC:0.2mg|VitD:0|Zn:0.8mg
+- Kacang Tanah Goreng: 567 kcal|K:16g|P:26g|L:49g|Serat:8.5g|Gula:4g|Na:18mg|Ca:92mg|Fe:4.6mg|VitC:0|VitD:0|Zn:3.3mg
+- Kacang Merah Rebus: 127 kcal|K:22g|P:8.7g|L:0.5g|Serat:6.4g|Gula:0.3g|Na:2mg|Ca:28mg|Fe:2.9mg|VitC:1.2mg|VitD:0|Zn:1mg
+
+[SAYURAN]
+- Kangkung Tumis: 30 kcal|K:3g|P:2.6g|L:0.5g|Serat:2.1g|Gula:0g|Na:50mg|Ca:77mg|Fe:2.5mg|VitC:30mg|VitD:0|Zn:0.2mg
+- Bayam Rebus: 23 kcal|K:3.6g|P:2.9g|L:0.3g|Serat:2.2g|Gula:0.4g|Na:70mg|Ca:136mg|Fe:3.6mg|VitC:10mg|VitD:0|Zn:0.8mg
+- Brokoli Rebus: 35 kcal|K:7.2g|P:2.4g|L:0.4g|Serat:3.3g|Gula:1.4g|Na:41mg|Ca:40mg|Fe:0.7mg|VitC:65mg|VitD:0|Zn:0.4mg
+- Wortel Rebus: 35 kcal|K:8.2g|P:0.8g|L:0.2g|Serat:3g|Gula:3.5g|Na:58mg|Ca:30mg|Fe:0.3mg|VitC:3.6mg|VitD:0|Zn:0.2mg
+- Timun Segar: 15 kcal|K:3.6g|P:0.7g|L:0.1g|Serat:0.5g|Gula:1.7g|Na:2mg|Ca:16mg|Fe:0.3mg|VitC:2.8mg|VitD:0|Zn:0.2mg
+- Tomat Segar: 18 kcal|K:3.9g|P:0.9g|L:0.2g|Serat:1.2g|Gula:2.6g|Na:5mg|Ca:10mg|Fe:0.3mg|VitC:14mg|VitD:0|Zn:0.2mg
+- Labu Siam Rebus: 19 kcal|K:4.5g|P:0.8g|L:0.1g|Serat:1.7g|Gula:1.9g|Na:2mg|Ca:12mg|Fe:0.3mg|VitC:6mg|VitD:0|Zn:0.7mg
+- Tauge/Kecambah: 31 kcal|K:6g|P:3g|L:0.2g|Serat:1.8g|Gula:4.3g|Na:6mg|Ca:13mg|Fe:0.9mg|VitC:13mg|VitD:0|Zn:0.4mg
+
+[BUAH-BUAHAN]
+- Pisang (Ambon): 89 kcal|K:23g|P:1.1g|L:0.3g|Serat:2.6g|Gula:12g|Na:1mg|Ca:5mg|Fe:0.3mg|VitC:9mg|VitD:0|Zn:0.2mg
+- Apel Merah: 52 kcal|K:14g|P:0.3g|L:0.2g|Serat:2.4g|Gula:10g|Na:1mg|Ca:6mg|Fe:0.1mg|VitC:5mg|VitD:0|Zn:0mg
+- Jeruk Manis: 47 kcal|K:12g|P:0.9g|L:0.1g|Serat:2.4g|Gula:9g|Na:0mg|Ca:40mg|Fe:0.1mg|VitC:53mg|VitD:0|Zn:0.1mg
+- Mangga Matang: 60 kcal|K:15g|P:0.8g|L:0.4g|Serat:1.6g|Gula:14g|Na:1mg|Ca:11mg|Fe:0.2mg|VitC:36mg|VitD:0|Zn:0.1mg
+- Pepaya: 43 kcal|K:11g|P:0.5g|L:0.3g|Serat:1.7g|Gula:8g|Na:8mg|Ca:20mg|Fe:0.3mg|VitC:61mg|VitD:0|Zn:0.1mg
+- Semangka: 30 kcal|K:7.6g|P:0.6g|L:0.2g|Serat:0.4g|Gula:6.2g|Na:1mg|Ca:7mg|Fe:0.2mg|VitC:8mg|VitD:0|Zn:0.1mg
+- Alpukat: 160 kcal|K:8.5g|P:2g|L:15g|Serat:6.7g|Gula:0.7g|Na:7mg|Ca:12mg|Fe:0.6mg|VitC:10mg|VitD:0|Zn:0.6mg
+
+[MINUMAN]
+- Es Teh Manis (250ml): gula ~25g (~100 kcal), Ca:0, Fe:0, Na:5mg
+- Kopi Susu Gula Aren (1 cup 350ml): ~180 kcal|K:25g|P:4g|L:6g|Gula:22g|Na:60mg|Ca:80mg
+- Jus Jeruk Segar (250ml): ~112 kcal|K:26g|P:1.7g|L:0.5g|Gula:21g|Na:2mg|Ca:27mg|VitC:124mg
+- Susu Coklat Kotak (250ml): ~190 kcal|K:27g|P:7g|L:6g|Gula:24g|Na:150mg|Ca:280mg|Fe:0.6mg|VitD:1mcg
+- Air Kelapa Muda (250ml): ~46 kcal|K:9g|P:1.7g|L:0.5g|Gula:6g|Na:105mg|Ca:58mg|Fe:0.3mg|VitC:2.4mg|Zn:0.1mg
+
+[LEMAK & BUMBU]
+- Minyak Goreng (per 10g/1sdm): 88 kcal|K:0g|P:0g|L:10g|Na:0mg
+- Santan Kental (per 100ml): 230 kcal|K:6g|P:2.3g|L:24g|Serat:0g|Na:15mg|Ca:16mg|Fe:1.6mg|VitC:1mg|Zn:0.7mg
+- Kecap Manis (per 15ml/1sdm): 40 kcal|K:9g|P:1g|L:0g|Gula:8g|Na:600mg
+- Sambal Terasi (per 15g/1sdm): 15 kcal|K:2g|P:0.5g|L:0.5g|Na:350mg|VitC:5mg
 
 == INSTRUKSI KALKULASI KETAT (>97% AKURASI) ==
 1. Konversi porsi ke gram MATANG terlebih dahulu. Gunakan acuan standar Indonesia di atas.
 2. Cari data per 100g di DATABASE REFERENCE di atas atau USDA/TKPI jika tidak ada.
-3. Hitung: Nilai = (data per 100g) × (gram porsi / 100). Lakukan untuk SEMUA makro DAN MIKRO.
-4. MULTI-BAHAN: Hitung MASING-MASING bahan TERPISAH sesuai beratnya, lalu JUMLAHKAN.
+3. Hitung: Nilai = (data per 100g) × (gram porsi / 100). Lakukan untuk SETIAP field (cal, protein, carbs, fat, fiber, sugar, sodium, calcium, iron, vitC, vitD, zinc).
+4. MULTI-BAHAN: Hitung MASING-MASING bahan TERPISAH sesuai beratnya, lalu JUMLAHKAN semua field.
 5. MULTI-PORSI: Kalikan semua nilai dengan jumlah porsi yang disebutkan.
 6. ATWATER INTEGRITY: Makanan berbasis mie/nasi/tepung/roti/singkong WAJIB memiliki Karbo dominan (BUKAN 0g).
 7. SODIUM RULES:
    - Mie Instan/Mie Pedas Resto: 1 porsi = 1200–1600mg sodium.
-   - Sup/Soto/Bakso/Ramen berkulah: 1 porsi = 900–1400mg sodium.
+   - Sup/Soto/Bakso/Ramen berkuah: 1 porsi = 900–1400mg sodium.
    - Makanan berbumbu/sambal/kecap: 500–900mg sodium.
    - Rebusan polos/tanpa garam: 10–80mg per 100g.
 8. PENGOLAHAN MINYAK:
@@ -984,10 +1077,25 @@ Deskripsi/Cara Masak: ${desc || 'standar'}
    - Tumis/Goreng Biasa: Tambah +5g lemak (+45 kcal) per porsi.
    - Santan/Gulai: Tambah +8g lemak (+72 kcal) per 100g.
    - Air Fryer/Rebus/Kukus/Panggang tanpa minyak: TANPA tambahan lemak.
-9. Mentah vs Matang: "fillet/mentah/raw" = gunakan data mentah. Selain itu = matang.
-10. VERIFIKASI: Total Kalori HARUS = (Protein×4) + (Karbo×4) + (Lemak×9) ± 5%. Jika tidak, koreksi.
-11. Jawab HANYA JSON valid ini (tanpa teks/markdown apapun di luar JSON):
-{"calculation":"rincian perkalian detail semua makro+mikro misal: Nasi 150g → 130×1.5=195kcal, Karbo=28×1.5=42g...","cal":0.0,"protein":0.0,"carbs":0.0,"fat":0.0,"fiber":0.0,"sugar":0.0,"sodium":0.0,"calcium":0.0,"iron":0.0,"vitC":0.0,"vitD":0.0,"zinc":0.0}
+9. MICRONUTRIENT WAJIB DIHITUNG (DILARANG ASAL 0):
+   - fiber: Sayuran 2–4g/100g, buah 1–3g/100g, nasi 0.3–0.5g/100g, mie 1g/100g.
+   - sugar: Minuman manis 15–25g/gelas, buah 8–15g/100g, nasi/lauk ~0g.
+   - calcium: Susu/keju 100–700mg/100g, tahu 350mg/100g, ikan 10–50mg/100g, tempe 111mg/100g.
+   - iron: Daging merah 2–3mg/100g, bayam 3.6mg/100g, tempe 2.7mg/100g, telur 1.8mg/100g.
+   - vitC: Jeruk/pepaya/mangga 30–60mg/100g, sayur hijau 10–65mg/100g, daging/telur ~0mg.
+   - vitD: Salmon/ikan berlemak 5–11mcg/100g, telur 2.2mcg/100g, susu 1.3mcg/100ml.
+   - zinc: Daging sapi 6mg/100g, keju 3mg/100g, tempe 1.8mg/100g, ayam 1–2.7mg/100g.
+10. Mentah vs Matang: "fillet/mentah/raw" = gunakan data mentah. Selain itu = matang.
+11. VERIFIKASI WAJIB: Total Kalori HARUS = (Protein×4) + (Karbo×4) + (Lemak×9) ± 5%. Jika tidak, koreksi angka lemak atau karbo.
+12. COMMON MISTAKES (HINDARI):
+   - JANGAN: Goreng tapi lemak < 5g (SALAH, goreng minimal 8–15g lemak).
+   - JANGAN: Mie/nasi/roti tapi karbo = 0g (SALAH, pasti ada karbo).
+   - JANGAN: Makanan berbumbu/resto tapi sodium < 100mg (SALAH, minimal 300–500mg).
+   - JANGAN: Sayuran/buah tapi fiber = 0g (SALAH, pasti ada fiber).
+   - JANGAN: Susu/keju tapi calcium = 0mg (SALAH, susu 113mg/100ml, keju 721mg/100g).
+   - JANGAN: Ikan/telur tapi vitD = 0mcg (SALAH, telur 2.2mcg, ikan 3–11mcg).
+13. Jawab HANYA JSON valid ini (tanpa teks/markdown apapun di luar JSON):
+{"calculation":"WAJIB ISI: rincian perkalian detail per bahan, misal: Nasi 150g → cal=130×1.5=195, K=28×1.5=42g, P=2.7×1.5=4.1g, L=0.3×1.5=0.5g, serat=0.4×1.5=0.6g, Na=1×1.5=1.5mg, Ca=10×1.5=15mg, Fe=1.2×1.5=1.8mg...","cal":0.0,"protein":0.0,"carbs":0.0,"fat":0.0,"fiber":0.0,"sugar":0.0,"sodium":0.0,"calcium":0.0,"iron":0.0,"vitC":0.0,"vitD":0.0,"zinc":0.0}
 Bulatkan 1 angka desimal.`;
 
   const raw = await callAI([systemMsg, { role:'user', content: prompt }], true, 'gpt-4o-mini');
