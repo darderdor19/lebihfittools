@@ -728,12 +728,8 @@ async function analyzePhotoAI(images, mime = null, userDescription = '', onProgr
   // =============================================
   if (onProgress) onProgress('🔍 Mengidentifikasi makanan dari foto...');
 
-  let identifyPrompt = `Kamu adalah sistem identifikasi visual makanan & gizi yang sangat berpengalaman dan presisi.
-Analisis gambar ini dan identifikasi seluruh makanan/lauk yang terlihat.`;
-
-  if (userDescription) {
-    identifyPrompt += `\n\nDeskripsi tambahan dari user: "${userDescription}"`;
-  }
+  let identifyPrompt = `Bro coba lo analisis secara akurat di foto ini ada makanan apa aja dan berapa banyaknya serta sesuaikan dengan deskripsinya ${userDescription ? `("${userDescription}")` : '(kalau ada yang diisi user kalau ga gausah sertain deskripsi)'}.
+Kamu adalah sistem identifikasi visual makanan & gizi yang sangat berpengalaman dan presisi.`;
 
   identifyPrompt += `
 
@@ -832,7 +828,8 @@ SEMUA NILAI MIKRO WAJIB DIHITUNG — DILARANG default 0 tanpa kalkulasi.
 WAJIB: Jawab HANYA JSON valid. DILARANG teks/markdown di luar JSON.`
   };
 
-  const nutritionPrompt = `Kamu adalah kalkulator nutrisi makanan presisi tinggi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
+  const nutritionPrompt = `Bro coba lo analisis makanan ini (${foodName}) dengan porsi (${portionMultiplier > 1 ? portionMultiplier + ' porsi (' + totalGrams + 'g)' : totalGrams + 'g'}) ${userDescription ? `dengan deskripsi ("${userDescription}")` : ''}, lo analisis makro dan mikro nutrisinya lengkap sesuai dengan standar internasional yang akurat (USDA FoodData Central & TKPI Kemenkes).
+Kamu adalah kalkulator nutrisi makanan presisi tinggi berstandar internasional (USDA FoodData Central & TKPI Indonesia Kemenkes).
 Gunakan Atwater Factors: Protein=4 kcal/g, Karbo=4 kcal/g, Lemak=9 kcal/g.
 
 == MAKANAN YANG DIIDENTIFIKASI DARI FOTO ==
@@ -972,7 +969,9 @@ WAJIB: Jawab HANYA dengan JSON valid. DILARANG menambahkan teks, penjelasan, ata
 SEMUA NILAI MIKRO WAJIB DIHITUNG — DILARANG default 0 tanpa kalkulasi.`
   };
 
-  const prompt = `== INPUT MAKANAN ==
+  const prompt = `Bro coba lo analisis makanan ini (${name}) dengan porsi (${portion || '1 porsi standar Indonesia'}) ${desc ? `dengan deskripsi (${desc})` : ''}, lo analisis makro dan mikro nutrisinya lengkap sesuai dengan standar internasional yang akurat (USDA FoodData Central & TKPI Kemenkes).
+
+== INPUT MAKANAN ==
 Nama Makanan: ${name}
 Porsi/Berat: ${portion || '1 porsi standar Indonesia'}
 Deskripsi/Cara Masak: ${desc || 'standar'}

@@ -87,7 +87,9 @@ SEMUA NILAI MIKRO WAJIB DIHITUNG — DILARANG default 0 tanpa kalkulasi.
 WAJIB: Jawab HANYA dengan JSON valid. DILARANG teks/markdown di luar JSON.`
   };
 
-  const prompt = `== INPUT MAKANAN ==
+  const prompt = `Bro coba lo analisis makanan ini dengan porsi dan deskripsinya, lo analisis makro dan mikro nutrisinya lengkap sesuai dengan standar internasional yang akurat (USDA FoodData Central & TKPI Kemenkes).
+
+== INPUT MAKANAN ==
 ${text}
 
 == STANDAR PORSI KULINER INDONESIA ==
