@@ -1165,6 +1165,19 @@
         </label>
       </div>
       <div class="sidebar-divider"></div>
+      <span class="sidebar-label">Meta Pixel (FB Ads)</span>
+      <div style="padding: 4px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <i data-lucide="activity" style="width:14px;height:14px;color:var(--accent);flex-shrink:0;"></i>
+          <span style="font-size:0.75rem;color:var(--text2);font-weight:600;">Pixel ID</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="pixelIdInput" placeholder="Masukkan Pixel ID..." style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.78rem;outline:none;">
+          <button onclick="savePixelId()" style="padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:var(--bg);font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">Simpan</button>
+        </div>
+        <div id="pixelIdStatus" style="font-size:0.68rem;color:var(--text3);margin-top:4px;"></div>
+      </div>
+      <div class="sidebar-divider"></div>
       <span class="sidebar-label">Akun</span>
       <button class="sidebar-item" onclick="openChangePass()">
         <i data-lucide="key"></i> Ganti Password
@@ -2184,6 +2197,7 @@ function showDashboard(user) {
   lucide.createIcons();
   loadAllUsers();
   listenAiToggle(); // sync AI toggle from Firebase
+  loadPixelId(); // load saved Meta Pixel ID
   if (user.email === SUPER_ADMIN) {
     document.getElementById('nav-admins').style.display = '';
     loadAdmins();
@@ -2998,6 +3012,46 @@ async function toggleAiAssistant(checked) {
     const toggleEl = document.getElementById('aiAssistantToggle');
     if (toggleEl) toggleEl.checked = !checked;
   }
+}
+
+// === Meta Pixel ID Management ===
+async function savePixelId() {
+  const input = document.getElementById('pixelIdInput');
+  const status = document.getElementById('pixelIdStatus');
+  const pixelId = (input ? input.value.trim() : '');
+  
+  try {
+    await fbDb.ref('admins/settings/pixel_id').set(pixelId || null);
+    if (status) {
+      status.textContent = pixelId ? '✅ Pixel ID tersimpan: ' + pixelId : '🗑️ Pixel ID dihapus';
+      status.style.color = pixelId ? 'var(--success)' : 'var(--text3)';
+    }
+    showToast(pixelId ? '✅ Meta Pixel ID berhasil disimpan' : '🗑️ Meta Pixel ID dihapus', pixelId ? 'success' : 'info');
+  } catch (err) {
+    console.error('[savePixelId] error:', err);
+    if (status) {
+      status.textContent = '❌ Gagal menyimpan: ' + err.message;
+      status.style.color = 'var(--danger)';
+    }
+    showToast('Gagal menyimpan Pixel ID: ' + err.message, 'error');
+  }
+}
+
+function loadPixelId() {
+  if (!fbDb) return;
+  fbDb.ref('admins/settings/pixel_id').once('value').then(snap => {
+    const pid = snap.val();
+    const input = document.getElementById('pixelIdInput');
+    const status = document.getElementById('pixelIdStatus');
+    if (input && pid) input.value = pid;
+    if (status && pid) {
+      status.textContent = '🟢 Pixel aktif: ' + pid;
+      status.style.color = 'var(--success)';
+    } else if (status) {
+      status.textContent = 'Belum ada Pixel ID';
+      status.style.color = 'var(--text3)';
+    }
+  }).catch(() => {});
 }
 
 function fetchVercelKeyStatus() {
