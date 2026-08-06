@@ -1152,6 +1152,9 @@
       <button class="sidebar-item" id="nav-report" onclick="switchTab('report')">
         <i data-lucide="bar-chart-2"></i> Report Penjualan
       </button>
+      <button class="sidebar-item" id="nav-pixel" onclick="switchTab('pixel')">
+        <i data-lucide="activity"></i> Meta Pixel (FB Ads)
+      </button>
       <div class="sidebar-divider"></div>
       <span class="sidebar-label">Fitur AI</span>
       <div class="sidebar-feature-toggle">
@@ -1163,27 +1166,6 @@
           <input type="checkbox" id="aiAssistantToggle" onchange="toggleAiAssistant(this.checked)" checked>
           <span class="mini-switch-slider"></span>
         </label>
-      </div>
-      <div class="sidebar-divider"></div>
-      <span class="sidebar-label">Meta Pixel (FB Ads)</span>
-      <div style="padding: 4px 0; display: flex; flex-direction: column; gap: 8px;">
-        <div>
-          <label style="font-size:0.72rem; color:var(--text2); font-weight:600; display:flex; align-items:center; gap:4px; margin-bottom:4px;">
-            <i data-lucide="eye" style="width:12px;height:12px;color:var(--accent);"></i> Pixel ID 1: LP View (PageView)
-          </label>
-          <input type="text" id="pixelIdInput" placeholder="Contoh: 1234567890..." style="width:100%; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:0.78rem; outline:none; box-sizing:border-box;">
-        </div>
-        <div>
-          <label style="font-size:0.72rem; color:var(--text2); font-weight:600; display:flex; align-items:center; gap:4px; margin-bottom:4px;">
-            <i data-lucide="shopping-cart" style="width:12px;height:12px;color:var(--accent);"></i> Pixel ID 2: Initiate Checkout (Opsional)
-          </label>
-          <input type="text" id="pixelIdIcInput" placeholder="Kosongkan jika sama dengan Pixel 1" style="width:100%; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:0.78rem; outline:none; box-sizing:border-box;">
-        </div>
-        <button onclick="savePixelId()" style="width:100%; padding:8px 12px; border-radius:8px; border:none; background:var(--accent); color:var(--bg); font-size:0.75rem; font-weight:700; cursor:pointer;">Simpan Meta Pixel</button>
-        <div id="pixelIdStatus" style="font-size:0.68rem; color:var(--text3); line-height:1.3;"></div>
-        <div style="font-size:0.65rem; color:var(--text3); background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px; padding:6px; line-height:1.4;">
-          💡 <b>Info:</b> Jika Pixel 2 dikosongkan, event <i>Initiate Checkout</i> otomatis dikirim ke Pixel 1.
-        </div>
       </div>
       <div class="sidebar-divider"></div>
       <span class="sidebar-label">Akun</span>
@@ -1698,6 +1680,75 @@
 
         </div>
 
+      </section>
+
+      <!-- ===== TAB: META PIXEL ===== -->
+      <section id="tab-pixel" class="content-section">
+        <div class="section-header">
+          <h2><i data-lucide="activity" style="width:20px;height:20px;color:var(--accent);"></i> Pengaturan Meta Pixel (FB Ads)</h2>
+          <button class="btn-sm btn-ghost" onclick="loadPixelId()" style="display:flex;align-items:center;gap:6px;">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh Status
+          </button>
+        </div>
+
+        <p style="color:var(--text2);font-size:0.88rem;margin-bottom:24px;">
+          Kelola ID Meta Pixel untuk melacak kunjungan Landing Page (PageView) dan konversi tombol CTA (Initiate Checkout) secara real-time.
+        </p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <!-- Card 1: Form Config -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+            <h3 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="sliders" style="width:18px;height:18px;color:var(--accent);"></i> Konfigurasi Pixel ID
+            </h3>
+
+            <div class="modal-form-group">
+              <label style="font-weight:600;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="eye" style="width:14px;height:14px;color:var(--accent);"></i> Pixel ID 1: LP View (PageView) *
+              </label>
+              <input type="text" id="pixelIdInput" placeholder="Masukkan Meta Pixel ID (contoh: 123456789012345)..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
+              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Metrik ini otomatis mengirimkan event <code>PageView</code> saat calon pengguna membuka Landing Page.</div>
+            </div>
+
+            <div class="modal-form-group">
+              <label style="font-weight:600;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="shopping-cart" style="width:14px;height:14px;color:var(--accent);"></i> Pixel ID 2: Initiate Checkout (Opsional)
+              </label>
+              <input type="text" id="pixelIdIcInput" placeholder="Kosongkan jika sama dengan Pixel 1..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
+              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Metrik ini otomatis mengirimkan event <code>InitiateCheckout</code> saat tombol CTA / Beli Pro diklik. Kosongkan jika menggunakan 1 Pixel ID yang sama.</div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
+              <button class="btn-sm btn-primary" onclick="savePixelId()" style="padding:10px 20px;font-size:0.85rem;font-weight:700;">
+                <i data-lucide="save" style="width:14px;height:14px;"></i> Simpan Meta Pixel
+              </button>
+              <div id="pixelIdStatus" style="font-size:0.8rem;font-weight:600;"></div>
+            </div>
+          </div>
+
+          <!-- Card 2: Status & Penjelasan -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;gap:16px;background:var(--bg2);">
+            <h3 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="info" style="width:18px;height:18px;color:var(--accent);"></i> Informasi Tracking Meta Ads
+            </h3>
+
+            <div style="font-size:0.85rem;color:var(--text2);line-height:1.6;display:flex;flex-direction:column;gap:12px;">
+              <div style="background:var(--bg1);padding:12px;border-radius:8px;border:1px solid var(--border);">
+                <b style="color:var(--text1);display:block;margin-bottom:4px;">👁️ LP View (PageView):</b>
+                Setiap pengguna yang membuka Landing Page akan memicu event <code>PageView</code> secara otomatis.
+              </div>
+
+              <div style="background:var(--bg1);padding:12px;border-radius:8px;border:1px solid var(--border);">
+                <b style="color:var(--text1);display:block;margin-bottom:4px;">🛒 Initiate Checkout (Tombol CTA):</b>
+                Setiap kali pengguna mengeklik tombol <i>"Mulai Transformasi Sekarang"</i> atau <i>"Berlangganan Pro"</i>, event <code>InitiateCheckout</code> otomatis terkirim.
+              </div>
+
+              <div style="background:rgba(0,240,255,0.05);padding:12px;border-radius:8px;border:1px solid rgba(0,240,255,0.2);color:var(--accent);">
+                💡 <b>Tips Pengujian:</b> Gunakan ekstensi browser Chrome <b>Meta Pixel Helper</b> untuk memverifikasi sinyal tracking secara live pada browser kamu.
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
     </main>
@@ -2345,9 +2396,14 @@ function renderUserTable(users) {
         <td><span class="badge badge-${status.type}">${status.label}</span>${limitTag}</td>
         <td style="color:var(--text2);font-size:0.82rem;">${joinedAt}</td>
         <td>
-          <button class="btn-sm btn-warning" onclick="openSubModal('${safeEmail}', '${origEmail}')">
-            <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
-          </button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-sm btn-warning" onclick="openSubModal('${safeEmail}', '${origEmail}')">
+              <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
+            </button>
+            <button class="btn-sm btn-danger" onclick="deleteUser('${safeEmail}', '${origEmail}')">
+              <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Hapus
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -3076,6 +3132,22 @@ function loadPixelId() {
       }
     }
   }).catch(() => {});
+}
+
+// === Delete User Function ===
+async function deleteUser(safeEmail, email) {
+  const confirmMsg = `⚠️ KONFIRMASI HAPUS USER\n\nApakah Anda yakin ingin menghapus user:\n${email}\n\nSeluruh data user ini di Firebase Realtime Database akan dihapus secara PERMANEN dan tidak dapat dikembalikan.`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    showToast('Menghapus user dan seluruh data...', 'info');
+    await fbDb.ref(`users/${safeEmail}`).remove();
+    showToast(`✅ User ${email} dan seluruh datanya berhasil dihapus!`, 'success');
+    loadAllUsers();
+  } catch (err) {
+    console.error('[deleteUser] error:', err);
+    showToast('Gagal menghapus user: ' + err.message, 'error');
+  }
 }
 
 function fetchVercelKeyStatus() {

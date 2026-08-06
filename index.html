@@ -2292,23 +2292,23 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- TRIAL EXPIRED OVERLAY -->
+  <!-- SUBSCRIPTION / VERIFICATION LOCK OVERLAY -->
   <div id="trialExpiredOverlay" class="onboarding-overlay hidden" style="z-index: 999999;">
     <div class="onboarding-card" style="max-width: 480px; text-align: center; padding: 36px; position: relative;">
       <div style="margin-bottom: 24px;">
-        <div class="logo-glow" style="margin: 0 auto 16px auto; background: rgba(239, 68, 68, 0.1); border-color: #ef4444; color: #ef4444;">
-          <i data-lucide="clock" style="width: 40px; height: 40px; filter: drop-shadow(0 0 8px #ef4444);"></i>
+        <div class="logo-glow" style="margin: 0 auto 16px auto; background: rgba(0, 240, 255, 0.1); border-color: var(--accent); color: var(--accent);">
+          <i data-lucide="lock" style="width: 40px; height: 40px; filter: drop-shadow(0 0 8px var(--accent));"></i>
         </div>
-        <h2 style="font-size: 1.8rem; font-weight: 800; color: #ef4444; margin-bottom: 8px;">Uji Coba Berakhir</h2>
-        <p style="font-size: 0.88rem; color: var(--text2); line-height: 1.5;">
-          Masa uji coba gratis 3 hari Anda untuk <strong id="trialExpiredEmail" style="color: var(--text);">user@mail.com</strong> telah berakhir pada <span id="trialExpiredDate" style="color: var(--accent); font-weight: 600;">-</span>.
+        <h2 id="trialExpiredTitle" style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 8px;">Akun Belum Diverifikasi</h2>
+        <p id="trialExpiredMsg" style="font-size: 0.88rem; color: var(--text2); line-height: 1.5;">
+          Maaf, sepertinya akun Anda belum diverifikasi. Silakan hubungi admin di bawah untuk verifikasi akun kamu.
         </p>
       </div>
 
       <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px; margin-bottom: 24px; text-align: left;">
         <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; gap: 8px;">
           <i data-lucide="sparkles" style="width: 16px; height: 16px; color: var(--accent);"></i>
-          Kenapa harus upgrade ke Pro?
+          Keuntungan Akses Member Pro LebihFit:
         </h4>
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.82rem; color: var(--text2); display: flex; flex-direction: column; gap: 8px;">
           <li style="display: flex; align-items: center; gap: 8px;"><i data-lucide="check" style="color: var(--success); width: 14px; height: 14px; flex-shrink: 0;"></i> Analisis Gizi dari Foto Makanan AI Presisi</li>
@@ -2319,8 +2319,11 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
-        <a id="btnUpgradeProTrial" href="#lp-pricing-1month" class="btn-primary btn-full" style="padding: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #00ffcc, #7c3aed); border: none; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);">
-          <i data-lucide="crown" style="width: 18px; height: 18px;"></i> Lihat Paket Harga & Upgrade Pro
+        <a id="btnUpgradeProTrial" href="https://lynk.id/lebihfit/rvqgee8rykmw/checkout?token=cGFyYW1zPSU1QiU1RCZ0aWNrZXRzPSU1QiU1RCZiaWRfcHJpY2U9MCZxdHlfcHJvZD0xJnNlc3NpZD0mdG90YWxfcHJpY2U9JnRvdGFsX3VuaXQ9" target="_blank" onclick="if(typeof fbq==='function')fbq('track','InitiateCheckout');" class="btn-primary btn-full" style="padding: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #00f0ff, #00a6b8); border: none; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);">
+          <i data-lucide="crown" style="width: 18px; height: 18px;"></i> Berlangganan Paket Pro (Rp 99.000 / bln)
+        </a>
+        <a id="btnTrialExpiredWA" href="https://wa.me/6285286535908?text=Halo%20Admin%20LebihFit,%20saya%20ingin%20verifikasi%20akun" target="_blank" class="btn-primary btn-full" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #25D366; color: #fff; border: none;">
+          <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i> Hubungi Admin via WhatsApp
         </a>
         <button type="button" class="btn-secondary btn-full" onclick="handleTrialExpiredLogout()" style="padding: 12px; font-weight: 600;">
           <i data-lucide="log-out" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Keluar / Ganti Akun
@@ -2328,7 +2331,7 @@
       </div>
 
       <p style="font-size: 0.75rem; color: var(--text3);">
-        Butuh bantuan? Hubungi kami di <a href="https://instagram.com/jadilebihfit" target="_blank" style="color: var(--accent); text-decoration: none;">@jadilebihfit</a>
+        Butuh bantuan cepat? Hubungi kami di <a href="https://wa.me/6285286535908" target="_blank" style="color: var(--accent); text-decoration: none;">WhatsApp Admin (085286535908)</a>
       </p>
     </div>
   </div>

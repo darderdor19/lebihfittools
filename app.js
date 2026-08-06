@@ -567,41 +567,46 @@ async function checkTrialStatus() {
     return false;
 }
 
-function showTrialExpiredOverlay(email, createdAt) {
+function showTrialExpiredOverlay(email, metaInfo) {
     const overlay = document.getElementById('trialExpiredOverlay');
     if (!overlay) return;
 
-    const emailEl = document.getElementById('trialExpiredEmail');
-    if (emailEl) emailEl.textContent = email;
+    const titleEl = document.getElementById('trialExpiredTitle');
+    const msgEl = document.getElementById('trialExpiredMsg');
+    const waBtn = document.getElementById('btnTrialExpiredWA');
+    const renewBtn = document.getElementById('btnUpgradeProTrial');
 
-    const dateEl = document.getElementById('trialExpiredDate');
-    if (dateEl) {
-        const trialDuration = 3 * 24 * 60 * 60 * 1000;
-        const expiryTime = createdAt + trialDuration;
-        const expiryDate = new Date(expiryTime);
-        const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        dateEl.textContent = expiryDate.toLocaleDateString('id-ID', options);
+    const now = Date.now();
+    let isExpiredSub = false;
+    if (metaInfo && typeof metaInfo === 'object' && metaInfo.proUntil) {
+        const until = new Date(metaInfo.proUntil).getTime();
+        if (until < now) isExpiredSub = true;
     }
 
-    const upgradeBtn = document.getElementById('btnUpgradeProTrial');
-    if (upgradeBtn) {
-        // Redirect to LP pricing section instead of Telegram
-        upgradeBtn.href = '#lp-pricing';
-        upgradeBtn.removeAttribute('target');
-        upgradeBtn.onclick = function(e) {
-            e.preventDefault();
-            // Hide overlay and app, show landing page scrolled to pricing
-            overlay.classList.add('hidden');
-            document.getElementById('app').classList.add('hidden');
-            const lp = document.getElementById('landingPage');
-            if (lp) {
-                lp.classList.remove('hidden');
-                setTimeout(() => {
-                    const pricingSection = document.getElementById('lp-pricing');
-                    if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-            }
-        };
+    if (isExpiredSub) {
+        if (titleEl) titleEl.textContent = "Subscription Berakhir ⌛";
+        if (msgEl) {
+            msgEl.innerHTML = `Maaf, paket subscription Anda sudah berakhir. Silakan perpanjang akun Anda di bawah atau lewat admin untuk mendapatkan promo dan penawaran menarik lainnya.`;
+        }
+        if (waBtn) {
+            waBtn.href = `https://wa.me/6285286535908?text=Halo%20Admin%20LebihFit,%20paket%20subscription%20saya%20(${encodeURIComponent(email || '')})%20sudah%20berakhir.%20Saya%20ingin%20perpanjang.`;
+            waBtn.innerHTML = `<i data-lucide="message-circle" style="width:16px;height:16px;"></i> Perpanjang via WhatsApp`;
+        }
+        if (renewBtn) {
+            renewBtn.innerHTML = `<i data-lucide="crown" style="width:18px;height:18px;"></i> Perpanjang Paket Pro (Rp 99.000 / bln)`;
+        }
+    } else {
+        if (titleEl) titleEl.textContent = "Akun Belum Diverifikasi 🔒";
+        if (msgEl) {
+            msgEl.innerHTML = `Maaf, sepertinya akun Anda belum diverifikasi. Silakan hubungi admin di bawah untuk verifikasi akun kamu.`;
+        }
+        if (waBtn) {
+            waBtn.href = `https://wa.me/6285286535908?text=Halo%20Admin%20LebihFit,%20saya%20sudah%20daftar%20dengan%20email%20${encodeURIComponent(email || '')}%20dan%20ingin%20verifikasi%20akun.`;
+            waBtn.innerHTML = `<i data-lucide="message-circle" style="width:16px;height:16px;"></i> Hubungi Admin via WhatsApp`;
+        }
+        if (renewBtn) {
+            renewBtn.innerHTML = `<i data-lucide="crown" style="width:18px;height:18px;"></i> Berlangganan Paket Pro (Rp 99.000 / bln)`;
+        }
     }
 
     const appContainer = document.getElementById('app');
@@ -611,9 +616,7 @@ function showTrialExpiredOverlay(email, createdAt) {
     if (landingPage) landingPage.classList.add('hidden');
 
     overlay.classList.remove('hidden');
-    if (window.lucide) {
-        lucide.createIcons();
-    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderMembershipStatus() {
