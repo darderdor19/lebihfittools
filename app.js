@@ -522,21 +522,12 @@ async function checkTrialStatus() {
         }
     }
 
-    if (createdAt === null || createdAt === undefined) {
-        const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
-        if (cachedCreatedAt) {
-            createdAt = parseInt(JSON.parse(cachedCreatedAt));
-        } else {
-            createdAt = Date.now();
-            localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
-        }
-        isPro = localStorage.getItem('lf_user_is_pro') === 'true';
-        isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
-    }
+    isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
+    const isSuperAdmin = (email.replace(/"/g, '').trim() === 'jadilebihfit@gmail.com');
+    const hasAccess = isSuperAdmin || hasActiveProAccess(email);
 
-    // Blocked users are always blocked
-    if (isBlocked) {
-        showTrialExpiredOverlay(email, createdAt);
+    if (isBlocked || !hasAccess) {
+        showTrialExpiredOverlay(email, { proUntil: localStorage.getItem('lf_user_pro_until') });
         return true;
     }
 
