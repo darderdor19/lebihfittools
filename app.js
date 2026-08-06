@@ -247,7 +247,13 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
 
     // Check if user has active Pro access or is Admin
     const isSuperAdmin = (email.replace(/"/g, '').trim() === 'jadilebihfit@gmail.com');
-    const hasAccess = isSuperAdmin || hasActiveProAccess(email);
+    const isProVal = userMeta ? (userMeta.isPro || false) : (localStorage.getItem('lf_user_is_pro') === 'true');
+    let isTimeBasedProVal = false;
+    if (userMeta && userMeta.proUntil) {
+        const untilDate = new Date(userMeta.proUntil).getTime();
+        if (untilDate > Date.now()) isTimeBasedProVal = true;
+    }
+    const hasAccess = isSuperAdmin || isProVal || isTimeBasedProVal || hasActiveProAccess(email);
 
     if (isBlocked || !hasAccess) {
         document.getElementById('authOverlay').classList.add('hidden');
@@ -262,8 +268,21 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
         return;
     }
 
+    // Access granted! Hide overlays and show app / onboarding immediately
     document.getElementById('authOverlay').classList.add('hidden');
     document.getElementById('landingPage').classList.add('hidden');
+    const trialOl = document.getElementById('trialExpiredOverlay');
+    if (trialOl) trialOl.classList.add('hidden');
+
+    const initialProfile = getProfile();
+    if (!initialProfile) {
+        document.getElementById('onboarding').classList.remove('hidden');
+    } else {
+        document.getElementById('app').classList.remove('hidden');
+        renderProfileDisplay();
+        showPage('dashboard');
+    }
+
     showToast("Login Berhasil! Menyinkronkan data...", "info");
 
     syncFirebaseToLocal().then(() => {
@@ -273,7 +292,6 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
             document.getElementById('onboarding').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
             renderProfileDisplay();
-            showPage('dashboard');
         } else {
             document.getElementById('onboarding').classList.remove('hidden');
         }

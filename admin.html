@@ -2340,8 +2340,25 @@ function getStatusInfo(meta) {
   if (meta.isPro) return { label: 'Lifetime Pro', type: 'lifetime' };
   if (meta.proUntil) {
     const until = new Date(meta.proUntil).getTime();
-    if (until > now) return { label: `Pro s.d. ${meta.proUntil}`, type: 'pro' };
-    else return { label: `Expired (${meta.proUntil})`, type: 'expired' };
+    if (until > now) {
+      const planLabels = {
+        month1: 'Pro 1 Bulan',
+        month3: 'Pro 3 Bulan',
+        month6: 'Pro 6 Bulan',
+        year: 'Pro 1 Tahun'
+      };
+      let planLabel = meta.proPlan ? planLabels[meta.proPlan] : null;
+      if (!planLabel) {
+        const diffDays = Math.round((until - now) / (24 * 60 * 60 * 1000));
+        if (diffDays <= 35) planLabel = 'Pro 1 Bulan';
+        else if (diffDays <= 100) planLabel = 'Pro 3 Bulan';
+        else if (diffDays <= 200) planLabel = 'Pro 6 Bulan';
+        else planLabel = 'Pro 1 Tahun';
+      }
+      return { label: planLabel, type: 'pro' };
+    } else {
+      return { label: 'Pro Expired', type: 'expired' };
+    }
   }
   return { label: 'Belum Diverifikasi', type: 'unverified' };
 }
@@ -2537,6 +2554,7 @@ function openSubModal(safeEmail, origEmail) {
   const limitSelect = document.getElementById('subModalLimitSelect');
   
   if (meta.isPro) select.value = 'lifetime';
+  else if (meta.proPlan) select.value = meta.proPlan;
   else if (meta.proUntil) select.value = 'month1';
   else select.value = 'unverified';
 
@@ -2592,14 +2610,17 @@ async function saveSubscription() {
   if (val === 'lifetime') {
     updateData.isPro = true;
     updateData.proUntil = null;
+    updateData.proPlan = 'lifetime';
     updateData.isBlocked = false;
   } else if (val === 'unverified') {
     updateData.isPro = false;
     updateData.proUntil = null;
+    updateData.proPlan = null;
     updateData.isBlocked = false;
   } else if (val === 'revoke') {
     updateData.isPro = false;
     updateData.proUntil = null;
+    updateData.proPlan = null;
     updateData.isBlocked = true;
   } else {
     const days = { month1: 30, month3: 90, month6: 180, year: 365 }[val];
@@ -2607,6 +2628,7 @@ async function saveSubscription() {
     d.setDate(d.getDate() + (days || 30));
     updateData.isPro = false;
     updateData.proUntil = d.toISOString().split('T')[0];
+    updateData.proPlan = val;
     updateData.isBlocked = false;
   }
   
