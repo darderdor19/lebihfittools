@@ -594,7 +594,11 @@ function showTrialExpiredOverlay(email, metaInfo) {
     if (landingPage) landingPage.classList.add('hidden');
 
     overlay.classList.remove('hidden');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    try {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    } catch(err) {
+        console.warn('Lucide icon error suppressed:', err);
+    }
 }
 
 function renderMembershipStatus() {
