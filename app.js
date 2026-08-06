@@ -76,30 +76,13 @@ async function initApp() {
             }).catch(console.error);
             
             // Show UI immediately based on local state
-            const profile = getProfile();
-            if (!profile) {
-                document.getElementById('onboarding').classList.remove('hidden');
+            if (!hasActiveProAccess(authUser.email)) {
+                showTrialExpiredOverlay(authUser.email, { proUntil: localStorage.getItem('lf_user_pro_until') });
             } else {
-                // Check trial status locally first to prevent flash of app
-                let localExpired = false;
-                const cachedCreatedAt = localStorage.getItem('lf_user_created_at');
-                try {
-                    if (cachedCreatedAt) {
-                        const createdAt = parseInt(JSON.parse(cachedCreatedAt));
-                        const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
-                        const trialDuration = 3 * 24 * 60 * 60 * 1000;
-                        const now = Date.now();
-                        localExpired = !cachedIsPro && (now - createdAt) > trialDuration;
-                        
-                        if (localExpired) {
-                            showTrialExpiredOverlay(authUser.email, createdAt);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error parsing trial info:", e);
-                }
-
-                if (!localExpired) {
+                const profile = getProfile();
+                if (!profile) {
+                    document.getElementById('onboarding').classList.remove('hidden');
+                } else {
                     document.getElementById('app').classList.remove('hidden');
                     renderProfileDisplay();
                     
@@ -230,7 +213,6 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
                 const untilDate = new Date(meta.proUntil).getTime();
                 if (untilDate > now) isTimeBasedPro = true;
             }
-            isExpired = false; // No automatic 3-day trial, non-pro users can log in
         }
         
         // Cek admin status
@@ -258,18 +240,23 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
         } else {
             createdAt = parseInt(JSON.parse(cachedCreatedAt));
             isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
-            isExpired = false;
         }
     }
 
-    if (isBlocked) {
+    // Check if user has active Pro access or is Admin
+    const isSuperAdmin = (email.replace(/"/g, '').trim() === 'jadilebihfit@gmail.com');
+    const hasAccess = isSuperAdmin || hasActiveProAccess(email);
+
+    if (isBlocked || !hasAccess) {
         document.getElementById('authOverlay').classList.add('hidden');
-        showTrialExpiredOverlay(email, createdAt || Date.now());
         const lp = document.getElementById('landingPage');
-        if (lp) lp.classList.remove('hidden');
+        if (lp) lp.classList.add('hidden');
         const appContainer = document.getElementById('app');
         if (appContainer) appContainer.classList.add('hidden');
-        showToast("Akun Anda telah diblokir. Silakan hubungi admin.", "error");
+        const ob = document.getElementById('onboarding');
+        if (ob) ob.classList.add('hidden');
+
+        showTrialExpiredOverlay(email, meta);
         return;
     }
 
@@ -289,15 +276,6 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
             document.getElementById('onboarding').classList.remove('hidden');
         }
     }).catch(console.error);
-
-    const profile = getProfile();
-    if (!profile) {
-        document.getElementById('onboarding').classList.remove('hidden');
-    } else {
-        document.getElementById('app').classList.remove('hidden');
-        renderProfileDisplay();
-        showPage('dashboard');
-    }
 }
 
 // Google Sign-in
