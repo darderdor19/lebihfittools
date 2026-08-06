@@ -446,6 +446,7 @@
   .badge-lifetime { background: rgba(16,185,129,0.12); color: var(--success); }
   .badge-pro { background: rgba(0,255,204,0.1); color: var(--accent); }
   .badge-trial { background: rgba(245,158,11,0.12); color: var(--warning); }
+  .badge-unverified { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
   .badge-expired { background: rgba(239,68,68,0.12); color: var(--danger); }
 
   /* Search/filter bar */
@@ -1206,7 +1207,7 @@
             <div class="stat-value" style="color:var(--accent)" id="statTimeBased">-</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Trial / Expired</div>
+            <div class="stat-label">Belum Diverifikasi</div>
             <div class="stat-value warning" id="statTrial">-</div>
           </div>
         </div>
@@ -1216,9 +1217,9 @@
           <input type="text" id="searchInput" placeholder="Cari email / nama..." oninput="filterUsers()">
           <select id="filterStatus" onchange="filterUsers()">
             <option value="all">Semua Status</option>
+            <option value="unverified">Belum Diverifikasi</option>
             <option value="lifetime">Lifetime</option>
             <option value="pro">Pro Berbatas</option>
-            <option value="trial">Trial / Expired</option>
             <option value="expired">Pro Expired</option>
           </select>
         </div>
@@ -2000,7 +2001,7 @@
     <div class="modal-form-group">
       <label>📅 Time Subscription (Waktu Langganan)</label>
       <select id="subModalSelect">
-        <option value="trial">🔄 Reset Free Trial (3 Hari)</option>
+        <option value="unverified">🔒 Belum Diverifikasi (Akses Dikunci)</option>
         <option value="month1">📅 1 Bulan (30 Hari)</option>
         <option value="month3">📅 3 Bulan (90 Hari)</option>
         <option value="month6">📅 6 Bulan (180 Hari)</option>
@@ -2316,40 +2317,33 @@ async function loadAllUsers() {
 
 function updateStats(users) {
   const keys = Object.keys(users);
-  let lifetime = 0, timeBased = 0, trial = 0;
+  let lifetime = 0, timeBased = 0, unverified = 0;
   const now = Date.now();
   
   keys.forEach(k => {
     const meta = (users[k] || {}).lf_user_meta || {};
     if (meta.isPro) lifetime++;
     else if (meta.proUntil && new Date(meta.proUntil).getTime() > now) timeBased++;
-    else trial++;
+    else unverified++;
   });
   
   document.getElementById('statTotal').textContent = keys.length;
   document.getElementById('statLifetime').textContent = lifetime;
   document.getElementById('statTimeBased').textContent = timeBased;
-  document.getElementById('statTrial').textContent = trial;
+  document.getElementById('statTrial').textContent = unverified;
 }
 
 function getStatusInfo(meta) {
   const now = Date.now();
-  if (!meta) return { label: 'Trial', type: 'trial' };
+  if (!meta) return { label: 'Belum Diverifikasi', type: 'unverified' };
   if (meta.isBlocked) return { label: '🚫 DIBLOKIR', type: 'expired' };
-  if (meta.isPro) return { label: 'Lifetime', type: 'lifetime' };
+  if (meta.isPro) return { label: 'Lifetime Pro', type: 'lifetime' };
   if (meta.proUntil) {
     const until = new Date(meta.proUntil).getTime();
     if (until > now) return { label: `Pro s.d. ${meta.proUntil}`, type: 'pro' };
-    else return { label: `Expired ${meta.proUntil}`, type: 'expired' };
+    else return { label: `Expired (${meta.proUntil})`, type: 'expired' };
   }
-  // Check if trial is still active (3 days from createdAt)
-  if (meta.createdAt) {
-    const trialEnd = meta.createdAt + (3 * 24 * 60 * 60 * 1000);
-    if (now > trialEnd) return { label: 'Trial Habis', type: 'expired' };
-    const daysLeft = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
-    return { label: `Trial (${daysLeft} hari lagi)`, type: 'trial' };
-  }
-  return { label: 'Trial / Expired', type: 'trial' };
+  return { label: 'Belum Diverifikasi', type: 'unverified' };
 }
 
 function renderUserTable(users) {
@@ -2544,7 +2538,7 @@ function openSubModal(safeEmail, origEmail) {
   
   if (meta.isPro) select.value = 'lifetime';
   else if (meta.proUntil) select.value = 'month1';
-  else select.value = 'trial';
+  else select.value = 'unverified';
 
   if (limitSelect) {
     limitSelect.value = (meta.unlimitedLimit || meta.isUnlimited) ? 'unlimited' : 'default';
@@ -2564,11 +2558,11 @@ function updateSubModalInfo() {
   const val = document.getElementById('subModalSelect').value;
   const info = document.getElementById('subModalInfo');
   const msgs = {
-    trial: 'Reset masa trial user menjadi 3 hari dari sekarang.',
-    month1: `Akses Pro hingga: ${getDateStr(30)}`,
-    month3: `Akses Pro hingga: ${getDateStr(90)}`,
-    month6: `Akses Pro hingga: ${getDateStr(180)}`,
-    year: `Akses Pro hingga: ${getDateStr(365)}`,
+    unverified: '🔒 Status Belum Diverifikasi (Akses aplikasi dikunci hingga disetujui admin).',
+    month1: `Akses Pro 1 Bulan hingga: ${getDateStr(30)}`,
+    month3: `Akses Pro 3 Bulan hingga: ${getDateStr(90)}`,
+    month6: `Akses Pro 6 Bulan hingga: ${getDateStr(180)}`,
+    year: `Akses Pro 1 Tahun hingga: ${getDateStr(365)}`,
     lifetime: 'Akses Pro selamanya tanpa batas waktu.',
     revoke: '⚠️ User akan diblokir total dan tidak bisa mengakses aplikasi.'
   };
@@ -2599,11 +2593,10 @@ async function saveSubscription() {
     updateData.isPro = true;
     updateData.proUntil = null;
     updateData.isBlocked = false;
-  } else if (val === 'trial') {
+  } else if (val === 'unverified') {
     updateData.isPro = false;
     updateData.proUntil = null;
     updateData.isBlocked = false;
-    updateData.createdAt = Date.now();
   } else if (val === 'revoke') {
     updateData.isPro = false;
     updateData.proUntil = null;
