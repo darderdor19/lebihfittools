@@ -2896,17 +2896,18 @@ a{color:var(--accent);text-decoration:none}
 
 .lp-pricing-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  max-width: 1300px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1080px;
   margin: 0 auto;
+  justify-content: center;
   align-items: stretch;
 }
 
 @media (max-width: 1024px) {
   .lp-pricing-grid {
-    grid-template-columns: repeat(2, 1fr);
-    max-width: 800px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: 760px;
   }
 }
 
