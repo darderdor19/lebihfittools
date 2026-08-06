@@ -2497,22 +2497,48 @@
     if (e.key === 'Escape') closeVideoPopup(null, true);
   });
 
-  // === Meta Pixel Dynamic Loader & Helper ===
+  // === Meta Pixel & CAPI Dynamic Loader & Helper ===
   window.__pixelLpId = null;
   window.__pixelIcId = null;
+  window.__pixelToken = null;
+
+  function sendCapiEvent(pixelId, token, eventName) {
+    if (!pixelId || !token) return;
+    try {
+      var url = 'https://graph.facebook.com/v19.0/' + pixelId + '/events?access_token=' + encodeURIComponent(token);
+      var payload = {
+        data: [{
+          event_name: eventName,
+          event_time: Math.floor(Date.now() / 1000),
+          action_source: "website",
+          event_source_url: window.location.href,
+          user_data: { client_user_agent: navigator.userAgent }
+        }]
+      };
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function() {});
+    } catch(e) {}
+  }
 
   function trackInitiateCheckout() {
     if (typeof fbq === 'function') {
       fbq('track', 'InitiateCheckout');
-      console.log('[Pixel] Tracked InitiateCheckout');
+      console.log('[Pixel] Tracked InitiateCheckout via Browser Pixel');
+    }
+    if (window.__pixelIcId && window.__pixelToken) {
+      sendCapiEvent(window.__pixelIcId, window.__pixelToken, 'InitiateCheckout');
     }
   }
 
   (function() {
-    function loadMetaPixel(lpPixelId, icPixelId) {
+    function loadMetaPixel(lpPixelId, icPixelId, pixelToken) {
       if ((!lpPixelId && !icPixelId) || typeof fbq !== 'undefined') return;
       window.__pixelLpId = lpPixelId;
       window.__pixelIcId = icPixelId || lpPixelId;
+      window.__pixelToken = pixelToken || null;
 
       !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -2529,6 +2555,9 @@
 
       if (lpPixelId) {
         fbq('track', 'PageView');
+        if (pixelToken) {
+          sendCapiEvent(lpPixelId, pixelToken, 'PageView');
+        }
       }
 
       var ns = document.createElement('noscript');
@@ -2537,7 +2566,7 @@
       img.src = 'https://www.facebook.net/tr?id=' + primaryId + '&ev=PageView&noscript=1';
       ns.appendChild(img);
       document.body.appendChild(ns);
-      console.log('[Pixel] Meta Pixel active — LP View:', lpPixelId, '| Checkout:', window.__pixelIcId);
+      console.log('[Pixel] Meta Pixel active — LP View:', lpPixelId, '| Checkout:', window.__pixelIcId, '| CAPI Token:', pixelToken ? 'Aktif' : 'Tidak ada');
     }
 
     var checkInterval = setInterval(function() {
@@ -2545,11 +2574,13 @@
         clearInterval(checkInterval);
         Promise.all([
           fbDb.ref('admins/settings/pixel_id').once('value'),
-          fbDb.ref('admins/settings/pixel_id_ic').once('value')
+          fbDb.ref('admins/settings/pixel_id_ic').once('value'),
+          fbDb.ref('admins/settings/pixel_token').once('value')
         ]).then(function(snaps) {
           var p1 = snaps[0] ? snaps[0].val() : null;
           var p2 = snaps[1] ? snaps[1].val() : null;
-          if (p1 || p2) loadMetaPixel(p1, p2);
+          var ptok = snaps[2] ? snaps[2].val() : null;
+          if (p1 || p2) loadMetaPixel(p1, p2, ptok);
         }).catch(function() {});
       }
     }, 500);
