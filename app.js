@@ -230,8 +230,7 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
                 const untilDate = new Date(meta.proUntil).getTime();
                 if (untilDate > now) isTimeBasedPro = true;
             }
-            const trialDuration = 3 * 24 * 60 * 60 * 1000;
-            isExpired = !isPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
+            isExpired = false; // No automatic 3-day trial, non-pro users can log in
         }
         
         // Cek admin status
@@ -258,36 +257,19 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
             localStorage.removeItem('lf_user_is_blocked');
         } else {
             createdAt = parseInt(JSON.parse(cachedCreatedAt));
-            const cachedIsPro = localStorage.getItem('lf_user_is_pro') === 'true';
             isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
-            const trialDuration = 3 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            isExpired = !cachedIsPro && (now - createdAt) > trialDuration;
+            isExpired = false;
         }
     }
 
-    if (isExpired || isBlocked) {
+    if (isBlocked) {
         document.getElementById('authOverlay').classList.add('hidden');
-        
-        // Setup details in the overlay
         showTrialExpiredOverlay(email, createdAt || Date.now());
-        
-        // Keep the overlay hidden for now, show the landing page
-        const overlay = document.getElementById('trialExpiredOverlay');
-        if (overlay) overlay.classList.add('hidden');
-        
         const lp = document.getElementById('landingPage');
         if (lp) lp.classList.remove('hidden');
-        
         const appContainer = document.getElementById('app');
         if (appContainer) appContainer.classList.add('hidden');
-        
-        alert("kamu sudah mencoba trial dan trial nya sudah habis");
-        
-        setTimeout(() => {
-            const pricingSection = document.getElementById('lp-pricing');
-            if (pricingSection) pricingSection.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        showToast("Akun Anda telah diblokir. Silakan hubungi admin.", "error");
         return;
     }
 
@@ -487,7 +469,50 @@ function resetAuth() {
     _pendingGoogleUser = null;
 }
 
-// ===== FREE TRIAL CHECKER =====
+// ===== PRO ACCESS CHECKER & MODAL =====
+function hasActiveProAccess() {
+    const authUser = getAuthUser();
+    if (!authUser) return false;
+    const email = authUser.email || localStorage.getItem('lf_user_email') || '';
+    const cleanEmail = email.replace(/"/g, '').trim();
+    if (cleanEmail === 'jadilebihfit@gmail.com') return true;
+
+    const isPro = localStorage.getItem('lf_user_is_pro') === 'true';
+    const cachedProUntil = localStorage.getItem('lf_user_pro_until');
+    let isTimeBasedPro = false;
+    if (cachedProUntil) {
+        try {
+            const until = new Date(JSON.parse(cachedProUntil)).getTime();
+            if (until > Date.now()) isTimeBasedPro = true;
+        } catch(e) {}
+    }
+    return isPro || isTimeBasedPro;
+}
+
+function showProUpgradeModal(featureName) {
+    const modal = document.getElementById('proUpgradeModal');
+    const text = document.getElementById('proUpgradeFeatureText');
+    if (text) text.textContent = (featureName || 'Fitur ini') + ' khusus untuk member Pro LebihFit';
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function closeProUpgradeModal() {
+    const modal = document.getElementById('proUpgradeModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function requireProAccess(callback, featureName) {
+    if (hasActiveProAccess()) {
+        if (callback) callback();
+        return true;
+    }
+    showProUpgradeModal(featureName);
+    return false;
+}
+
 async function checkTrialStatus() {
     const authUser = getAuthUser();
     if (!authUser) return false;
@@ -531,33 +556,15 @@ async function checkTrialStatus() {
         isBlocked = localStorage.getItem('lf_user_is_blocked') === 'true';
     }
 
-    // Blocked users are always expired
+    // Blocked users are always blocked
     if (isBlocked) {
         showTrialExpiredOverlay(email, createdAt);
         return true;
     }
 
-    const cachedProUntil = localStorage.getItem('lf_user_pro_until');
-    if (!proUntil && cachedProUntil) proUntil = JSON.parse(cachedProUntil);
-
-    const now = Date.now();
-    let isTimeBasedPro = false;
-    if (proUntil) {
-        const untilDate = new Date(proUntil).getTime();
-        if (untilDate > now) isTimeBasedPro = true;
-    }
-
-    const trialDuration = 3 * 24 * 60 * 60 * 1000; // 3 days
-    const isExpired = !isPro && !isTimeBasedPro && (now - createdAt) > trialDuration;
-
-    if (isExpired) {
-        showTrialExpiredOverlay(email, createdAt);
-        return true;
-    } else {
-        const overlay = document.getElementById('trialExpiredOverlay');
-        if (overlay) overlay.classList.add('hidden');
-        return false;
-    }
+    const overlay = document.getElementById('trialExpiredOverlay');
+    if (overlay) overlay.classList.add('hidden');
+    return false;
 }
 
 function showTrialExpiredOverlay(email, createdAt) {
@@ -2968,7 +2975,8 @@ function clearFoodForm() {
     document.getElementById('btnSimpanMakanan').classList.add('hidden');
 }
 
-async function analyzeTextFood() {
+async function handleTextAnalysis() {
+    if (!requireProAccess(null, 'Analisis Makanan AI')) return;
     const name = document.getElementById('foodName').value.trim();
     const portion = document.getElementById('foodPortion').value.trim();
     const desc = document.getElementById('foodDesc').value.trim();
@@ -3152,6 +3160,7 @@ function clearPhoto() {
 }
 
 async function analyzePhoto() {
+    if (!requireProAccess(null, 'Scan Foto Makanan AI')) return;
     if (foodImagesList.length === 0) return;
     
     const btn = document.getElementById('analyzeBtn');
