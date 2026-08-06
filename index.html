@@ -2388,7 +2388,7 @@
         <a href="https://lynk.id/lebihfit/rvqgee8rykmw/checkout?token=cGFyYW1zPSU1QiU1RCZ0aWNrZXRzPSU1QiU1RCZiaWRfcHJpY2U9MCZxdHlfcHJvZD0xJnNlc3NpZD0mdG90YWxfcHJpY2U9JnRvdGFsX3VuaXQ9" target="_blank" onclick="if(typeof fbq==='function')fbq('track','InitiateCheckout');" class="btn-primary" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #00f0ff, #00a6b8); border: none; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);">
           <i data-lucide="crown" style="width: 16px; height: 16px;"></i> Berlangganan Pro (Rp 99.000 / bln)
         </a>
-        <a href="https://wa.me/6285179883580?text=Halo%20Admin%20LebihFit,%20saya%20sudah%20daftar%20dan%20ingin%20konfirmasi%20pembayaran%20untuk%20aktifkan%20Pro" target="_blank" class="btn-primary" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #25D366; color: #fff; border: none;">
+        <a href="https://wa.me/6285286535908?text=Halo%20Admin%20LebihFit,%20saya%20sudah%20daftar%20dan%20ingin%20konfirmasi%20pembayaran%20untuk%20aktifkan%20Pro" target="_blank" class="btn-primary" style="padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; background: #25D366; color: #fff; border: none;">
           <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i> Konfirmasi via WhatsApp
         </a>
         <button type="button" class="btn-secondary" onclick="closeProUpgradeModal()" style="padding: 10px; font-weight: 600; width: 100%; margin-top: 4px;">
@@ -2494,37 +2494,62 @@
     if (e.key === 'Escape') closeVideoPopup(null, true);
   });
 
-  // === Meta Pixel Dynamic Loader from Firebase ===
+  // === Meta Pixel Dynamic Loader & Helper ===
+  window.__pixelLpId = null;
+  window.__pixelIcId = null;
+
+  function trackInitiateCheckout() {
+    if (typeof fbq === 'function') {
+      fbq('track', 'InitiateCheckout');
+      console.log('[Pixel] Tracked InitiateCheckout');
+    }
+  }
+
   (function() {
-    function loadMetaPixel(pixelId) {
-      if (!pixelId || typeof fbq !== 'undefined') return;
+    function loadMetaPixel(lpPixelId, icPixelId) {
+      if ((!lpPixelId && !icPixelId) || typeof fbq !== 'undefined') return;
+      window.__pixelLpId = lpPixelId;
+      window.__pixelIcId = icPixelId || lpPixelId;
+
       !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
       n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
       t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
       document,'script','https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', pixelId);
-      fbq('track', 'PageView');
-      // Add noscript pixel
+
+      var primaryId = lpPixelId || icPixelId;
+      fbq('init', primaryId);
+
+      if (icPixelId && icPixelId !== primaryId) {
+        fbq('init', icPixelId);
+      }
+
+      if (lpPixelId) {
+        fbq('track', 'PageView');
+      }
+
       var ns = document.createElement('noscript');
       var img = document.createElement('img');
       img.height = 1; img.width = 1; img.style.display = 'none';
-      img.src = 'https://www.facebook.net/tr?id=' + pixelId + '&ev=PageView&noscript=1';
+      img.src = 'https://www.facebook.net/tr?id=' + primaryId + '&ev=PageView&noscript=1';
       ns.appendChild(img);
       document.body.appendChild(ns);
-      console.log('[Pixel] Meta Pixel loaded:', pixelId);
+      console.log('[Pixel] Meta Pixel active — LP View:', lpPixelId, '| Checkout:', window.__pixelIcId);
     }
-    // Wait for Firebase to be ready, then load pixel
+
     var checkInterval = setInterval(function() {
       if (typeof fbDb !== 'undefined' && fbDb) {
         clearInterval(checkInterval);
-        fbDb.ref('admins/settings/pixel_id').once('value').then(function(snap) {
-          var pid = snap.val();
-          if (pid) loadMetaPixel(pid);
+        Promise.all([
+          fbDb.ref('admins/settings/pixel_id').once('value'),
+          fbDb.ref('admins/settings/pixel_id_ic').once('value')
+        ]).then(function(snaps) {
+          var p1 = snaps[0] ? snaps[0].val() : null;
+          var p2 = snaps[1] ? snaps[1].val() : null;
+          if (p1 || p2) loadMetaPixel(p1, p2);
         }).catch(function() {});
       }
     }, 500);
-    // Timeout after 10 seconds
     setTimeout(function() { clearInterval(checkInterval); }, 10000);
   })();
   </script>
