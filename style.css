@@ -2008,22 +2008,16 @@ a{color:var(--accent);text-decoration:none}
 }
 
 .text-strike {
-  position: relative;
-  display: inline-block;
+  display: inline;
   color: var(--text3);
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  -webkit-text-decoration-color: #ef4444;
+  text-decoration-thickness: 4px;
 }
 
 .text-strike::after {
-  content: '';
-  position: absolute;
-  top: 55%;
-  left: -5%;
-  width: 110%;
-  height: 6px;
-  background: var(--danger);
-  transform: translateY(-50%);
-  border-radius: 4px;
-  opacity: 0.8;
+  display: none !important;
 }
 
 .lp-hero-content p {
@@ -3471,8 +3465,11 @@ a{color:var(--accent);text-decoration:none}
 
 /* Hero headline strikethrough */
 .text-strike {
+  display: inline;
   text-decoration: line-through;
   text-decoration-color: #ef4444;
+  -webkit-text-decoration-color: #ef4444;
+  text-decoration-thickness: 4px;
   color: var(--text2);
 }
 
