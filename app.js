@@ -180,37 +180,39 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
     let isExpired = false;
     let isBlocked = false;
     let createdAt = null;
+    let userMeta = null;
 
     if (fbDb) {
         // Cek meta user
         const snap = await fbDb.ref(`users/${safeEmail}/lf_user_meta`).once('value');
-        const meta = snap.val();
-        if (!meta) {
+        userMeta = snap.val();
+        if (!userMeta) {
             const now = Date.now();
-            await fbDb.ref(`users/${safeEmail}/lf_user_meta`).set({ createdAt: now, isPro: false });
+            userMeta = { createdAt: now, isPro: false };
+            await fbDb.ref(`users/${safeEmail}/lf_user_meta`).set(userMeta);
             localStorage.setItem('lf_user_created_at', JSON.stringify(now));
             localStorage.setItem('lf_user_is_pro', JSON.stringify(false));
             localStorage.removeItem('lf_user_pro_until');
             localStorage.removeItem('lf_user_is_blocked');
             createdAt = now;
         } else {
-            createdAt = meta.createdAt;
-            isBlocked = meta.isBlocked || false;
-            const isPro = meta.isPro || false;
+            createdAt = userMeta.createdAt;
+            isBlocked = userMeta.isBlocked || false;
+            const isPro = userMeta.isPro || false;
             
             localStorage.setItem('lf_user_created_at', JSON.stringify(createdAt));
             localStorage.setItem('lf_user_is_pro', JSON.stringify(isPro));
             localStorage.setItem('lf_user_is_blocked', JSON.stringify(isBlocked));
-            if (meta.proUntil) {
-                localStorage.setItem('lf_user_pro_until', JSON.stringify(meta.proUntil));
+            if (userMeta.proUntil) {
+                localStorage.setItem('lf_user_pro_until', JSON.stringify(userMeta.proUntil));
             } else {
                 localStorage.removeItem('lf_user_pro_until');
             }
 
             const now = Date.now();
             let isTimeBasedPro = false;
-            if (meta.proUntil) {
-                const untilDate = new Date(meta.proUntil).getTime();
+            if (userMeta.proUntil) {
+                const untilDate = new Date(userMeta.proUntil).getTime();
                 if (untilDate > now) isTimeBasedPro = true;
             }
         }
@@ -256,7 +258,7 @@ async function onFirebaseAuthSuccess(firebaseUser, extraName = null, extraPhone 
         const ob = document.getElementById('onboarding');
         if (ob) ob.classList.add('hidden');
 
-        showTrialExpiredOverlay(email, meta);
+        showTrialExpiredOverlay(email, userMeta);
         return;
     }
 
