@@ -2569,21 +2569,41 @@
       console.log('[Pixel] Meta Pixel active — LP View:', lpPixelId, '| Checkout:', window.__pixelIcId, '| CAPI Token:', pixelToken ? 'Aktif' : 'Tidak ada');
     }
 
+    // Fallback pixel config in case Firebase read fails or is slow
+    var FALLBACK_PIXEL_ID = '3918724768422627';
+
+    var pixelLoaded = false;
     var checkInterval = setInterval(function() {
-      if (typeof fbDb !== 'undefined' && fbDb) {
+      if (typeof fbDb !== 'undefined' && fbDb && !pixelLoaded) {
         clearInterval(checkInterval);
         fbDb.ref('public_config/pixel').once('value').then(function(snap) {
           var cfg = snap.val() || {};
-          var p1 = cfg.pixel_id || null;
+          var p1 = cfg.pixel_id || FALLBACK_PIXEL_ID;
           var p2 = cfg.pixel_id_ic || null;
           var ptok = cfg.pixel_token || null;
-          if (p1 || p2) loadMetaPixel(p1, p2, ptok);
+          if (!pixelLoaded && (p1 || p2)) {
+            pixelLoaded = true;
+            loadMetaPixel(p1, p2, ptok);
+          }
         }).catch(function(err) {
-          console.warn('[Pixel] Failed to load pixel config from public_config:', err.message);
+          console.warn('[Pixel] Firebase read failed, using fallback:', err.message);
+          if (!pixelLoaded) {
+            pixelLoaded = true;
+            loadMetaPixel(FALLBACK_PIXEL_ID, null, null);
+          }
         });
       }
-    }, 500);
-    setTimeout(function() { clearInterval(checkInterval); }, 10000);
+    }, 300);
+
+    // If Firebase never loads within 4 seconds, use fallback directly
+    setTimeout(function() {
+      clearInterval(checkInterval);
+      if (!pixelLoaded) {
+        pixelLoaded = true;
+        loadMetaPixel(FALLBACK_PIXEL_ID, null, null);
+        console.log('[Pixel] Timeout — loaded fallback pixel');
+      }
+    }, 4000);
   })();
   </script>
 </body>
