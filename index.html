@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3918724768422627');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3918724768422627&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LebihFit — Smart Nutrition Tracker</title>
@@ -2534,76 +2551,29 @@
   }
 
   (function() {
-    function loadMetaPixel(lpPixelId, icPixelId, pixelToken) {
-      if ((!lpPixelId && !icPixelId) || typeof fbq !== 'undefined') return;
-      window.__pixelLpId = lpPixelId;
-      window.__pixelIcId = icPixelId || lpPixelId;
-      window.__pixelToken = pixelToken || null;
+    // Pixel already loaded in <head>, just fetch CAPI token from Firebase if available
+    window.__pixelLpId = '3918724768422627';
+    window.__pixelIcId = '3918724768422627';
 
-      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-      document,'script','https://connect.facebook.net/en_US/fbevents.js');
-
-      var primaryId = lpPixelId || icPixelId;
-      fbq('init', primaryId);
-
-      if (icPixelId && icPixelId !== primaryId) {
-        fbq('init', icPixelId);
-      }
-
-      if (lpPixelId) {
-        fbq('track', 'PageView');
-        if (pixelToken) {
-          sendCapiEvent(lpPixelId, pixelToken, 'PageView');
-        }
-      }
-
-      var ns = document.createElement('noscript');
-      var img = document.createElement('img');
-      img.height = 1; img.width = 1; img.style.display = 'none';
-      img.src = 'https://www.facebook.net/tr?id=' + primaryId + '&ev=PageView&noscript=1';
-      ns.appendChild(img);
-      document.body.appendChild(ns);
-      console.log('[Pixel] Meta Pixel active — LP View:', lpPixelId, '| Checkout:', window.__pixelIcId, '| CAPI Token:', pixelToken ? 'Aktif' : 'Tidak ada');
-    }
-
-    // Fallback pixel config in case Firebase read fails or is slow
-    var FALLBACK_PIXEL_ID = '3918724768422627';
-
-    var pixelLoaded = false;
     var checkInterval = setInterval(function() {
-      if (typeof fbDb !== 'undefined' && fbDb && !pixelLoaded) {
+      if (typeof fbDb !== 'undefined' && fbDb) {
         clearInterval(checkInterval);
         fbDb.ref('public_config/pixel').once('value').then(function(snap) {
           var cfg = snap.val() || {};
-          var p1 = cfg.pixel_id || FALLBACK_PIXEL_ID;
-          var p2 = cfg.pixel_id_ic || null;
-          var ptok = cfg.pixel_token || null;
-          if (!pixelLoaded && (p1 || p2)) {
-            pixelLoaded = true;
-            loadMetaPixel(p1, p2, ptok);
+          if (cfg.pixel_id) window.__pixelLpId = cfg.pixel_id;
+          if (cfg.pixel_id_ic) window.__pixelIcId = cfg.pixel_id_ic;
+          if (cfg.pixel_token) window.__pixelToken = cfg.pixel_token;
+          // Init second pixel ID if different from primary
+          if (cfg.pixel_id_ic && cfg.pixel_id_ic !== cfg.pixel_id && typeof fbq === 'function') {
+            fbq('init', cfg.pixel_id_ic);
           }
+          console.log('[Pixel] Config loaded — LP:', window.__pixelLpId, '| IC:', window.__pixelIcId, '| CAPI:', cfg.pixel_token ? 'Aktif' : '-');
         }).catch(function(err) {
-          console.warn('[Pixel] Firebase read failed, using fallback:', err.message);
-          if (!pixelLoaded) {
-            pixelLoaded = true;
-            loadMetaPixel(FALLBACK_PIXEL_ID, null, null);
-          }
+          console.warn('[Pixel] Firebase config read failed:', err.message);
         });
       }
     }, 300);
-
-    // If Firebase never loads within 4 seconds, use fallback directly
-    setTimeout(function() {
-      clearInterval(checkInterval);
-      if (!pixelLoaded) {
-        pixelLoaded = true;
-        loadMetaPixel(FALLBACK_PIXEL_ID, null, null);
-        console.log('[Pixel] Timeout — loaded fallback pixel');
-      }
-    }, 4000);
+    setTimeout(function() { clearInterval(checkInterval); }, 10000);
   })();
   </script>
 </body>
