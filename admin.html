@@ -1707,24 +1707,32 @@
               <label style="font-weight:600;display:flex;align-items:center;gap:6px;">
                 <i data-lucide="eye" style="width:14px;height:14px;color:var(--accent);"></i> Pixel ID 1: LP View (PageView) *
               </label>
-              <input type="text" id="pixelIdInput" placeholder="Masukkan Meta Pixel ID (contoh: 123456789012345)..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
-              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Metrik ini otomatis mengirimkan event <code>PageView</code> saat calon pengguna membuka Landing Page.</div>
+              <input type="text" id="pixelIdInput" placeholder="Masukkan Meta Pixel ID LP View (contoh: 123456789012345)..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
+              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Metrik ini KHUSUS mengirimkan event <code>PageView</code> saat calon pengguna membuka Landing Page.</div>
             </div>
 
             <div class="modal-form-group">
               <label style="font-weight:600;display:flex;align-items:center;gap:6px;">
-                <i data-lucide="shopping-cart" style="width:14px;height:14px;color:var(--accent);"></i> Pixel ID 2: Initiate Checkout (Opsional)
+                <i data-lucide="key" style="width:14px;height:14px;color:var(--accent);"></i> Access Token 1: LP View CAPI Token (Opsional)
               </label>
-              <input type="text" id="pixelIdIcInput" placeholder="Kosongkan jika sama dengan Pixel 1..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
-              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Metrik ini otomatis mengirimkan event <code>InitiateCheckout</code> saat tombol CTA / Beli Pro diklik. Kosongkan jika menggunakan 1 Pixel ID yang sama.</div>
+              <input type="password" id="pixelTokenLpInput" placeholder="EAAG... (Opsional untuk CAPI Landing Page)" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
+            </div>
+
+            <div style="height:1px;background:var(--border);margin:8px 0;"></div>
+
+            <div class="modal-form-group">
+              <label style="font-weight:600;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="shopping-cart" style="width:14px;height:14px;color:var(--accent);"></i> Pixel ID 2: Initiate Checkout / ICO (Opsional)
+              </label>
+              <input type="text" id="pixelIdIcInput" placeholder="Masukkan Meta Pixel ID khusus Initiate Checkout..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
+              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Metrik ini KHUSUS mengirimkan event <code>InitiateCheckout</code> saat tombol CTA / Beli Pro diklik. Jika kosong, InitiateCheckout tidak dikirim.</div>
             </div>
 
             <div class="modal-form-group">
               <label style="font-weight:600;display:flex;align-items:center;gap:6px;">
-                <i data-lucide="key" style="width:14px;height:14px;color:var(--accent);"></i> Meta Access Token / Conversions API Token (Opsional)
+                <i data-lucide="key" style="width:14px;height:14px;color:var(--accent);"></i> Access Token 2: Initiate Checkout CAPI Token (Opsional)
               </label>
-              <input type="password" id="pixelTokenInput" placeholder="EAAG... (Kosongkan jika hanya menggunakan Pixel ID Browser biasa)" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
-              <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;">Token Akses Conversions API (CAPI) Meta Ads untuk dua lapis tracking (bypass AdBlocker & iOS 14). Kosongkan jika hanya memakai Meta Pixel ID biasa.</div>
+              <input type="password" id="pixelTokenIcInput" placeholder="EAAG... (Opsional untuk CAPI Initiate Checkout)" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.88rem;outline:none;box-sizing:border-box;">
             </div>
 
             <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
@@ -3104,37 +3112,46 @@ async function toggleAiAssistant(checked) {
 // === Meta Pixel ID & Access Token Management ===
 async function savePixelId() {
   const input1 = document.getElementById('pixelIdInput');
+  const inputTokenLp = document.getElementById('pixelTokenLpInput');
   const input2 = document.getElementById('pixelIdIcInput');
-  const inputToken = document.getElementById('pixelTokenInput');
+  const inputTokenIc = document.getElementById('pixelTokenIcInput');
   const status = document.getElementById('pixelIdStatus');
+
   const pid1 = input1 ? input1.value.trim() : '';
+  const ptokenLp = inputTokenLp ? inputTokenLp.value.trim() : '';
   const pid2 = input2 ? input2.value.trim() : '';
-  const ptoken = inputToken ? inputToken.value.trim() : '';
+  const ptokenIc = inputTokenIc ? inputTokenIc.value.trim() : '';
   
   try {
     await fbDb.ref('admins/settings/pixel_id').set(pid1 || null);
+    await fbDb.ref('admins/settings/pixel_token_lp').set(ptokenLp || null);
     await fbDb.ref('admins/settings/pixel_id_ic').set(pid2 || null);
-    await fbDb.ref('admins/settings/pixel_token').set(ptoken || null);
+    await fbDb.ref('admins/settings/pixel_token_ic').set(ptokenIc || null);
+
     // Also write to public_config so unauthenticated LP visitors can read pixel IDs
     await fbDb.ref('public_config/pixel').set({
       pixel_id: pid1 || null,
+      pixel_token_lp: ptokenLp || null,
       pixel_id_ic: pid2 || null,
-      pixel_token: ptoken || null
+      pixel_token_ic: ptokenIc || null
     });
+
     if (pid1) localStorage.setItem('lf_pixel_id', pid1);
     else localStorage.removeItem('lf_pixel_id');
+
     if (pid2) localStorage.setItem('lf_pixel_id_ic', pid2);
     else localStorage.removeItem('lf_pixel_id_ic');
+
     if (status) {
       if (pid1 || pid2) {
-        status.textContent = '✅ Pixel LP View: ' + (pid1 || '-') + ' | Checkout: ' + (pid2 || pid1 || '-') + (ptoken ? ' | CAPI Token: Aktif 🔑' : '');
+        status.textContent = '✅ LP View: ' + (pid1 || 'Tidak ada') + ' | Checkout (ICO): ' + (pid2 || 'Tidak ada');
         status.style.color = 'var(--success)';
       } else {
         status.textContent = '🗑️ Meta Pixel dibersihkan';
         status.style.color = 'var(--text3)';
       }
     }
-    showToast('✅ Pengaturan Meta Pixel & CAPI Token berhasil disimpan', 'success');
+    showToast('✅ Pengaturan Meta Pixel & Token berhasil disimpan', 'success');
   } catch (err) {
     console.error('[savePixelId] error:', err);
     if (status) {
@@ -3149,22 +3166,29 @@ function loadPixelId() {
   if (!fbDb) return;
   Promise.all([
     fbDb.ref('admins/settings/pixel_id').once('value'),
+    fbDb.ref('admins/settings/pixel_token_lp').once('value'),
     fbDb.ref('admins/settings/pixel_id_ic').once('value'),
-    fbDb.ref('admins/settings/pixel_token').once('value')
-  ]).then(([snap1, snap2, snap3]) => {
+    fbDb.ref('admins/settings/pixel_token_ic').once('value')
+  ]).then(([snap1, snapTokenLp, snap2, snapTokenIc]) => {
     const pid1 = snap1 ? snap1.val() : null;
+    const ptokenLp = snapTokenLp ? snapTokenLp.val() : null;
     const pid2 = snap2 ? snap2.val() : null;
-    const ptoken = snap3 ? snap3.val() : null;
+    const ptokenIc = snapTokenIc ? snapTokenIc.val() : null;
+
     const input1 = document.getElementById('pixelIdInput');
+    const inputTokenLp = document.getElementById('pixelTokenLpInput');
     const input2 = document.getElementById('pixelIdIcInput');
-    const inputToken = document.getElementById('pixelTokenInput');
+    const inputTokenIc = document.getElementById('pixelTokenIcInput');
     const status = document.getElementById('pixelIdStatus');
+
     if (input1 && pid1) input1.value = pid1;
+    if (inputTokenLp && ptokenLp) inputTokenLp.value = ptokenLp;
     if (input2 && pid2) input2.value = pid2;
-    if (inputToken && ptoken) inputToken.value = ptoken;
+    if (inputTokenIc && ptokenIc) inputTokenIc.value = ptokenIc;
+
     if (status) {
       if (pid1 || pid2) {
-        status.textContent = '🟢 LP View: ' + (pid1 || '-') + ' | Checkout: ' + (pid2 || pid1 || '-') + (ptoken ? ' | CAPI Token: Aktif 🔑' : '');
+        status.textContent = '🟢 LP View: ' + (pid1 || 'Tidak ada') + ' | Checkout (ICO): ' + (pid2 || 'Tidak ada');
         status.style.color = 'var(--success)';
       } else {
         status.textContent = 'Belum ada Pixel ID tersimpan';

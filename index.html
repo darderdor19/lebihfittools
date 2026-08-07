@@ -2525,8 +2525,9 @@ if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
 
   // === Meta Pixel & CAPI Dynamic Loader & Helper ===
   window.__pixelLpId = null;
+  window.__pixelTokenLp = null;
   window.__pixelIcId = null;
-  window.__pixelToken = null;
+  window.__pixelTokenIc = null;
 
   function sendCapiEvent(pixelId, token, eventName) {
     if (!pixelId || !token) return;
@@ -2550,12 +2551,16 @@ if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
   }
 
   function trackInitiateCheckout() {
-    if (typeof fbq === 'function') {
-      fbq('track', 'InitiateCheckout');
-      console.log('[Pixel] Tracked InitiateCheckout via Browser Pixel');
-    }
-    if (window.__pixelIcId && window.__pixelToken) {
-      sendCapiEvent(window.__pixelIcId, window.__pixelToken, 'InitiateCheckout');
+    if (window.__pixelIcId) {
+      if (typeof fbq === 'function') {
+        fbq('trackSingle', window.__pixelIcId, 'InitiateCheckout');
+        console.log('[Pixel] Tracked InitiateCheckout on Pixel ID 2:', window.__pixelIcId);
+      }
+      if (window.__pixelTokenIc) {
+        sendCapiEvent(window.__pixelIcId, window.__pixelTokenIc, 'InitiateCheckout');
+      }
+    } else {
+      console.log('[Pixel] InitiateCheckout skipped because Pixel ID 2 is not configured.');
     }
   }
 
@@ -2566,39 +2571,51 @@ if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
         fbDb.ref('public_config/pixel').once('value').then(function(snap) {
           var cfg = snap.val() || {};
           var newLpId = cfg.pixel_id || null;
-          var newIcId = cfg.pixel_id_ic || newLpId;
-          var newToken = cfg.pixel_token || null;
+          var newLpToken = cfg.pixel_token_lp || null;
+          var newIcId = cfg.pixel_id_ic || null;
+          var newIcToken = cfg.pixel_token_ic || null;
 
+          // 1. Pixel ID 1: LP View
           if (newLpId) {
             var oldLpId = window.__pixelLpId;
             localStorage.setItem('lf_pixel_id', newLpId);
             window.__pixelLpId = newLpId;
+            window.__pixelTokenLp = newLpToken;
 
             if (typeof fbq === 'function') {
               if (!oldLpId || oldLpId !== newLpId) {
                 fbq('init', newLpId);
-                fbq('track', 'PageView');
-                console.log('[Pixel] Initialized Meta Pixel ID:', newLpId);
+                fbq('trackSingle', newLpId, 'PageView');
+                if (newLpToken) sendCapiEvent(newLpId, newLpToken, 'PageView');
+                console.log('[Pixel] Initialized LP View Pixel ID 1:', newLpId);
               }
             }
           } else {
             localStorage.removeItem('lf_pixel_id');
             window.__pixelLpId = null;
+            window.__pixelTokenLp = null;
           }
 
+          // 2. Pixel ID 2: Initiate Checkout
           if (newIcId) {
+            var oldIcId = window.__pixelIcId;
             localStorage.setItem('lf_pixel_id_ic', newIcId);
             window.__pixelIcId = newIcId;
-            if (newIcId !== window.__pixelLpId && typeof fbq === 'function') {
-              fbq('init', newIcId);
+            window.__pixelTokenIc = newIcToken;
+
+            if (typeof fbq === 'function') {
+              if (!oldIcId || oldIcId !== newIcId) {
+                fbq('init', newIcId);
+                console.log('[Pixel] Initialized Initiate Checkout Pixel ID 2:', newIcId);
+              }
             }
           } else {
             localStorage.removeItem('lf_pixel_id_ic');
             window.__pixelIcId = null;
+            window.__pixelTokenIc = null;
           }
 
-          window.__pixelToken = newToken;
-          console.log('[Pixel] Config synced — LP:', window.__pixelLpId, '| IC:', window.__pixelIcId, '| CAPI:', newToken ? 'Aktif' : '-');
+          console.log('[Pixel] Config synced — LP View (Pixel 1):', window.__pixelLpId || 'Kosong', '| ICO (Pixel 2):', window.__pixelIcId || 'Kosong');
         }).catch(function(err) {
           console.warn('[Pixel] Firebase config read failed:', err.message);
         });
