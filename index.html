@@ -18,9 +18,11 @@ n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
 
+window.__pixelLpTracked = false;
 if (window.__pixelLpId) {
   fbq('init', window.__pixelLpId);
   fbq('track', 'PageView');
+  window.__pixelLpTracked = true;
 }
 if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
   fbq('init', window.__pixelIcId);
@@ -2583,11 +2585,15 @@ if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
             window.__pixelTokenLp = newLpToken;
 
             if (typeof fbq === 'function') {
-              if (!oldLpId || oldLpId !== newLpId) {
+              if (!window.__pixelLpTracked || (oldLpId && oldLpId !== newLpId)) {
                 fbq('init', newLpId);
                 fbq('trackSingle', newLpId, 'PageView');
-                if (newLpToken) sendCapiEvent(newLpId, newLpToken, 'PageView');
+                window.__pixelLpTracked = true;
                 console.log('[Pixel] Initialized LP View Pixel ID 1:', newLpId);
+              }
+              if (newLpToken && !window.__capiLpTracked) {
+                sendCapiEvent(newLpId, newLpToken, 'PageView');
+                window.__capiLpTracked = true;
               }
             }
           } else {
