@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<!-- Meta Pixel Code -->
+<!-- Meta Pixel Code (auto-updates from Admin Panel) -->
 <script>
+var _lfPixelId = '3918724768422627';
+try { var _c = localStorage.getItem('lf_pixel_id'); if (_c) _lfPixelId = _c; } catch(e) {}
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -11,7 +13,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '3918724768422627');
+fbq('init', _lfPixelId);
 fbq('track', 'PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none"
@@ -2551,23 +2553,35 @@ src="https://www.facebook.com/tr?id=3918724768422627&ev=PageView&noscript=1"
   }
 
   (function() {
-    // Pixel already loaded in <head>, just fetch CAPI token from Firebase if available
-    window.__pixelLpId = '3918724768422627';
-    window.__pixelIcId = '3918724768422627';
+    // Pixel loaded in <head> from localStorage cache, now sync with Firebase for updates
+    window.__pixelLpId = _lfPixelId;
+    window.__pixelIcId = _lfPixelId;
 
     var checkInterval = setInterval(function() {
       if (typeof fbDb !== 'undefined' && fbDb) {
         clearInterval(checkInterval);
         fbDb.ref('public_config/pixel').once('value').then(function(snap) {
           var cfg = snap.val() || {};
-          if (cfg.pixel_id) window.__pixelLpId = cfg.pixel_id;
-          if (cfg.pixel_id_ic) window.__pixelIcId = cfg.pixel_id_ic;
-          if (cfg.pixel_token) window.__pixelToken = cfg.pixel_token;
-          // Init second pixel ID if different from primary
-          if (cfg.pixel_id_ic && cfg.pixel_id_ic !== cfg.pixel_id && typeof fbq === 'function') {
-            fbq('init', cfg.pixel_id_ic);
+          // Update localStorage so next page load uses the latest pixel ID from admin
+          if (cfg.pixel_id) {
+            localStorage.setItem('lf_pixel_id', cfg.pixel_id);
+            window.__pixelLpId = cfg.pixel_id;
+            // If admin changed pixel ID, init the new one too
+            if (cfg.pixel_id !== _lfPixelId && typeof fbq === 'function') {
+              fbq('init', cfg.pixel_id);
+              fbq('track', 'PageView');
+            }
           }
-          console.log('[Pixel] Config loaded — LP:', window.__pixelLpId, '| IC:', window.__pixelIcId, '| CAPI:', cfg.pixel_token ? 'Aktif' : '-');
+          if (cfg.pixel_id_ic) {
+            localStorage.setItem('lf_pixel_id_ic', cfg.pixel_id_ic);
+            window.__pixelIcId = cfg.pixel_id_ic;
+            // Init IC pixel if different from LP pixel
+            if (cfg.pixel_id_ic !== (cfg.pixel_id || _lfPixelId) && typeof fbq === 'function') {
+              fbq('init', cfg.pixel_id_ic);
+            }
+          }
+          if (cfg.pixel_token) window.__pixelToken = cfg.pixel_token;
+          console.log('[Pixel] Config synced — LP:', window.__pixelLpId, '| IC:', window.__pixelIcId, '| CAPI:', cfg.pixel_token ? 'Aktif' : '-');
         }).catch(function(err) {
           console.warn('[Pixel] Firebase config read failed:', err.message);
         });

@@ -3121,6 +3121,10 @@ async function savePixelId() {
       pixel_id_ic: pid2 || null,
       pixel_token: ptoken || null
     });
+    if (pid1) localStorage.setItem('lf_pixel_id', pid1);
+    else localStorage.removeItem('lf_pixel_id');
+    if (pid2) localStorage.setItem('lf_pixel_id_ic', pid2);
+    else localStorage.removeItem('lf_pixel_id_ic');
     if (status) {
       if (pid1 || pid2) {
         status.textContent = '✅ Pixel LP View: ' + (pid1 || '-') + ' | Checkout: ' + (pid2 || pid1 || '-') + (ptoken ? ' | CAPI Token: Aktif 🔑' : '');
