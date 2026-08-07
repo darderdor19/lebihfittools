@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<!-- Meta Pixel Code (auto-updates from Admin Panel) -->
+<!-- Meta Pixel Base (Dynamic Config from Admin Panel) -->
 <script>
-var _lfPixelId = '3918724768422627';
-try { var _c = localStorage.getItem('lf_pixel_id'); if (_c) _lfPixelId = _c; } catch(e) {}
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', _lfPixelId);
-fbq('track', 'PageView');
+window.__pixelLpId = null;
+window.__pixelIcId = null;
+window.__pixelToken = null;
+
+try {
+  window.__pixelLpId = localStorage.getItem('lf_pixel_id') || null;
+  window.__pixelIcId = localStorage.getItem('lf_pixel_id_ic') || window.__pixelLpId;
+} catch(e) {}
+
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+
+if (window.__pixelLpId) {
+  fbq('init', window.__pixelLpId);
+  fbq('track', 'PageView');
+}
+if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
+  fbq('init', window.__pixelIcId);
+}
 </script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=3918724768422627&ev=PageView&noscript=1"
-/></noscript>
 <!-- End Meta Pixel Code -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2553,35 +2560,45 @@ src="https://www.facebook.com/tr?id=3918724768422627&ev=PageView&noscript=1"
   }
 
   (function() {
-    // Pixel loaded in <head> from localStorage cache, now sync with Firebase for updates
-    window.__pixelLpId = _lfPixelId;
-    window.__pixelIcId = _lfPixelId;
-
     var checkInterval = setInterval(function() {
       if (typeof fbDb !== 'undefined' && fbDb) {
         clearInterval(checkInterval);
         fbDb.ref('public_config/pixel').once('value').then(function(snap) {
           var cfg = snap.val() || {};
-          // Update localStorage so next page load uses the latest pixel ID from admin
-          if (cfg.pixel_id) {
-            localStorage.setItem('lf_pixel_id', cfg.pixel_id);
-            window.__pixelLpId = cfg.pixel_id;
-            // If admin changed pixel ID, init the new one too
-            if (cfg.pixel_id !== _lfPixelId && typeof fbq === 'function') {
-              fbq('init', cfg.pixel_id);
-              fbq('track', 'PageView');
+          var newLpId = cfg.pixel_id || null;
+          var newIcId = cfg.pixel_id_ic || newLpId;
+          var newToken = cfg.pixel_token || null;
+
+          if (newLpId) {
+            var oldLpId = window.__pixelLpId;
+            localStorage.setItem('lf_pixel_id', newLpId);
+            window.__pixelLpId = newLpId;
+
+            if (typeof fbq === 'function') {
+              if (!oldLpId || oldLpId !== newLpId) {
+                fbq('init', newLpId);
+                fbq('track', 'PageView');
+                console.log('[Pixel] Initialized Meta Pixel ID:', newLpId);
+              }
             }
+          } else {
+            localStorage.removeItem('lf_pixel_id');
+            window.__pixelLpId = null;
           }
-          if (cfg.pixel_id_ic) {
-            localStorage.setItem('lf_pixel_id_ic', cfg.pixel_id_ic);
-            window.__pixelIcId = cfg.pixel_id_ic;
-            // Init IC pixel if different from LP pixel
-            if (cfg.pixel_id_ic !== (cfg.pixel_id || _lfPixelId) && typeof fbq === 'function') {
-              fbq('init', cfg.pixel_id_ic);
+
+          if (newIcId) {
+            localStorage.setItem('lf_pixel_id_ic', newIcId);
+            window.__pixelIcId = newIcId;
+            if (newIcId !== window.__pixelLpId && typeof fbq === 'function') {
+              fbq('init', newIcId);
             }
+          } else {
+            localStorage.removeItem('lf_pixel_id_ic');
+            window.__pixelIcId = null;
           }
-          if (cfg.pixel_token) window.__pixelToken = cfg.pixel_token;
-          console.log('[Pixel] Config synced — LP:', window.__pixelLpId, '| IC:', window.__pixelIcId, '| CAPI:', cfg.pixel_token ? 'Aktif' : '-');
+
+          window.__pixelToken = newToken;
+          console.log('[Pixel] Config synced — LP:', window.__pixelLpId, '| IC:', window.__pixelIcId, '| CAPI:', newToken ? 'Aktif' : '-');
         }).catch(function(err) {
           console.warn('[Pixel] Firebase config read failed:', err.message);
         });
