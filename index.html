@@ -2572,16 +2572,15 @@
     var checkInterval = setInterval(function() {
       if (typeof fbDb !== 'undefined' && fbDb) {
         clearInterval(checkInterval);
-        Promise.all([
-          fbDb.ref('admins/settings/pixel_id').once('value'),
-          fbDb.ref('admins/settings/pixel_id_ic').once('value'),
-          fbDb.ref('admins/settings/pixel_token').once('value')
-        ]).then(function(snaps) {
-          var p1 = snaps[0] ? snaps[0].val() : null;
-          var p2 = snaps[1] ? snaps[1].val() : null;
-          var ptok = snaps[2] ? snaps[2].val() : null;
+        fbDb.ref('public_config/pixel').once('value').then(function(snap) {
+          var cfg = snap.val() || {};
+          var p1 = cfg.pixel_id || null;
+          var p2 = cfg.pixel_id_ic || null;
+          var ptok = cfg.pixel_token || null;
           if (p1 || p2) loadMetaPixel(p1, p2, ptok);
-        }).catch(function() {});
+        }).catch(function(err) {
+          console.warn('[Pixel] Failed to load pixel config from public_config:', err.message);
+        });
       }
     }, 500);
     setTimeout(function() { clearInterval(checkInterval); }, 10000);

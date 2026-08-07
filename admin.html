@@ -3115,6 +3115,12 @@ async function savePixelId() {
     await fbDb.ref('admins/settings/pixel_id').set(pid1 || null);
     await fbDb.ref('admins/settings/pixel_id_ic').set(pid2 || null);
     await fbDb.ref('admins/settings/pixel_token').set(ptoken || null);
+    // Also write to public_config so unauthenticated LP visitors can read pixel IDs
+    await fbDb.ref('public_config/pixel').set({
+      pixel_id: pid1 || null,
+      pixel_id_ic: pid2 || null,
+      pixel_token: ptoken || null
+    });
     if (status) {
       if (pid1 || pid2) {
         status.textContent = '✅ Pixel LP View: ' + (pid1 || '-') + ' | Checkout: ' + (pid2 || pid1 || '-') + (ptoken ? ' | CAPI Token: Aktif 🔑' : '');
