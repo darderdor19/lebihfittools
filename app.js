@@ -391,10 +391,16 @@ async function loginEmailPass() {
         const msgs = {
             'auth/user-not-found': 'Email tidak terdaftar. Coba Daftar dulu ya.',
             'auth/wrong-password': 'Password salah. Coba lagi.',
-            'auth/invalid-credential': 'Email atau password salah.',
+            'auth/invalid-credential': '❌ Email atau password salah. Jika kamu dulu daftar pakai Google, gunakan tombol "Masuk dengan Google" di atas.',
+            'auth/invalid-login-credentials': '❌ Email atau password salah. Jika kamu dulu daftar pakai Google, gunakan tombol "Masuk dengan Google" di atas.',
             'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi nanti.'
         };
-        showToast(msgs[err.code] || "Login gagal: " + err.message, "error");
+        // Deteksi error INVALID_LOGIN_CREDENTIALS dari Firebase (bisa muncul di err.message)
+        let errMsg = msgs[err.code];
+        if (!errMsg && err.message && err.message.includes('INVALID_LOGIN_CREDENTIALS')) {
+            errMsg = '❌ Login gagal. Jika kamu dulu daftar pakai Google, gunakan tombol "Masuk dengan Google" di atas.';
+        }
+        showToast(errMsg || "Login gagal: " + err.message, "error");
     } finally {
         btn.innerHTML = 'Masuk Sekarang';
         btn.disabled = false;
