@@ -266,3 +266,79 @@ async function removeAdmin(safeEmail) {
         showToast('Gagal menghapus admin', 'error');
     }
 }
+
+// ===== ADMIN RESET/GANTI PASSWORD USER =====
+async function adminResetPassword() {
+    const newPwd = document.getElementById('adminNewPassword').value.trim();
+    if (!newPwd) { showToast('Masukkan password baru dulu', 'error'); return; }
+    if (newPwd.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+    if (!currentEditEmail) { showToast('Pilih user dulu', 'error'); return; }
+
+    try {
+        // Kirim ke Vercel backend untuk update password via Firebase Admin SDK
+        const adminUser = getAuthUser();
+        const idToken = await adminUser.getIdToken(true);
+        const res = await fetch('/api/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+            body: JSON.stringify({ action: 'resetPassword', email: currentEditEmail, newPassword: newPwd })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ Password berhasil diubah untuk ' + currentEditEmail, 'success');
+            document.getElementById('adminNewPassword').value = '';
+        } else {
+            showToast('❌ Gagal ubah password: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (err) {
+        console.error('[adminResetPassword]', err);
+        showToast('❌ Gagal koneksi ke server: ' + err.message, 'error');
+    }
+}
+
+// ===== ADMIN BUAT USER BARU (EMAIL + PASSWORD) =====
+async function adminCreateUser() {
+    const name = document.getElementById('createUserName').value.trim();
+    const email = document.getElementById('createUserEmail').value.trim().toLowerCase();
+    const password = document.getElementById('createUserPassword').value.trim();
+    const phone = document.getElementById('createUserPhone').value.trim();
+    const subVal = document.getElementById('createUserSub').value;
+
+    if (!name) { showToast('Nama wajib diisi', 'error'); return; }
+    if (!email || !email.includes('@')) { showToast('Email tidak valid', 'error'); return; }
+    if (!password || password.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+
+    const btn = document.getElementById('btnAdminCreateUser');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Mendaftarkan...';
+
+    try {
+        const adminUser = getAuthUser();
+        const idToken = await adminUser.getIdToken(true);
+
+        const res = await fetch('/api/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+            body: JSON.stringify({ action: 'createUser', email, password, name, phone, subscription: subVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ User ' + email + ' berhasil didaftarkan! Bisa login pakai Email + Password sekarang.', 'success');
+            // Reset form & close modal
+            ['createUserName','createUserEmail','createUserPassword','createUserPhone'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('adminCreateUserModal').classList.add('hidden');
+            loadAllUsers();
+        } else {
+            showToast('❌ Gagal daftarkan user: ' + (data.error || 'Unknown'), 'error');
+        }
+    } catch (err) {
+        console.error('[adminCreateUser]', err);
+        showToast('❌ Gagal koneksi ke server: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '✅ Daftarkan User';
+    }
+}

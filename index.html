@@ -2147,7 +2147,12 @@ if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
         <p style="color:var(--text2);margin-bottom:24px;font-size:0.95rem;">Dashboard untuk mengelola user dan langganan.</p>
         
         <div class="section-card">
-          <h3 class="section-title"><i data-lucide="users"></i> Daftar User</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <h3 class="section-title" style="margin:0;"><i data-lucide="users"></i> Daftar User</h3>
+            <button class="btn-primary" onclick="document.getElementById('adminCreateUserModal').classList.remove('hidden')" style="padding:7px 14px;font-size:0.78rem;">
+              <i data-lucide="user-plus" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Daftarkan User Baru
+            </button>
+          </div>
           <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:0.9rem;" id="adminUsersTable">
               <thead>
@@ -2290,8 +2295,55 @@ if (window.__pixelIcId && window.__pixelIcId !== window.__pixelLpId) {
           <option value="unlimited">🔓 Bebasin Limit (Unlimited / Bebas Pakai)</option>
         </select>
       </div>
-      <div class="form-actions" style="margin-top:20px;">
+      <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">🔑 Ganti / Reset Password User</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="password" id="adminNewPassword" class="form-input" placeholder="Password baru (min 6 karakter)" style="flex:1;">
+          <button class="btn-primary" onclick="adminResetPassword()" style="padding:8px 14px;font-size:0.78rem;white-space:nowrap;">🔑 Set Password</button>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Kosongkan jika tidak ingin ganti password.</div>
+      </div>
+      <div class="form-actions" style="margin-top:16px;">
         <button class="btn-primary" onclick="saveAdminSub()" style="width:100%;">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BUAT USER BARU (ADMIN) -->
+  <div id="adminCreateUserModal" class="modal-overlay hidden" style="z-index:9999999;">
+    <div class="modal-card" style="max-width:420px;">
+      <div class="modal-header">
+        <h3><i data-lucide="user-plus" style="color:var(--accent);"></i> Daftarkan User Baru</h3>
+        <button class="modal-close" onclick="document.getElementById('adminCreateUserModal').classList.add('hidden')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">Nama Lengkap *</label>
+        <input type="text" id="createUserName" class="form-input" placeholder="Nama pengguna baru">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">Email *</label>
+        <input type="email" id="createUserEmail" class="form-input" placeholder="email@gmail.com">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">Password * (min 6 karakter)</label>
+        <input type="password" id="createUserPassword" class="form-input" placeholder="Password awal user">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">No. HP</label>
+        <input type="text" id="createUserPhone" class="form-input" placeholder="08xxxxxxxxxx (Opsional)">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label style="font-size:0.8rem;color:var(--text2);font-weight:600;">Paket Langganan Awal</label>
+        <select id="createUserSub" class="form-input">
+          <option value="trial">Free Trial (3 Hari)</option>
+          <option value="month">Pro 1 Bulan (30 Hari)</option>
+          <option value="year">Pro 1 Tahun (365 Hari)</option>
+          <option value="lifetime">Lifetime</option>
+        </select>
+      </div>
+      <div class="form-actions" style="margin-top:20px;">
+        <button class="btn-primary" onclick="adminCreateUser()" style="width:100%;" id="btnAdminCreateUser">✅ Daftarkan User</button>
       </div>
     </div>
   </div>
