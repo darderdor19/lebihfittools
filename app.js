@@ -407,6 +407,33 @@ async function loginEmailPass() {
     }
 }
 
+// User Self-Service Reset Password
+async function forgotPassword() {
+    if (!fbAuth) { showToast("Firebase Auth belum siap.", "error"); return; }
+    let email = document.getElementById('loginEmail') ? document.getElementById('loginEmail').value.trim() : '';
+    if (!email || !email.includes('@')) {
+        email = prompt("Masukkan alamat email akun kamu untuk terima link reset password:");
+        if (!email) return;
+        email = email.trim();
+    }
+    if (!email || !email.includes('@')) {
+        showToast("Format email tidak valid.", "error");
+        return;
+    }
+
+    try {
+        await fbAuth.sendPasswordResetEmail(email);
+        showToast(`✅ Link reset password telah dikirim ke ${email}. Silakan cek inbox/spam email kamu!`, "success");
+    } catch (err) {
+        console.error('[forgotPassword]', err);
+        const msgs = {
+            'auth/user-not-found': 'Email ini belum terdaftar di sistem.',
+            'auth/invalid-email': 'Format email tidak valid.'
+        };
+        showToast(msgs[err.code] || "Gagal kirim link reset: " + err.message, "error");
+    }
+}
+
 // Email/Password Register
 async function registerEmailPass() {
     if (!fbAuth) { showToast("Firebase Auth belum siap.", "error"); return; }
