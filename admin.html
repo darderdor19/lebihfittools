@@ -2033,6 +2033,15 @@
         <option value="unlimited">🔓 Bebasin Limit (Unlimited / Bebas Pakai)</option>
       </select>
     </div>
+    <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+    <div class="modal-form-group">
+      <label>🔑 Ganti / Reset Password User</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="password" id="subModalNewPassword" placeholder="Password baru (min 6 karakter)..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:0.85rem;outline:none;">
+        <button type="button" onclick="adminResetPasswordInAdminPage()" style="padding:8px 14px;font-size:0.78rem;font-weight:700;white-space:nowrap;background:var(--accent);color:#000;border:none;border-radius:8px;cursor:pointer;">🔑 Set Password</button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:4px;">Kosongkan jika tidak ingin mengubah password.</div>
+    </div>
     <div id="subModalInfo" style="font-size:0.8rem;color:var(--text2);margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;display:none;"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeSubModal()">Batal</button>
@@ -2655,6 +2664,35 @@ async function saveSubscription() {
     loadAllUsers();
   } catch (err) {
     showToast('❌ Gagal memperbarui: ' + err.message, 'error');
+  }
+}
+
+// ===== ADMIN RESET/GANTI PASSWORD USER =====
+async function adminResetPasswordInAdminPage() {
+  const newPwd = document.getElementById('subModalNewPassword').value.trim();
+  if (!newPwd) { showToast('Masukkan password baru dulu', 'error'); return; }
+  if (newPwd.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+  if (!currentEditEmail) { showToast('Pilih user dulu', 'error'); return; }
+
+  try {
+    const adminUser = fbAuth ? fbAuth.currentUser : null;
+    if (!adminUser) { showToast('Kamu harus terautentikasi sebagai admin dulu', 'error'); return; }
+    const idToken = await adminUser.getIdToken(true);
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ action: 'resetPassword', email: currentEditEmail, newPassword: newPwd })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ Password berhasil diubah untuk ' + currentEditEmail, 'success');
+      document.getElementById('subModalNewPassword').value = '';
+    } else {
+      showToast('❌ Gagal ubah password: ' + (data.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    console.error('[adminResetPasswordInAdminPage]', err);
+    showToast('❌ Gagal koneksi ke server: ' + err.message, 'error');
   }
 }
 
